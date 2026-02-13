@@ -22,7 +22,8 @@
 
   // Local state
   let trace = $state<StoredTrace | null>(null);
-  let spanTree = $state<SpanTreeNode[]>([]);
+  let spanTreeRoot = $state<SpanTreeNode[]>([]); // Tree structure with collapse state
+  let spanTree = $state<SpanTreeNode[]>([]); // Flattened view for rendering
   let selectedSpanId = $state<string | null>(null);
   let selectedEventIndex = $state<number | null>(null);
   let attributeFilter = $state<string>("");
@@ -157,8 +158,8 @@
         }
         trace = { ...data, spans: spansMap };
         // Build tree and flatten for rendering
-        const tree = buildSpanTree(spansArray);
-        spanTree = flattenSpanTree(tree);
+        spanTreeRoot = buildSpanTree(spansArray);
+        spanTree = flattenSpanTree(spanTreeRoot);
 
         // Auto-select span from URL query parameter if present, otherwise reset selection
         if (spanIdFromUrl && spansMap.has(spanIdFromUrl)) {
@@ -222,6 +223,113 @@
     const matchedSpan = matchingSpans[currentMatchIndex];
     if (matchedSpan) {
       handleSpanSelect(matchedSpan.span.spanId);
+    }
+  }
+
+  // Toggle collapse/expand for a span node
+  function toggleNodeCollapse(spanId: string) {
+    function toggle(nodes: SpanTreeNode[]): boolean {
+      for (const node of nodes) {
+        if (node.span.spanId === spanId) {
+          node.collapsed = !node.collapsed;
+          return true;
+        }
+        if (toggle(node.children)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (toggle(spanTreeRoot)) {
+      spanTree = flattenSpanTree(spanTreeRoot);
+    }
+  }
+
+  // Set collapse state for a span node
+  function setNodeCollapse(spanId: string, collapsed: boolean) {
+    function setCollapse(nodes: SpanTreeNode[]): boolean {
+      for (const node of nodes) {
+        if (node.span.spanId === spanId) {
+          node.collapsed = collapsed;
+          return true;
+        }
+        if (setCollapse(node.children)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (setCollapse(spanTreeRoot)) {
+      spanTree = flattenSpanTree(spanTreeRoot);
+    }
+  }
+
+  // Find node in tree by spanId
+  function findNode(
+    spanId: string,
+    nodes: SpanTreeNode[] = spanTreeRoot,
+  ): SpanTreeNode | null {
+    for (const node of nodes) {
+      if (node.span.spanId === spanId) {
+        return node;
+      }
+      const found = findNode(spanId, node.children);
+      if (found) {
+        return found;
+      }
+    }
+    return null;
+  }
+
+  // Keyboard navigation handler
+  function handleWaterfallKeydown(e: KeyboardEvent) {
+    if (!selectedSpanId || spanTree.length === 0) return;
+
+    const currentIndex = spanTree.findIndex(
+      (node) => node.span.spanId === selectedSpanId,
+    );
+    if (currentIndex === -1) return;
+
+    const currentNode = findNode(selectedSpanId);
+    if (!currentNode) return;
+
+    switch (e.key) {
+      case "ArrowUp":
+        e.preventDefault();
+        if (currentIndex > 0) {
+          handleSpanSelect(spanTree[currentIndex - 1].span.spanId);
+        }
+        break;
+
+      case "ArrowDown":
+        e.preventDefault();
+        if (currentIndex < spanTree.length - 1) {
+          handleSpanSelect(spanTree[currentIndex + 1].span.spanId);
+        }
+        break;
+
+      case "ArrowLeft":
+        e.preventDefault();
+        if (currentNode.children.length > 0 && !currentNode.collapsed) {
+          setNodeCollapse(selectedSpanId, true);
+        }
+        break;
+
+      case "ArrowRight":
+        e.preventDefault();
+        if (currentNode.children.length > 0 && currentNode.collapsed) {
+          setNodeCollapse(selectedSpanId, false);
+        }
+        break;
+
+      case "Enter":
+        e.preventDefault();
+        if (currentNode.children.length > 0) {
+          toggleNodeCollapse(selectedSpanId);
+        }
+        break;
     }
   }
 </script>
@@ -310,7 +418,13 @@
               Total: <strong>{traceDuration}</strong>
             </div>
           </div>
-          <div class="waterfall-container">
+          <div
+            class="waterfall-container"
+            onkeydown={handleWaterfallKeydown}
+            role="treegrid"
+            tabindex="0"
+            aria-label="Span tree"
+          >
             <!-- Time ruler header row -->
             <div class="indicator-cell ruler-spacer"></div>
             <div class="waterfall-cell">
@@ -343,7 +457,10 @@
                   {traceDurationNs}
                   isSelected={node.span.spanId === selectedSpanId}
                   isHighlighted={matchingSpanIds.has(node.span.spanId)}
+                  hasChildren={node.children.length > 0}
+                  isCollapsed={node.collapsed}
                   onSelect={() => handleSpanSelect(node.span.spanId)}
+                  onToggleCollapse={() => toggleNodeCollapse(node.span.spanId)}
                   onEventClick={(eventIndex) =>
                     handleEventClick(node.span.spanId, eventIndex)}
                 />
@@ -795,6 +912,11 @@
     border: 1px solid #e0e0e0;
     border-radius: 4px;
     overflow: hidden;
+  }
+
+  .waterfall-container:focus {
+    outline: 2px solid #1976d2;
+    outline-offset: 2px;
   }
 
   .indicator-cell {

@@ -11,7 +11,10 @@
     traceDurationNs: bigint;
     isSelected: boolean;
     isHighlighted?: boolean;
+    hasChildren?: boolean;
+    isCollapsed?: boolean;
     onSelect: () => void;
+    onToggleCollapse?: () => void;
     onEventClick?: (eventIndex: number) => void;
   }
 
@@ -22,7 +25,10 @@
     traceDurationNs,
     isSelected,
     isHighlighted = false,
+    hasChildren = false,
+    isCollapsed = false,
     onSelect,
+    onToggleCollapse,
     onEventClick,
   }: Props = $props();
 
@@ -67,6 +73,13 @@
       onEventClick(eventIndex);
     }
   }
+
+  function handleCollapseToggle(e: MouseEvent | KeyboardEvent) {
+    e.stopPropagation();
+    if (onToggleCollapse) {
+      onToggleCollapse();
+    }
+  }
 </script>
 
 <div
@@ -75,14 +88,37 @@
   class:highlighted={isHighlighted}
   class:error={hasError}
   onclick={onSelect}
-  onkeydown={(e) => e.key === "Enter" && onSelect()}
-  role="button"
-  tabindex="0"
+  onkeydown={(e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onSelect();
+    }
+  }}
+  role="row"
+  aria-selected={isSelected}
+  tabindex="-1"
 >
   <!-- Left: Span name with indentation -->
   <div class="span-info" style="padding-left: {depth * 20}px">
     <div class="span-name" title={span.name}>
-      {span.name}
+      {#if hasChildren}
+        <button
+          class="collapse-toggle"
+          onclick={handleCollapseToggle}
+          onkeydown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleCollapseToggle(e);
+            }
+          }}
+          aria-label={isCollapsed ? "Expand" : "Collapse"}
+          aria-expanded={!isCollapsed}
+          tabindex="-1"
+        >
+          {isCollapsed ? "▶" : "▼"}
+        </button>
+      {/if}
+      <span class="span-name-text">{span.name}</span>
     </div>
     <div class="span-meta">
       <span class="service-badge" style="background: {serviceColor}"
@@ -183,6 +219,40 @@
   .span-name {
     font-weight: 500;
     font-size: 0.875rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .collapse-toggle {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.625rem;
+    flex-shrink: 0;
+    transition: color 0.15s ease;
+  }
+
+  .collapse-toggle:hover {
+    color: #333;
+  }
+
+  .collapse-toggle:focus {
+    outline: 2px solid #1976d2;
+    outline-offset: 2px;
+  }
+
+  .span-name-text {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
