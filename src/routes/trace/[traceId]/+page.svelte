@@ -34,6 +34,7 @@
   let error = $state<string | null>(null);
   let showTraceDetails = $state<boolean>(true);
   let showSpanDetails = $state<boolean>(true);
+  let waterfallContainer = $state<HTMLDivElement | null>(null);
 
   // Derived: trace duration for waterfall calculation
   const traceDurationNs = $derived(
@@ -288,41 +289,52 @@
 
   // Toggle collapse/expand for a span node
   function toggleNodeCollapse(spanId: string) {
-    function toggle(nodes: SpanTreeNode[]): boolean {
-      for (const node of nodes) {
-        if (node.span.spanId === spanId) {
-          node.collapsed = !node.collapsed;
-          return true;
-        }
-        if (toggle(node.children)) {
-          return true;
-        }
-      }
-      return false;
+    const node = findNode(spanId);
+    if (!node) return;
+
+    const wasCollapsed = node.collapsed;
+    node.collapsed = !node.collapsed;
+
+    // If collapsing and selected span is a descendant, select this node
+    if (
+      !wasCollapsed &&
+      selectedSpanId &&
+      isDescendantOf(selectedSpanId, node)
+    ) {
+      selectedSpanId = spanId;
     }
 
-    if (toggle(spanTreeRoot)) {
-      spanTree = flattenSpanTree(spanTreeRoot);
+    spanTree = flattenSpanTree(spanTreeRoot);
+
+    // Refocus container after toggle to maintain keyboard navigation
+    if (waterfallContainer) {
+      waterfallContainer.focus();
     }
   }
 
   // Set collapse state for a span node
   function setNodeCollapse(spanId: string, collapsed: boolean) {
-    function setCollapse(nodes: SpanTreeNode[]): boolean {
-      for (const node of nodes) {
-        if (node.span.spanId === spanId) {
-          node.collapsed = collapsed;
-          return true;
-        }
-        if (setCollapse(node.children)) {
-          return true;
-        }
-      }
-      return false;
+    const node = findNode(spanId);
+    if (!node) return;
+
+    const wasCollapsed = node.collapsed;
+    node.collapsed = collapsed;
+
+    // If collapsing and selected span is a descendant, select this node
+    if (
+      collapsed &&
+      !wasCollapsed &&
+      selectedSpanId &&
+      isDescendantOf(selectedSpanId, node)
+    ) {
+      selectedSpanId = spanId;
     }
 
-    if (setCollapse(spanTreeRoot)) {
-      spanTree = flattenSpanTree(spanTreeRoot);
+    spanTree = flattenSpanTree(spanTreeRoot);
+
+    // Refocus container after collapse state change to maintain keyboard navigation
+    if (waterfallContainer) {
+      waterfallContainer.focus();
     }
   }
 
@@ -341,6 +353,22 @@
       }
     }
     return null;
+  }
+
+  // Check if a span is a descendant of another span
+  function isDescendantOf(
+    descendantId: string,
+    ancestorNode: SpanTreeNode,
+  ): boolean {
+    for (const child of ancestorNode.children) {
+      if (child.span.spanId === descendantId) {
+        return true;
+      }
+      if (isDescendantOf(descendantId, child)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // Keyboard navigation handler
@@ -527,6 +555,7 @@
             </div>
           </div>
           <div
+            bind:this={waterfallContainer}
             class="waterfall-container"
             onkeydown={handleWaterfallKeydown}
             role="treegrid"

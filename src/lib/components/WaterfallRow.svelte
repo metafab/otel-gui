@@ -79,6 +79,10 @@
     if (onToggleCollapse) {
       onToggleCollapse();
     }
+    // Blur the button to prevent it from capturing keyboard events
+    if (e.target instanceof HTMLElement) {
+      e.target.blur();
+    }
   }
 </script>
 
@@ -88,11 +92,8 @@
   class:highlighted={isHighlighted}
   class:error={hasError}
   onclick={onSelect}
-  onkeydown={(e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      onSelect();
-    }
+  onkeydown={() => {
+    // Keyboard navigation handled at container level
   }}
   role="row"
   aria-selected={isSelected}
