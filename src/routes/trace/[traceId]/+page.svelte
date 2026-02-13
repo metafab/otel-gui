@@ -20,6 +20,11 @@
   const traceId = $derived($page.params.traceId);
   const spanIdFromUrl = $derived($page.url.searchParams.get("spanId"));
 
+  // Page title with shortened trace ID
+  const pageTitle = $derived(
+    traceId ? `otel-gui – Trace ${traceId.slice(0, 8)}` : "otel-gui – Trace",
+  );
+
   // Local state
   let trace = $state<StoredTrace | null>(null);
   let spanTreeRoot = $state<SpanTreeNode[]>([]); // Tree structure with collapse state
@@ -421,6 +426,10 @@
     }
   }
 </script>
+
+<svelte:head>
+  <title>{pageTitle}</title>
+</svelte:head>
 
 <div class="trace-detail">
   <header class="header">

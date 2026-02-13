@@ -87,6 +87,10 @@
   }
 </script>
 
+<svelte:head>
+  <title>otel-gui – Traces</title>
+</svelte:head>
+
 <div class="container">
   <header>
     <h1>OpenTelemetry Traces</h1>
