@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
+  import { replaceState } from "$app/navigation";
   import { onMount } from "svelte";
   import { traceStore } from "$lib/stores/traces.svelte";
   import {
@@ -225,7 +226,7 @@
     // Update URL to include selected span (for bookmarking/sharing)
     const url = new URL(window.location.href);
     url.searchParams.set("spanId", spanId);
-    window.history.replaceState({}, "", url);
+    replaceState(url, {});
   }
 
   function handleEventClick(spanId: string, eventIndex: number) {
