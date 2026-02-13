@@ -145,7 +145,7 @@
         </div>
 
         <div class="filter-group">
-          <label for="status">Status</label>
+          <span class="filter-label">Status</span>
           <label class="checkbox-label">
             <input
               id="errors-only"
@@ -327,7 +327,8 @@
     min-width: 300px;
   }
 
-  .filter-group label:not(.checkbox-label) {
+  .filter-group label:not(.checkbox-label),
+  .filter-group .filter-label {
     font-size: 0.75rem;
     font-weight: 600;
     color: #666;
