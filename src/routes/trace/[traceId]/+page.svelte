@@ -129,11 +129,29 @@
   const matchCount = $derived(matchingSpanIds.size);
 
   // Error span tracking
+  // errorSpans: visible error spans only (used for navigation)
   const errorSpans = $derived(
     spanTree.filter((node) => node.span.status.code === 2),
   );
 
   const errorCount = $derived(errorSpans.length);
+
+  // Helper function to count all error spans recursively (including collapsed)
+  function countAllErrorSpans(nodes: SpanTreeNode[]): number {
+    let count = 0;
+    for (const node of nodes) {
+      if (node.span.status.code === 2) {
+        count++;
+      }
+      if (node.children.length > 0) {
+        count += countAllErrorSpans(node.children);
+      }
+    }
+    return count;
+  }
+
+  // totalErrorCount: all error spans in the trace (regardless of collapse state)
+  const totalErrorCount = $derived(countAllErrorSpans(spanTreeRoot));
 
   // Reset current match index when search changes
   $effect(() => {
@@ -504,30 +522,32 @@
           <div class="waterfall-header">
             <h3>Trace Timeline</h3>
             <div class="header-controls">
-              {#if errorCount > 0}
+              {#if totalErrorCount > 0}
                 <div class="error-navigation">
                   <span class="error-badge-nav"
-                    >Spans with errors {errorCount}</span
+                    >Spans with errors {totalErrorCount}</span
                   >
-                  <button
-                    onclick={handlePreviousError}
-                    class="nav-button"
-                    title="Previous error"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    onclick={handleNextError}
-                    class="nav-button"
-                    title="Next error"
-                  >
-                    ↓
-                  </button>
-                  <span class="position-indicator"
-                    >{currentErrorIndex === -1
-                      ? 0
-                      : currentErrorIndex + 1}/{errorCount}</span
-                  >
+                  {#if errorCount > 0}
+                    <button
+                      onclick={handlePreviousError}
+                      class="nav-button"
+                      title="Previous error"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onclick={handleNextError}
+                      class="nav-button"
+                      title="Next error"
+                    >
+                      ↓
+                    </button>
+                    <span class="position-indicator"
+                      >{currentErrorIndex === -1
+                        ? 0
+                        : currentErrorIndex + 1}/{errorCount}</span
+                    >
+                  {/if}
                 </div>
               {/if}
               <div class="search-controls">
