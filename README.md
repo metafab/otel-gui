@@ -49,6 +49,11 @@ curl -X POST http://localhost:4318/v1/traces \
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @sample-trace-error.json
+
+# Send a trace with span links (demonstrates distributed tracing)
+curl -X POST http://localhost:4318/v1/traces \
+  -H "Content-Type: application/json" \
+  -d @sample-trace-links.json
 ```
 
 The UI auto-refreshes every 2 seconds to show new traces.

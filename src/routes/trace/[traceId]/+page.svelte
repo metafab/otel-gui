@@ -14,6 +14,7 @@
 
   // Get trace ID from URL
   const traceId = $derived($page.params.traceId);
+  const spanIdFromUrl = $derived($page.url.searchParams.get("spanId"));
 
   // Local state
   let trace = $state<StoredTrace | null>(null);
@@ -32,9 +33,17 @@
     trace ? formatDuration(trace.startTimeUnixNano, trace.endTimeUnixNano) : "",
   );
 
-  // Load trace data
+  // Load trace data on mount
   onMount(async () => {
     await loadTrace();
+  });
+
+  // Reload trace when URL changes (for hyperlink navigation)
+  $effect(() => {
+    // Watch for changes in traceId or spanIdFromUrl
+    if (traceId) {
+      loadTrace();
+    }
   });
 
   async function loadTrace() {
@@ -59,6 +68,13 @@
         // Build tree and flatten for rendering
         const tree = buildSpanTree(spansArray);
         spanTree = flattenSpanTree(tree);
+
+        // Auto-select span from URL query parameter if present, otherwise reset selection
+        if (spanIdFromUrl && spansMap.has(spanIdFromUrl)) {
+          selectedSpanId = spanIdFromUrl;
+        } else {
+          selectedSpanId = null;
+        }
       } else {
         error = "Trace not found";
       }
@@ -72,6 +88,10 @@
 
   function handleSpanSelect(spanId: string) {
     selectedSpanId = spanId;
+    // Update URL to include selected span (for bookmarking/sharing)
+    const url = new URL(window.location.href);
+    url.searchParams.set("spanId", spanId);
+    window.history.replaceState({}, "", url);
   }
 
   function handleBack() {
@@ -189,7 +209,14 @@
                 {#if selectedSpan.parentSpanId}
                   <div class="detail-row">
                     <span class="label">Parent ID:</span>
-                    <span class="value mono">{selectedSpan.parentSpanId}</span>
+                    <button
+                      class="value mono parent-link"
+                      onclick={() =>
+                        handleSpanSelect(selectedSpan.parentSpanId)}
+                      title="Jump to parent span"
+                    >
+                      {selectedSpan.parentSpanId}
+                    </button>
                   </div>
                 {/if}
                 <div class="detail-row">
@@ -210,6 +237,57 @@
                       {#if Object.keys(event.attributes).length > 0}
                         <div class="event-attributes">
                           {#each Object.entries(event.attributes) as [key, value]}
+                            <div class="attribute-row">
+                              <span class="attr-key">{key}:</span>
+                              <span class="attr-value"
+                                >{JSON.stringify(value)}</span
+                              >
+                            </div>
+                          {/each}
+                        </div>
+                      {/if}
+                    </div>
+                  {/each}
+                {/if}
+
+                {#if selectedSpan.links.length > 0}
+                  <div class="section-divider"></div>
+                  <h4 class="section-title">
+                    Links ({selectedSpan.links.length})
+                  </h4>
+                  {#each selectedSpan.links as link}
+                    <div class="link-item">
+                      <div class="link-info">
+                        <div class="link-field">
+                          <span class="link-label">Trace ID:</span>
+                          <a
+                            href="/trace/{link.traceId}"
+                            class="link-value mono link-anchor"
+                            title="Open linked trace"
+                          >
+                            {link.traceId}
+                          </a>
+                        </div>
+                        <div class="link-field">
+                          <span class="link-label">Span ID:</span>
+                          <a
+                            href="/trace/{link.traceId}?spanId={link.spanId}"
+                            class="link-value mono link-anchor"
+                            title="Open linked trace and select span"
+                          >
+                            {link.spanId}
+                          </a>
+                        </div>
+                        {#if link.traceState}
+                          <div class="link-field">
+                            <span class="link-label">State:</span>
+                            <span class="link-value">{link.traceState}</span>
+                          </div>
+                        {/if}
+                      </div>
+                      {#if Object.keys(link.attributes).length > 0}
+                        <div class="link-attributes">
+                          {#each Object.entries(link.attributes) as [key, value]}
                             <div class="attribute-row">
                               <span class="attr-key">{key}:</span>
                               <span class="attr-value"
@@ -458,6 +536,21 @@
     font-weight: 600;
   }
 
+  .parent-link {
+    background: none;
+    border: none;
+    color: #1976d2;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+    transition: all 0.15s ease;
+  }
+
+  .parent-link:hover {
+    color: #1565c0;
+    text-decoration: underline;
+  }
+
   .mono {
     font-family: monospace;
   }
@@ -493,6 +586,60 @@
 
   .event-attributes {
     margin-left: 0.5rem;
+  }
+
+  .link-item {
+    padding: 0.75rem;
+    background: #f9f9f9;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    border-left: 3px solid #9c27b0;
+  }
+
+  .link-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .link-field {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .link-label {
+    font-weight: 600;
+    color: #666;
+    min-width: 70px;
+  }
+
+  .link-value {
+    color: #333;
+    word-break: break-all;
+  }
+
+  .link-anchor {
+    color: #1976d2;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+
+  .link-anchor:hover {
+    color: #1565c0;
+    text-decoration: underline;
+  }
+
+  .link-anchor:visited {
+    color: #7b1fa2;
+  }
+
+  .link-attributes {
+    margin-top: 0.5rem;
+    margin-left: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e0e0e0;
   }
 
   .attributes {
