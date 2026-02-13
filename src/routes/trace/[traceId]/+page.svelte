@@ -31,6 +31,8 @@
   let currentMatchIndex = $state<number>(0);
   let isLoading = $state<boolean>(true);
   let error = $state<string | null>(null);
+  let showTraceDetails = $state<boolean>(true);
+  let showSpanDetails = $state<boolean>(true);
 
   // Derived: trace duration for waterfall calculation
   const traceDurationNs = $derived(
@@ -337,6 +339,24 @@
 <div class="trace-detail">
   <header class="header">
     <button class="back-button" onclick={handleBack}>← Back to Traces</button>
+    {#if trace}
+      <div class="view-controls">
+        <button
+          class="toggle-button"
+          onclick={() => (showTraceDetails = !showTraceDetails)}
+          title={showTraceDetails ? "Hide trace details" : "Show trace details"}
+        >
+          {showTraceDetails ? "Hide" : "Show"} Trace Details
+        </button>
+        <button
+          class="toggle-button"
+          onclick={() => (showSpanDetails = !showSpanDetails)}
+          title={showSpanDetails ? "Hide span details" : "Show span details"}
+        >
+          {showSpanDetails ? "Hide" : "Show"} Span Details
+        </button>
+      </div>
+    {/if}
   </header>
 
   {#if isLoading}
@@ -346,41 +366,43 @@
   {:else if trace}
     <div class="trace-container">
       <!-- Trace Identification Section -->
-      <section class="trace-identification">
-        <h2>Trace {trace.traceId}</h2>
-        <div class="trace-meta">
-          <span class="service">{trace.serviceName}</span>
-          <span class="separator">•</span>
-          <span class="operation">{trace.rootSpanName}</span>
-          <span class="separator">•</span>
-          <span class="spans">{trace.spanCount} spans</span>
-          {#if trace.hasError}
+      {#if showTraceDetails}
+        <section class="trace-identification">
+          <h2>Trace {trace.traceId}</h2>
+          <div class="trace-meta">
+            <span class="service">{trace.serviceName}</span>
             <span class="separator">•</span>
-            <span class="error-badge">ERROR</span>
-          {/if}
-        </div>
-        <div class="trace-timestamps">
-          <div class="timestamp-item">
-            <span class="timestamp-label">Started:</span>
-            <span class="timestamp-value"
-              >{formatTimestamp(trace.startTimeUnixNano)}</span
-            >
+            <span class="operation">{trace.rootSpanName}</span>
+            <span class="separator">•</span>
+            <span class="spans">{trace.spanCount} spans</span>
+            {#if trace.hasError}
+              <span class="separator">•</span>
+              <span class="error-badge">ERROR</span>
+            {/if}
           </div>
-          <div class="timestamp-item">
-            <span class="timestamp-label">Ended:</span>
-            <span class="timestamp-value"
-              >{formatTimestamp(trace.endTimeUnixNano)}</span
-            >
+          <div class="trace-timestamps">
+            <div class="timestamp-item">
+              <span class="timestamp-label">Started:</span>
+              <span class="timestamp-value"
+                >{formatTimestamp(trace.startTimeUnixNano)}</span
+              >
+            </div>
+            <div class="timestamp-item">
+              <span class="timestamp-label">Ended:</span>
+              <span class="timestamp-value"
+                >{formatTimestamp(trace.endTimeUnixNano)}</span
+              >
+            </div>
+            <div class="timestamp-item">
+              <span class="timestamp-label">Duration:</span>
+              <span class="timestamp-value">{traceDuration}</span>
+            </div>
           </div>
-          <div class="timestamp-item">
-            <span class="timestamp-label">Duration:</span>
-            <span class="timestamp-value">{traceDuration}</span>
-          </div>
-        </div>
-      </section>
+        </section>
+      {/if}
 
       <!-- Main Content Grid -->
-      <div class="content-grid">
+      <div class="content-grid" class:full-width={!showSpanDetails}>
         <!-- Waterfall Section (Left) -->
         <section class="waterfall-section">
           <div class="waterfall-header">
@@ -470,223 +492,228 @@
         </section>
 
         <!-- Span Details Sidebar (Right) -->
-        <section class="sidebar-section">
-          {#if selectedSpanId && trace.spans.get(selectedSpanId)}
-            {@const selectedSpan = trace.spans.get(selectedSpanId)}
-            {#if selectedSpan}
-              <h3>Span Details</h3>
-              <div class="span-details">
-                <div class="detail-row">
-                  <span class="label">Name:</span>
-                  <span class="value">{selectedSpan.name}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="label">Started:</span>
-                  <span class="value"
-                    >{formatTimestamp(selectedSpan.startTimeUnixNano)}</span
-                  >
-                </div>
-                <div class="detail-row">
-                  <span class="label">Ended:</span>
-                  <span class="value"
-                    >{formatTimestamp(selectedSpan.endTimeUnixNano)}</span
-                  >
-                </div>
-                <div class="detail-row">
-                  <span class="label">Duration:</span>
-                  <span class="value">
-                    {formatDuration(
-                      selectedSpan.startTimeUnixNano,
-                      selectedSpan.endTimeUnixNano,
-                    )}
-                  </span>
-                </div>
-                <div class="detail-row">
-                  <span class="label">Kind:</span>
-                  <span class="value">{spanKindLabel(selectedSpan.kind)}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="label">Status:</span>
-                  <span
-                    class="value"
-                    class:status-error={selectedSpan.status.code === 2}
-                    class:status-ok={selectedSpan.status.code === 1}
-                  >
-                    {statusLabel(selectedSpan.status.code)}
-                    {#if selectedSpan.status.message}
-                      - {selectedSpan.status.message}
-                    {/if}
-                  </span>
-                </div>
-                <div class="detail-row">
-                  <span class="label">Span ID:</span>
-                  <span class="value mono">{selectedSpan.spanId}</span>
-                </div>
-                {#if selectedSpan.parentSpanId}
+        {#if showSpanDetails}
+          <section class="sidebar-section">
+            {#if selectedSpanId && trace.spans.get(selectedSpanId)}
+              {@const selectedSpan = trace.spans.get(selectedSpanId)}
+              {#if selectedSpan}
+                <h3>Span Details</h3>
+                <div class="span-details">
                   <div class="detail-row">
-                    <span class="label">Parent ID:</span>
-                    <button
-                      class="value mono parent-link"
-                      onclick={() =>
-                        handleSpanSelect(selectedSpan.parentSpanId)}
-                      title="Jump to parent span"
-                    >
-                      {selectedSpan.parentSpanId}
-                    </button>
+                    <span class="label">Name:</span>
+                    <span class="value">{selectedSpan.name}</span>
                   </div>
-                {/if}
-                <div class="detail-row">
-                  <span class="label">Service:</span>
-                  <span class="value"
-                    >{selectedSpan.resource["service.name"] || "unknown"}</span
-                  >
-                </div>
-
-                {#if selectedSpan.events.length > 0}
-                  <div class="section-divider"></div>
-                  <h4 class="section-title">
-                    Events ({selectedSpan.events.length})
-                  </h4>
-                  {#each selectedSpan.events as event, index}
-                    <div
-                      class="event-item"
-                      id="event-{index}"
-                      class:highlighted={selectedEventIndex === index}
+                  <div class="detail-row">
+                    <span class="label">Started:</span>
+                    <span class="value"
+                      >{formatTimestamp(selectedSpan.startTimeUnixNano)}</span
                     >
-                      <div class="event-header">
-                        <div class="event-name">{event.name}</div>
-                        <div
-                          class="event-timestamp"
-                          title={formatTimestamp(event.timeUnixNano)}
-                        >
-                          {formatRelativeTime(
-                            selectedSpan.startTimeUnixNano,
-                            event.timeUnixNano,
-                          )}
-                        </div>
-                      </div>
-                      {#if Object.keys(event.attributes).length > 0}
-                        <div class="event-attributes">
-                          {#each Object.entries(event.attributes) as [key, value]}
-                            <div class="attribute-row">
-                              <span class="attr-key">{key}:</span>
-                              <span class="attr-value"
-                                >{JSON.stringify(value)}</span
-                              >
-                            </div>
-                          {/each}
-                        </div>
+                  </div>
+                  <div class="detail-row">
+                    <span class="label">Ended:</span>
+                    <span class="value"
+                      >{formatTimestamp(selectedSpan.endTimeUnixNano)}</span
+                    >
+                  </div>
+                  <div class="detail-row">
+                    <span class="label">Duration:</span>
+                    <span class="value">
+                      {formatDuration(
+                        selectedSpan.startTimeUnixNano,
+                        selectedSpan.endTimeUnixNano,
+                      )}
+                    </span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="label">Kind:</span>
+                    <span class="value">{spanKindLabel(selectedSpan.kind)}</span
+                    >
+                  </div>
+                  <div class="detail-row">
+                    <span class="label">Status:</span>
+                    <span
+                      class="value"
+                      class:status-error={selectedSpan.status.code === 2}
+                      class:status-ok={selectedSpan.status.code === 1}
+                    >
+                      {statusLabel(selectedSpan.status.code)}
+                      {#if selectedSpan.status.message}
+                        - {selectedSpan.status.message}
                       {/if}
+                    </span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="label">Span ID:</span>
+                    <span class="value mono">{selectedSpan.spanId}</span>
+                  </div>
+                  {#if selectedSpan.parentSpanId}
+                    <div class="detail-row">
+                      <span class="label">Parent ID:</span>
+                      <button
+                        class="value mono parent-link"
+                        onclick={() =>
+                          handleSpanSelect(selectedSpan.parentSpanId)}
+                        title="Jump to parent span"
+                      >
+                        {selectedSpan.parentSpanId}
+                      </button>
                     </div>
-                  {/each}
-                {/if}
+                  {/if}
+                  <div class="detail-row">
+                    <span class="label">Service:</span>
+                    <span class="value"
+                      >{selectedSpan.resource["service.name"] ||
+                        "unknown"}</span
+                    >
+                  </div>
 
-                {#if selectedSpan.links.length > 0}
-                  <div class="section-divider"></div>
-                  <h4 class="section-title">
-                    Links ({selectedSpan.links.length})
-                  </h4>
-                  {#each selectedSpan.links as link}
-                    <div class="link-item">
-                      <div class="link-info">
-                        <div class="link-field">
-                          <span class="link-label">Trace ID:</span>
-                          <a
-                            href="/trace/{link.traceId}"
-                            class="link-value mono link-anchor"
-                            title="Open linked trace"
+                  {#if selectedSpan.events.length > 0}
+                    <div class="section-divider"></div>
+                    <h4 class="section-title">
+                      Events ({selectedSpan.events.length})
+                    </h4>
+                    {#each selectedSpan.events as event, index}
+                      <div
+                        class="event-item"
+                        id="event-{index}"
+                        class:highlighted={selectedEventIndex === index}
+                      >
+                        <div class="event-header">
+                          <div class="event-name">{event.name}</div>
+                          <div
+                            class="event-timestamp"
+                            title={formatTimestamp(event.timeUnixNano)}
                           >
-                            {link.traceId}
-                          </a>
+                            {formatRelativeTime(
+                              selectedSpan.startTimeUnixNano,
+                              event.timeUnixNano,
+                            )}
+                          </div>
                         </div>
-                        <div class="link-field">
-                          <span class="link-label">Span ID:</span>
-                          <a
-                            href="/trace/{link.traceId}?spanId={link.spanId}"
-                            class="link-value mono link-anchor"
-                            title="Open linked trace and select span"
-                          >
-                            {link.spanId}
-                          </a>
-                        </div>
-                        {#if link.traceState}
-                          <div class="link-field">
-                            <span class="link-label">State:</span>
-                            <span class="link-value">{link.traceState}</span>
+                        {#if Object.keys(event.attributes).length > 0}
+                          <div class="event-attributes">
+                            {#each Object.entries(event.attributes) as [key, value]}
+                              <div class="attribute-row">
+                                <span class="attr-key">{key}:</span>
+                                <span class="attr-value"
+                                  >{JSON.stringify(value)}</span
+                                >
+                              </div>
+                            {/each}
                           </div>
                         {/if}
                       </div>
-                      {#if Object.keys(link.attributes).length > 0}
-                        <div class="link-attributes">
-                          {#each Object.entries(link.attributes) as [key, value]}
-                            <div class="attribute-row">
-                              <span class="attr-key">{key}:</span>
-                              <span class="attr-value"
-                                >{JSON.stringify(value)}</span
-                              >
-                            </div>
-                          {/each}
-                        </div>
-                      {/if}
-                    </div>
-                  {/each}
-                {/if}
-
-                {#if Object.keys(selectedSpan.attributes).length > 0}
-                  {@const allAttributes = Object.entries(
-                    selectedSpan.attributes,
-                  )}
-                  {@const filteredAttributes = attributeFilter.trim()
-                    ? allAttributes.filter(([key, value]) => {
-                        const query = attributeFilter.toLowerCase();
-                        const keyMatch = key.toLowerCase().includes(query);
-                        const valueMatch = JSON.stringify(value)
-                          .toLowerCase()
-                          .includes(query);
-                        return keyMatch || valueMatch;
-                      })
-                    : allAttributes}
-                  <div class="section-divider"></div>
-                  <div class="section-header">
-                    <h4 class="section-title">
-                      Attributes
-                      {#if attributeFilter.trim()}
-                        ({filteredAttributes.length} of {allAttributes.length})
-                      {:else}
-                        ({allAttributes.length})
-                      {/if}
-                    </h4>
-                    <input
-                      type="text"
-                      bind:value={attributeFilter}
-                      placeholder="Filter attributes..."
-                      class="attribute-filter"
-                    />
-                  </div>
-                  {#if filteredAttributes.length > 0}
-                    <div class="attributes">
-                      {#each filteredAttributes as [key, value]}
-                        <div class="attribute-row">
-                          <span class="attr-key">{key}:</span>
-                          <span class="attr-value">{JSON.stringify(value)}</span
-                          >
-                        </div>
-                      {/each}
-                    </div>
-                  {:else}
-                    <div class="no-attributes">
-                      No attributes match the filter.
-                    </div>
+                    {/each}
                   {/if}
-                {/if}
+
+                  {#if selectedSpan.links.length > 0}
+                    <div class="section-divider"></div>
+                    <h4 class="section-title">
+                      Links ({selectedSpan.links.length})
+                    </h4>
+                    {#each selectedSpan.links as link}
+                      <div class="link-item">
+                        <div class="link-info">
+                          <div class="link-field">
+                            <span class="link-label">Trace ID:</span>
+                            <a
+                              href="/trace/{link.traceId}"
+                              class="link-value mono link-anchor"
+                              title="Open linked trace"
+                            >
+                              {link.traceId}
+                            </a>
+                          </div>
+                          <div class="link-field">
+                            <span class="link-label">Span ID:</span>
+                            <a
+                              href="/trace/{link.traceId}?spanId={link.spanId}"
+                              class="link-value mono link-anchor"
+                              title="Open linked trace and select span"
+                            >
+                              {link.spanId}
+                            </a>
+                          </div>
+                          {#if link.traceState}
+                            <div class="link-field">
+                              <span class="link-label">State:</span>
+                              <span class="link-value">{link.traceState}</span>
+                            </div>
+                          {/if}
+                        </div>
+                        {#if Object.keys(link.attributes).length > 0}
+                          <div class="link-attributes">
+                            {#each Object.entries(link.attributes) as [key, value]}
+                              <div class="attribute-row">
+                                <span class="attr-key">{key}:</span>
+                                <span class="attr-value"
+                                  >{JSON.stringify(value)}</span
+                                >
+                              </div>
+                            {/each}
+                          </div>
+                        {/if}
+                      </div>
+                    {/each}
+                  {/if}
+
+                  {#if Object.keys(selectedSpan.attributes).length > 0}
+                    {@const allAttributes = Object.entries(
+                      selectedSpan.attributes,
+                    )}
+                    {@const filteredAttributes = attributeFilter.trim()
+                      ? allAttributes.filter(([key, value]) => {
+                          const query = attributeFilter.toLowerCase();
+                          const keyMatch = key.toLowerCase().includes(query);
+                          const valueMatch = JSON.stringify(value)
+                            .toLowerCase()
+                            .includes(query);
+                          return keyMatch || valueMatch;
+                        })
+                      : allAttributes}
+                    <div class="section-divider"></div>
+                    <div class="section-header">
+                      <h4 class="section-title">
+                        Attributes
+                        {#if attributeFilter.trim()}
+                          ({filteredAttributes.length} of {allAttributes.length})
+                        {:else}
+                          ({allAttributes.length})
+                        {/if}
+                      </h4>
+                      <input
+                        type="text"
+                        bind:value={attributeFilter}
+                        placeholder="Filter attributes..."
+                        class="attribute-filter"
+                      />
+                    </div>
+                    {#if filteredAttributes.length > 0}
+                      <div class="attributes">
+                        {#each filteredAttributes as [key, value]}
+                          <div class="attribute-row">
+                            <span class="attr-key">{key}:</span>
+                            <span class="attr-value"
+                              >{JSON.stringify(value)}</span
+                            >
+                          </div>
+                        {/each}
+                      </div>
+                    {:else}
+                      <div class="no-attributes">
+                        No attributes match the filter.
+                      </div>
+                    {/if}
+                  {/if}
+                </div>
+              {/if}
+            {:else}
+              <div class="no-selection">
+                <p>Select a span to view details</p>
               </div>
             {/if}
-          {:else}
-            <div class="no-selection">
-              <p>Select a span to view details</p>
-            </div>
-          {/if}
-        </section>
+          </section>
+        {/if}
       </div>
     </div>
   {/if}
@@ -702,6 +729,15 @@
     background: white;
     border-bottom: 1px solid #e0e0e0;
     padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .view-controls {
+    display: flex;
+    gap: 0.5rem;
   }
 
   .back-button {
@@ -715,6 +751,25 @@
 
   .back-button:hover {
     background: #f5f5f5;
+  }
+
+  .toggle-button {
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
+  }
+
+  .toggle-button:hover {
+    background: #f5f5f5;
+    border-color: #1976d2;
+  }
+
+  .toggle-button:active {
+    background: #e3f2fd;
   }
 
   .loading,
@@ -810,6 +865,10 @@
     display: grid;
     grid-template-columns: 1fr 400px;
     gap: 1.5rem;
+  }
+
+  .content-grid.full-width {
+    grid-template-columns: 1fr;
   }
 
   .waterfall-section,
