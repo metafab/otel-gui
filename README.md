@@ -31,6 +31,23 @@ Preview the production build with `pnpm run preview`.
 
 ## Sending Traces
 
+### Quick Demo (Recommended)
+
+Try the interactive e-commerce demo to see all features:
+
+```sh
+./demo-ecommerce-trace.sh
+```
+
+This demonstrates:
+- Multi-service distributed tracing (frontend, backend-api, auth-service, database)
+- Incremental span arrival and merging
+- Parent-child span hierarchy with deep nesting
+- Error handling with automatic retry
+- Collapse/expand functionality
+
+### Manual Examples
+
 Point your instrumented application's OTLP exporter to the viewer:
 
 ```sh
@@ -40,17 +57,27 @@ export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 Or send sample traces via curl:
 
 ```sh
-# Send a successful trace with 3 spans
+# Simple trace with 3 spans
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @sample-trace.json
 
-# Send a trace with errors (status.code = 2)
+# E-commerce trace - Part 1 (frontend + backend-api)
+curl -X POST http://localhost:4318/v1/traces \
+  -H "Content-Type: application/json" \
+  -d @sample-trace-ecommerce-part1.json
+
+# E-commerce trace - Part 2 (auth-service + database with errors)
+curl -X POST http://localhost:4318/v1/traces \
+  -H "Content-Type: application/json" \
+  -d @sample-trace-ecommerce-part2.json
+
+# Trace with errors (status.code = 2)
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @sample-trace-error.json
 
-# Send a trace with span links (demonstrates distributed tracing)
+# Trace with span links (demonstrates distributed tracing)
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @sample-trace-links.json
@@ -58,6 +85,20 @@ curl -X POST http://localhost:4318/v1/traces \
 
 The UI auto-refreshes every 2 seconds to show new traces.
 
+For detailed examples and feature exploration guide, see **[SAMPLE_TRACES.md](./SAMPLE_TRACES.md)**.
+
+## Features
+
+- 🔍 **Search & Filter** - Find spans by name, service, attributes, or events
+- ⌨️ **Keyboard Navigation** - Navigate span tree with arrow keys (↑↓←→ Enter)
+- ❌ **Error Navigation** - Jump between error spans with dedicated controls
+- 🌲 **Collapse/Expand** - Hide/show child spans for cleaner viewing
+- 📊 **Multi-Service** - Color-coded services with waterfall timeline
+- ⚡ **Events Timeline** - Event markers on span timeline with click navigation
+- 👁️ **Panel Toggles** - Hide/show trace details and span sidebar
+- 🔄 **Incremental Updates** - Handles spans arriving out-of-order
+
 ## Documentation
 
-See [docs/](./docs) for implementation plan and research notes.
+- **[SAMPLE_TRACES.md](./SAMPLE_TRACES.md)** - Sample traces, demo guide, and feature exploration
+- **[docs/](./docs)** - Implementation plan, architecture, and research notes

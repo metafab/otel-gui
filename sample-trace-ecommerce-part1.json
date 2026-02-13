@@ -1,0 +1,243 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "frontend" }
+          },
+          {
+            "key": "service.version",
+            "value": { "stringValue": "2.1.0" }
+          },
+          {
+            "key": "deployment.environment",
+            "value": { "stringValue": "production" }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "frontend-tracer",
+            "version": "1.0.0"
+          },
+          "spans": [
+            {
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "1a2b3c4d5e6f7a8b",
+              "parentSpanId": "",
+              "name": "POST /checkout",
+              "kind": 2,
+              "startTimeUnixNano": "1707825600000000000",
+              "endTimeUnixNano": "1707825601250000000",
+              "attributes": [
+                {
+                  "key": "http.method",
+                  "value": { "stringValue": "POST" }
+                },
+                {
+                  "key": "http.url",
+                  "value": { "stringValue": "/checkout" }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": { "intValue": "200" }
+                },
+                {
+                  "key": "user.id",
+                  "value": { "stringValue": "user-12345" }
+                },
+                {
+                  "key": "cart.items",
+                  "value": { "intValue": "3" }
+                }
+              ],
+              "events": [
+                {
+                  "timeUnixNano": "1707825600050000000",
+                  "name": "request.received",
+                  "attributes": [
+                    {
+                      "key": "request.size",
+                      "value": { "intValue": "2048" }
+                    }
+                  ]
+                },
+                {
+                  "timeUnixNano": "1707825601200000000",
+                  "name": "response.sent",
+                  "attributes": [
+                    {
+                      "key": "response.size",
+                      "value": { "intValue": "512" }
+                    }
+                  ]
+                }
+              ],
+              "links": [],
+              "status": {
+                "code": 1,
+                "message": ""
+              }
+            },
+            {
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "2b3c4d5e6f7a8b9c",
+              "parentSpanId": "1a2b3c4d5e6f7a8b",
+              "name": "validate cart",
+              "kind": 1,
+              "startTimeUnixNano": "1707825600100000000",
+              "endTimeUnixNano": "1707825600180000000",
+              "attributes": [
+                {
+                  "key": "cart.total",
+                  "value": { "stringValue": "149.99" }
+                },
+                {
+                  "key": "validation.passed",
+                  "value": { "boolValue": true }
+                }
+              ],
+              "events": [],
+              "links": [],
+              "status": {
+                "code": 1,
+                "message": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "backend-api" }
+          },
+          {
+            "key": "service.version",
+            "value": { "stringValue": "3.5.2" }
+          },
+          {
+            "key": "deployment.environment",
+            "value": { "stringValue": "production" }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "backend-tracer",
+            "version": "2.0.0"
+          },
+          "spans": [
+            {
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "3c4d5e6f7a8b9c0d",
+              "parentSpanId": "1a2b3c4d5e6f7a8b",
+              "name": "process payment",
+              "kind": 1,
+              "startTimeUnixNano": "1707825600200000000",
+              "endTimeUnixNano": "1707825601100000000",
+              "attributes": [
+                {
+                  "key": "payment.amount",
+                  "value": { "stringValue": "149.99" }
+                },
+                {
+                  "key": "payment.currency",
+                  "value": { "stringValue": "USD" }
+                },
+                {
+                  "key": "payment.method",
+                  "value": { "stringValue": "credit_card" }
+                }
+              ],
+              "events": [
+                {
+                  "timeUnixNano": "1707825600220000000",
+                  "name": "payment.initiated",
+                  "attributes": [
+                    {
+                      "key": "processor",
+                      "value": { "stringValue": "stripe" }
+                    }
+                  ]
+                },
+                {
+                  "timeUnixNano": "1707825601050000000",
+                  "name": "payment.completed",
+                  "attributes": [
+                    {
+                      "key": "transaction.id",
+                      "value": { "stringValue": "txn_98765432" }
+                    }
+                  ]
+                }
+              ],
+              "links": [],
+              "status": {
+                "code": 1,
+                "message": ""
+              }
+            },
+            {
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "4d5e6f7a8b9c0d1e",
+              "parentSpanId": "3c4d5e6f7a8b9c0d",
+              "name": "validate payment details",
+              "kind": 1,
+              "startTimeUnixNano": "1707825600250000000",
+              "endTimeUnixNano": "1707825600320000000",
+              "attributes": [
+                {
+                  "key": "card.type",
+                  "value": { "stringValue": "visa" }
+                },
+                {
+                  "key": "card.last4",
+                  "value": { "stringValue": "4242" }
+                }
+              ],
+              "events": [],
+              "links": [],
+              "status": {
+                "code": 1,
+                "message": ""
+              }
+            },
+            {
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "5e6f7a8b9c0d1e2f",
+              "parentSpanId": "3c4d5e6f7a8b9c0d",
+              "name": "check inventory",
+              "kind": 3,
+              "startTimeUnixNano": "1707825600350000000",
+              "endTimeUnixNano": "1707825600480000000",
+              "attributes": [
+                {
+                  "key": "inventory.location",
+                  "value": { "stringValue": "warehouse-east" }
+                },
+                {
+                  "key": "items.checked",
+                  "value": { "intValue": "3" }
+                }
+              ],
+              "events": [],
+              "links": [],
+              "status": {
+                "code": 1,
+                "message": ""
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,325 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "auth-service" }
+          },
+          {
+            "key": "service.version",
+            "value": { "stringValue": "1.8.0" }
+          },
+          {
+            "key": "deployment.environment",
+            "value": { "stringValue": "production" }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "auth-tracer",
+            "version": "1.0.0"
+          },
+          "spans": [
+            {
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "6f7a8b9c0d1e2f3a",
+              "parentSpanId": "3c4d5e6f7a8b9c0d",
+              "name": "verify user session",
+              "kind": 3,
+              "startTimeUnixNano": "1707825600500000000",
+              "endTimeUnixNano": "1707825600650000000",
+              "attributes": [
+                {
+                  "key": "user.id",
+                  "value": { "stringValue": "user-12345" }
+                },
+                {
+                  "key": "session.id",
+                  "value": { "stringValue": "sess_abc123xyz" }
+                },
+                {
+                  "key": "auth.method",
+                  "value": { "stringValue": "jwt" }
+                }
+              ],
+              "events": [
+                {
+                  "timeUnixNano": "1707825600520000000",
+                  "name": "token.validated",
+                  "attributes": [
+                    {
+                      "key": "token.expiry",
+                      "value": { "intValue": "3600" }
+                    }
+                  ]
+                }
+              ],
+              "links": [],
+              "status": {
+                "code": 1,
+                "message": ""
+              }
+            },
+            {
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "7a8b9c0d1e2f3a4b",
+              "parentSpanId": "6f7a8b9c0d1e2f3a",
+              "name": "query user permissions",
+              "kind": 3,
+              "startTimeUnixNano": "1707825600550000000",
+              "endTimeUnixNano": "1707825600620000000",
+              "attributes": [
+                {
+                  "key": "permissions.scope",
+                  "value": { "stringValue": "checkout:write" }
+                },
+                {
+                  "key": "role",
+                  "value": { "stringValue": "customer" }
+                }
+              ],
+              "events": [],
+              "links": [],
+              "status": {
+                "code": 1,
+                "message": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "database" }
+          },
+          {
+            "key": "service.version",
+            "value": { "stringValue": "14.2" }
+          },
+          {
+            "key": "db.system",
+            "value": { "stringValue": "postgresql" }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "db-tracer",
+            "version": "1.0.0"
+          },
+          "spans": [
+            {
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "8b9c0d1e2f3a4b5c",
+              "parentSpanId": "3c4d5e6f7a8b9c0d",
+              "name": "create order record",
+              "kind": 3,
+              "startTimeUnixNano": "1707825600700000000",
+              "endTimeUnixNano": "1707825600850000000",
+              "attributes": [
+                {
+                  "key": "db.statement",
+                  "value": { "stringValue": "INSERT INTO orders (user_id, total, status) VALUES ($1, $2, $3)" }
+                },
+                {
+                  "key": "db.name",
+                  "value": { "stringValue": "ecommerce" }
+                },
+                {
+                  "key": "db.operation",
+                  "value": { "stringValue": "INSERT" }
+                }
+              ],
+              "events": [
+                {
+                  "timeUnixNano": "1707825600720000000",
+                  "name": "query.start",
+                  "attributes": []
+                },
+                {
+                  "timeUnixNano": "1707825600840000000",
+                  "name": "query.end",
+                  "attributes": [
+                    {
+                      "key": "rows.affected",
+                      "value": { "intValue": "1" }
+                    }
+                  ]
+                }
+              ],
+              "links": [],
+              "status": {
+                "code": 1,
+                "message": ""
+              }
+            },
+            {
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "9c0d1e2f3a4b5c6d",
+              "parentSpanId": "3c4d5e6f7a8b9c0d",
+              "name": "update inventory",
+              "kind": 3,
+              "startTimeUnixNano": "1707825600900000000",
+              "endTimeUnixNano": "1707825601050000000",
+              "attributes": [
+                {
+                  "key": "db.statement",
+                  "value": { "stringValue": "UPDATE inventory SET quantity = quantity - $1 WHERE product_id = $2" }
+                },
+                {
+                  "key": "db.name",
+                  "value": { "stringValue": "ecommerce" }
+                },
+                {
+                  "key": "db.operation",
+                  "value": { "stringValue": "UPDATE" }
+                },
+                {
+                  "key": "products.updated",
+                  "value": { "intValue": "3" }
+                }
+              ],
+              "events": [
+                {
+                  "timeUnixNano": "1707825600920000000",
+                  "name": "lock.acquired",
+                  "attributes": [
+                    {
+                      "key": "lock.type",
+                      "value": { "stringValue": "row_exclusive" }
+                    }
+                  ]
+                },
+                {
+                  "timeUnixNano": "1707825601020000000",
+                  "name": "error.occurred",
+                  "attributes": [
+                    {
+                      "key": "error.type",
+                      "value": { "stringValue": "deadlock_detected" }
+                    },
+                    {
+                      "key": "error.message",
+                      "value": { "stringValue": "deadlock detected while updating inventory" }
+                    }
+                  ]
+                }
+              ],
+              "links": [],
+              "status": {
+                "code": 2,
+                "message": "Deadlock detected: Process 12345 waits for ExclusiveLock on relation; blocked by process 12346"
+              }
+            },
+            {
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "0d1e2f3a4b5c6d7e",
+              "parentSpanId": "9c0d1e2f3a4b5c6d",
+              "name": "retry inventory update",
+              "kind": 3,
+              "startTimeUnixNano": "1707825601060000000",
+              "endTimeUnixNano": "1707825601180000000",
+              "attributes": [
+                {
+                  "key": "db.statement",
+                  "value": { "stringValue": "UPDATE inventory SET quantity = quantity - $1 WHERE product_id = $2" }
+                },
+                {
+                  "key": "db.name",
+                  "value": { "stringValue": "ecommerce" }
+                },
+                {
+                  "key": "retry.attempt",
+                  "value": { "intValue": "1" }
+                }
+              ],
+              "events": [],
+              "links": [],
+              "status": {
+                "code": 1,
+                "message": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "backend-api" }
+          },
+          {
+            "key": "service.version",
+            "value": { "stringValue": "3.5.2" }
+          },
+          {
+            "key": "deployment.environment",
+            "value": { "stringValue": "production" }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "backend-tracer",
+            "version": "2.0.0"
+          },
+          "spans": [
+            {
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "1e2f3a4b5c6d7e8f",
+              "parentSpanId": "3c4d5e6f7a8b9c0d",
+              "name": "send confirmation email",
+              "kind": 3,
+              "startTimeUnixNano": "1707825601200000000",
+              "endTimeUnixNano": "1707825601230000000",
+              "attributes": [
+                {
+                  "key": "email.to",
+                  "value": { "stringValue": "customer@example.com" }
+                },
+                {
+                  "key": "email.template",
+                  "value": { "stringValue": "order_confirmation" }
+                },
+                {
+                  "key": "notification.service",
+                  "value": { "stringValue": "sendgrid" }
+                }
+              ],
+              "events": [
+                {
+                  "timeUnixNano": "1707825601205000000",
+                  "name": "email.queued",
+                  "attributes": [
+                    {
+                      "key": "queue.id",
+                      "value": { "stringValue": "msg_xyz789" }
+                    }
+                  ]
+                }
+              ],
+              "links": [],
+              "status": {
+                "code": 1,
+                "message": ""
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
