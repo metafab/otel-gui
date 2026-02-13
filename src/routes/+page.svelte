@@ -74,9 +74,9 @@
             <td class="operation">{trace.rootSpanName}</td>
             <td class="duration">{trace.durationMs.toFixed(2)}ms</td>
             <td class="span-count">{trace.spanCount}</td>
-            <td class="timestamp"
-              >{new Date(trace.startTime).toLocaleTimeString()}</td
-            >
+            <td class="timestamp" title={trace.startTime}>
+              {new Date(trace.startTime).toLocaleString()}
+            </td>
             <td class="status">
               {#if trace.hasError}
                 <span class="error-badge">ERROR</span>

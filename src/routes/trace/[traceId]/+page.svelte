@@ -8,7 +8,7 @@
     spanKindLabel,
     statusLabel,
   } from "$lib/utils/spans";
-  import { formatDuration } from "$lib/utils/time";
+  import { formatDuration, formatTimestamp } from "$lib/utils/time";
   import WaterfallRow from "$lib/components/WaterfallRow.svelte";
   import type { StoredTrace, SpanTreeNode } from "$lib/types";
 
@@ -124,6 +124,24 @@
             <span class="error-badge">ERROR</span>
           {/if}
         </div>
+        <div class="trace-timestamps">
+          <div class="timestamp-item">
+            <span class="timestamp-label">Started:</span>
+            <span class="timestamp-value"
+              >{formatTimestamp(trace.startTimeUnixNano)}</span
+            >
+          </div>
+          <div class="timestamp-item">
+            <span class="timestamp-label">Ended:</span>
+            <span class="timestamp-value"
+              >{formatTimestamp(trace.endTimeUnixNano)}</span
+            >
+          </div>
+          <div class="timestamp-item">
+            <span class="timestamp-label">Duration:</span>
+            <span class="timestamp-value">{traceDuration}</span>
+          </div>
+        </div>
       </section>
 
       <!-- Main Content Grid -->
@@ -175,6 +193,18 @@
                 <div class="detail-row">
                   <span class="label">Name:</span>
                   <span class="value">{selectedSpan.name}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Started:</span>
+                  <span class="value"
+                    >{formatTimestamp(selectedSpan.startTimeUnixNano)}</span
+                  >
+                </div>
+                <div class="detail-row">
+                  <span class="label">Ended:</span>
+                  <span class="value"
+                    >{formatTimestamp(selectedSpan.endTimeUnixNano)}</span
+                  >
                 </div>
                 <div class="detail-row">
                   <span class="label">Duration:</span>
@@ -390,6 +420,34 @@
     gap: 0.5rem;
     font-size: 0.875rem;
     color: #666;
+  }
+
+  .trace-timestamps {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+  }
+
+  .timestamp-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .timestamp-label {
+    font-size: 0.75rem;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+
+  .timestamp-value {
+    font-size: 0.875rem;
+    color: #333;
+    font-family: monospace;
   }
 
   .separator {
