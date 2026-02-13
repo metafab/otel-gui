@@ -11,6 +11,7 @@
     traceDurationNs: bigint;
     isSelected: boolean;
     onSelect: () => void;
+    onEventClick?: (eventIndex: number) => void;
   }
 
   let {
@@ -20,6 +21,7 @@
     traceDurationNs,
     isSelected,
     onSelect,
+    onEventClick,
   }: Props = $props();
 
   // Calculate span position and width as percentages (reactive)
@@ -42,6 +44,27 @@
   );
   const serviceColor = $derived(getServiceColor(serviceName));
   const hasError = $derived(span.status.code === 2);
+
+  // Calculate event positions on timeline
+  const eventPositions = $derived(
+    span.events.map((event) => {
+      const eventOffsetNs =
+        BigInt(event.timeUnixNano) - BigInt(span.startTimeUnixNano);
+      const positionPercent =
+        Number((eventOffsetNs * 10000n) / spanDurationNs) / 100;
+      return {
+        name: event.name,
+        position: Math.max(0, Math.min(100, positionPercent)),
+      };
+    }),
+  );
+
+  function handleEventClick(eventIndex: number, e: MouseEvent | KeyboardEvent) {
+    e.stopPropagation();
+    if (onEventClick) {
+      onEventClick(eventIndex);
+    }
+  }
 </script>
 
 <div
@@ -80,6 +103,19 @@
       <span class="duration-label">
         {formatDuration(span.startTimeUnixNano, span.endTimeUnixNano)}
       </span>
+
+      <!-- Event markers -->
+      {#each eventPositions as event, index}
+        <div
+          class="event-marker"
+          style="left: {event.position}%"
+          title={event.name}
+          onclick={(e) => handleEventClick(index, e)}
+          onkeydown={(e) => e.key === "Enter" && handleEventClick(index, e)}
+          role="button"
+          tabindex="0"
+        ></div>
+      {/each}
     </div>
   </div>
 </div>
@@ -193,5 +229,30 @@
   .timeline-bar[style*="width: 0.5%"] .duration-label,
   .timeline-bar[style*="width: 1%"] .duration-label {
     display: none;
+  }
+
+  /* Event markers (diamonds) */
+  .event-marker {
+    position: absolute;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    background: #ff9800;
+    transform: translate(-50%, -50%) rotate(45deg);
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.15s ease;
+    z-index: 10;
+  }
+
+  .event-marker:hover {
+    transform: translate(-50%, -50%) rotate(45deg) scale(1.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
+
+  .event-marker:focus {
+    outline: 2px solid #ff9800;
+    outline-offset: 2px;
   }
 </style>

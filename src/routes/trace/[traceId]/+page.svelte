@@ -8,7 +8,11 @@
     spanKindLabel,
     statusLabel,
   } from "$lib/utils/spans";
-  import { formatDuration, formatTimestamp } from "$lib/utils/time";
+  import {
+    formatDuration,
+    formatTimestamp,
+    formatRelativeTime,
+  } from "$lib/utils/time";
   import WaterfallRow from "$lib/components/WaterfallRow.svelte";
   import type { StoredTrace, SpanTreeNode } from "$lib/types";
 
@@ -20,6 +24,7 @@
   let trace = $state<StoredTrace | null>(null);
   let spanTree = $state<SpanTreeNode[]>([]);
   let selectedSpanId = $state<string | null>(null);
+  let selectedEventIndex = $state<number | null>(null);
   let isLoading = $state<boolean>(true);
   let error = $state<string | null>(null);
 
@@ -88,10 +93,27 @@
 
   function handleSpanSelect(spanId: string) {
     selectedSpanId = spanId;
+    selectedEventIndex = null; // Clear event selection when selecting a different span
     // Update URL to include selected span (for bookmarking/sharing)
     const url = new URL(window.location.href);
     url.searchParams.set("spanId", spanId);
     window.history.replaceState({}, "", url);
+  }
+
+  function handleEventClick(spanId: string, eventIndex: number) {
+    // Select the span if not already selected
+    if (selectedSpanId !== spanId) {
+      selectedSpanId = spanId;
+    }
+    selectedEventIndex = eventIndex;
+
+    // Scroll to the event in the sidebar
+    setTimeout(() => {
+      const eventElement = document.getElementById(`event-${eventIndex}`);
+      if (eventElement) {
+        eventElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 100);
   }
 
   function handleBack() {
@@ -178,6 +200,8 @@
                 {traceDurationNs}
                 isSelected={node.span.spanId === selectedSpanId}
                 onSelect={() => handleSpanSelect(node.span.spanId)}
+                onEventClick={(eventIndex) =>
+                  handleEventClick(node.span.spanId, eventIndex)}
               />
             {/each}
           </div>
@@ -261,9 +285,24 @@
                   <h4 class="section-title">
                     Events ({selectedSpan.events.length})
                   </h4>
-                  {#each selectedSpan.events as event}
-                    <div class="event-item">
-                      <div class="event-name">{event.name}</div>
+                  {#each selectedSpan.events as event, index}
+                    <div
+                      class="event-item"
+                      id="event-{index}"
+                      class:highlighted={selectedEventIndex === index}
+                    >
+                      <div class="event-header">
+                        <div class="event-name">{event.name}</div>
+                        <div
+                          class="event-timestamp"
+                          title={formatTimestamp(event.timeUnixNano)}
+                        >
+                          {formatRelativeTime(
+                            selectedSpan.startTimeUnixNano,
+                            event.timeUnixNano,
+                          )}
+                        </div>
+                      </div>
                       {#if Object.keys(event.attributes).length > 0}
                         <div class="event-attributes">
                           {#each Object.entries(event.attributes) as [key, value]}
@@ -633,13 +672,37 @@
     border-radius: 4px;
     margin-bottom: 0.5rem;
     border-left: 3px solid #1976d2;
+    transition: all 0.3s ease;
+    scroll-margin-top: 20px;
+  }
+
+  .event-item.highlighted {
+    background: #fff3e0;
+    border-left-color: #ff9800;
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+  }
+
+  .event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    gap: 1rem;
   }
 
   .event-name {
     font-weight: 600;
     color: #1976d2;
-    margin-bottom: 0.5rem;
     font-size: 0.875rem;
+    flex: 1;
+  }
+
+  .event-timestamp {
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: #666;
+    white-space: nowrap;
+    cursor: help;
   }
 
   .event-attributes {

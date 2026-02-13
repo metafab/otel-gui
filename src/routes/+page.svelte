@@ -128,7 +128,11 @@
 
         <div class="filter-group">
           <label for="service">Service</label>
-          <select id="service" bind:value={selectedService} class="filter-select">
+          <select
+            id="service"
+            bind:value={selectedService}
+            class="filter-select"
+          >
             <option value="all">All Services</option>
             {#each services as service}
               <option value={service}>{service}</option>
@@ -178,9 +182,8 @@
       </div>
 
       <div class="filter-stats">
-        Showing <strong>{filteredTraces.length}</strong> of <strong
-          >{traces.length}</strong
-        > traces
+        Showing <strong>{filteredTraces.length}</strong> of
+        <strong>{traces.length}</strong> traces
       </div>
     </div>
 
