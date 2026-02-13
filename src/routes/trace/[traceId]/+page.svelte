@@ -2,7 +2,14 @@
   import { page } from "$app/stores";
   import { onMount } from "svelte";
   import { traceStore } from "$lib/stores/traces.svelte";
-  import { buildSpanTree, flattenSpanTree } from "$lib/utils/spans";
+  import {
+    buildSpanTree,
+    flattenSpanTree,
+    spanKindLabel,
+    statusLabel,
+  } from "$lib/utils/spans";
+  import { formatDuration } from "$lib/utils/time";
+  import WaterfallRow from "$lib/components/WaterfallRow.svelte";
   import type { StoredTrace, SpanTreeNode } from "$lib/types";
 
   // Get trace ID from URL
@@ -14,6 +21,16 @@
   let selectedSpanId = $state<string | null>(null);
   let isLoading = $state<boolean>(true);
   let error = $state<string | null>(null);
+
+  // Derived: trace duration for waterfall calculation
+  const traceDurationNs = $derived(
+    trace
+      ? BigInt(trace.endTimeUnixNano) - BigInt(trace.startTimeUnixNano)
+      : 0n,
+  );
+  const traceDuration = $derived(
+    trace ? formatDuration(trace.startTimeUnixNano, trace.endTimeUnixNano) : "",
+  );
 
   // Load trace data
   onMount(async () => {
@@ -93,24 +110,37 @@
       <div class="content-grid">
         <!-- Waterfall Section (Left) -->
         <section class="waterfall-section">
-          <h3>Trace Timeline</h3>
+          <div class="waterfall-header">
+            <h3>Trace Timeline</h3>
+            <div class="trace-duration">
+              Total: <strong>{traceDuration}</strong>
+            </div>
+          </div>
           <div class="waterfall">
-            {#each spanTree as node (node.span.spanId)}
-              <div
-                class="waterfall-row"
-                class:selected={node.span.spanId === selectedSpanId}
-                onclick={() => handleSpanSelect(node.span.spanId)}
-                onkeydown={(e) =>
-                  e.key === "Enter" && handleSpanSelect(node.span.spanId)}
-                role="button"
-                tabindex="0"
-                style="padding-left: {node.depth * 20}px"
-              >
-                <span class="span-name">{node.span.name}</span>
-                <span class="span-service"
-                  >{node.span.resource["service.name"] || "unknown"}</span
-                >
+            <!-- Time ruler -->
+            <div class="time-ruler">
+              <div class="ruler-labels">
+                <span>Span Name</span>
               </div>
+              <div class="ruler-timeline">
+                <span class="ruler-mark">0ms</span>
+                <span class="ruler-mark">25%</span>
+                <span class="ruler-mark">50%</span>
+                <span class="ruler-mark">75%</span>
+                <span class="ruler-mark">{traceDuration}</span>
+              </div>
+            </div>
+
+            <!-- Waterfall rows -->
+            {#each spanTree as node (node.span.spanId)}
+              <WaterfallRow
+                span={node.span}
+                depth={node.depth}
+                traceStartNano={trace.startTimeUnixNano}
+                {traceDurationNs}
+                isSelected={node.span.spanId === selectedSpanId}
+                onSelect={() => handleSpanSelect(node.span.spanId)}
+              />
             {/each}
           </div>
         </section>
@@ -127,18 +157,78 @@
                   <span class="value">{selectedSpan.name}</span>
                 </div>
                 <div class="detail-row">
+                  <span class="label">Duration:</span>
+                  <span class="value">
+                    {formatDuration(
+                      selectedSpan.startTimeUnixNano,
+                      selectedSpan.endTimeUnixNano,
+                    )}
+                  </span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Kind:</span>
+                  <span class="value">{spanKindLabel(selectedSpan.kind)}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="label">Status:</span>
+                  <span
+                    class="value"
+                    class:status-error={selectedSpan.status.code === 2}
+                    class:status-ok={selectedSpan.status.code === 1}
+                  >
+                    {statusLabel(selectedSpan.status.code)}
+                    {#if selectedSpan.status.message}
+                      - {selectedSpan.status.message}
+                    {/if}
+                  </span>
+                </div>
+                <div class="detail-row">
                   <span class="label">Span ID:</span>
                   <span class="value mono">{selectedSpan.spanId}</span>
                 </div>
+                {#if selectedSpan.parentSpanId}
+                  <div class="detail-row">
+                    <span class="label">Parent ID:</span>
+                    <span class="value mono">{selectedSpan.parentSpanId}</span>
+                  </div>
+                {/if}
                 <div class="detail-row">
                   <span class="label">Service:</span>
                   <span class="value"
                     >{selectedSpan.resource["service.name"] || "unknown"}</span
                   >
                 </div>
+
+                {#if selectedSpan.events.length > 0}
+                  <div class="section-divider"></div>
+                  <h4 class="section-title">
+                    Events ({selectedSpan.events.length})
+                  </h4>
+                  {#each selectedSpan.events as event}
+                    <div class="event-item">
+                      <div class="event-name">{event.name}</div>
+                      {#if Object.keys(event.attributes).length > 0}
+                        <div class="event-attributes">
+                          {#each Object.entries(event.attributes) as [key, value]}
+                            <div class="attribute-row">
+                              <span class="attr-key">{key}:</span>
+                              <span class="attr-value"
+                                >{JSON.stringify(value)}</span
+                              >
+                            </div>
+                          {/each}
+                        </div>
+                      {/if}
+                    </div>
+                  {/each}
+                {/if}
+
                 {#if Object.keys(selectedSpan.attributes).length > 0}
+                  <div class="section-divider"></div>
+                  <h4 class="section-title">
+                    Attributes ({Object.keys(selectedSpan.attributes).length})
+                  </h4>
                   <div class="attributes">
-                    <h4>Attributes</h4>
                     {#each Object.entries(selectedSpan.attributes) as [key, value]}
                       <div class="attribute-row">
                         <span class="attr-key">{key}:</span>
@@ -260,7 +350,29 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 
-  .waterfall-section h3,
+  .waterfall-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .waterfall-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .trace-duration {
+    font-size: 0.875rem;
+    color: #666;
+  }
+
+  .trace-duration strong {
+    color: #1976d2;
+    font-family: monospace;
+  }
+
   .sidebar-section h3 {
     margin: 0 0 1rem 0;
     font-size: 1rem;
@@ -268,38 +380,42 @@
   }
 
   .waterfall {
-    max-height: 600px;
-    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
   }
 
-  .waterfall-row {
-    padding: 0.5rem;
-    border-left: 2px solid #e0e0e0;
-    margin-bottom: 0.25rem;
-    cursor: pointer;
-    transition: background 0.15s ease;
-  }
-
-  .waterfall-row:hover {
-    background: #f5f5f5;
-  }
-
-  .waterfall-row.selected {
-    background: #e3f2fd;
-    border-left-color: #1976d2;
-  }
-
-  .span-name {
-    display: block;
-    font-weight: 500;
-    font-size: 0.875rem;
-  }
-
-  .span-service {
-    display: block;
+  .time-ruler {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 1rem;
+    padding: 0.75rem 0.5rem;
+    background: #fafafa;
+    border-bottom: 2px solid #e0e0e0;
     font-size: 0.75rem;
+    color: #666;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .ruler-labels {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .ruler-timeline {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0.5rem;
+    font-family: monospace;
+  }
+
+  .ruler-mark {
+    font-size: 0.6875rem;
     color: #999;
-    margin-top: 0.25rem;
   }
 
   .no-selection {
@@ -310,19 +426,21 @@
 
   .span-details {
     font-size: 0.875rem;
+    max-height: 700px;
+    overflow-y: auto;
   }
 
   .detail-row {
-    padding: 0.5rem 0;
+    padding: 0.75rem 0;
     border-bottom: 1px solid #f0f0f0;
-    display: flex;
-    gap: 0.5rem;
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 0.75rem;
   }
 
   .detail-row .label {
     font-weight: 600;
     color: #666;
-    min-width: 80px;
   }
 
   .detail-row .value {
@@ -330,32 +448,76 @@
     word-break: break-all;
   }
 
+  .status-error {
+    color: #c62828;
+    font-weight: 600;
+  }
+
+  .status-ok {
+    color: #2e7d32;
+    font-weight: 600;
+  }
+
   .mono {
     font-family: monospace;
   }
 
-  .attributes {
-    margin-top: 1rem;
+  .section-divider {
+    border-top: 2px solid #e0e0e0;
+    margin: 1.5rem 0 1rem 0;
   }
 
-  .attributes h4 {
+  .section-title {
     font-size: 0.875rem;
-    margin: 0 0 0.5rem 0;
-    color: #666;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+    color: #333;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .event-item {
+    padding: 0.75rem;
+    background: #f9f9f9;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    border-left: 3px solid #1976d2;
+  }
+
+  .event-name {
+    font-weight: 600;
+    color: #1976d2;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .event-attributes {
+    margin-left: 0.5rem;
+  }
+
+  .attributes {
+    background: #f9f9f9;
+    padding: 0.75rem;
+    border-radius: 4px;
   }
 
   .attribute-row {
-    padding: 0.25rem 0;
+    padding: 0.375rem 0;
     font-size: 0.8125rem;
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 0.5rem;
   }
 
   .attr-key {
     color: #1976d2;
     font-weight: 500;
+    word-break: break-word;
   }
 
   .attr-value {
     color: #666;
     font-family: monospace;
+    word-break: break-all;
   }
 </style>
