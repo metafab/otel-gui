@@ -2,7 +2,7 @@
   import type { StoredSpan } from "$lib/types";
   import { formatDuration } from "$lib/utils/time";
   import { getServiceColor } from "$lib/utils/colors";
-  import { spanKindLabel, statusLabel } from "$lib/utils/spans";
+  import { spanKindLabel } from "$lib/utils/spans";
 
   interface Props {
     span: StoredSpan;
@@ -114,6 +114,9 @@
           }}
           aria-label={isCollapsed ? "Expand" : "Collapse"}
           aria-expanded={!isCollapsed}
+          title={isCollapsed
+            ? "Expand: → Right • Toggle: Enter"
+            : "Collapse: ← Left • Toggle: Enter"}
           tabindex="-1"
         >
           {isCollapsed ? "▶" : "▼"}
@@ -234,12 +237,12 @@
     color: #666;
     cursor: pointer;
     padding: 0;
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.625rem;
+    font-size: 0.75rem;
     flex-shrink: 0;
     transition: color 0.15s ease;
   }
