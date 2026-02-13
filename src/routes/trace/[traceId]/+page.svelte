@@ -29,6 +29,7 @@
   let attributeFilter = $state<string>("");
   let spanSearchQuery = $state<string>("");
   let currentMatchIndex = $state<number>(0);
+  let currentErrorIndex = $state<number>(-1);
   let isLoading = $state<boolean>(true);
   let error = $state<string | null>(null);
   let showTraceDetails = $state<boolean>(true);
@@ -120,11 +121,42 @@
 
   const matchCount = $derived(matchingSpanIds.size);
 
+  // Error span tracking
+  const errorSpans = $derived(
+    spanTree.filter((node) => node.span.status.code === 2),
+  );
+
+  const errorCount = $derived(errorSpans.length);
+
   // Reset current match index when search changes
   $effect(() => {
     if (spanSearchQuery) {
       currentMatchIndex = 0;
     }
+  });
+
+  // Reset current error index when trace changes
+  $effect(() => {
+    if (errorCount > 0) {
+      currentErrorIndex = -1;
+    }
+  });
+
+  // Update currentErrorIndex when selectedSpanId changes
+  $effect(() => {
+    if (!selectedSpanId) {
+      currentErrorIndex = -1;
+      return;
+    }
+
+    // Find the index of the selected span in errorSpans
+    const errorIndex = errorSpans.findIndex(
+      (node) => node.span.spanId === selectedSpanId,
+    );
+
+    // If selected span is an error span, update currentErrorIndex
+    // Otherwise, set it to -1
+    currentErrorIndex = errorIndex;
   });
 
   // Load trace data on mount
@@ -225,6 +257,32 @@
     const matchedSpan = matchingSpans[currentMatchIndex];
     if (matchedSpan) {
       handleSpanSelect(matchedSpan.span.spanId);
+    }
+  }
+
+  function handleNextError() {
+    if (errorCount === 0) return;
+    if (currentErrorIndex === -1) {
+      currentErrorIndex = 0;
+    } else {
+      currentErrorIndex = (currentErrorIndex + 1) % errorCount;
+    }
+    const errorSpan = errorSpans[currentErrorIndex];
+    if (errorSpan) {
+      handleSpanSelect(errorSpan.span.spanId);
+    }
+  }
+
+  function handlePreviousError() {
+    if (errorCount === 0) return;
+    if (currentErrorIndex === -1) {
+      currentErrorIndex = errorCount - 1;
+    } else {
+      currentErrorIndex = (currentErrorIndex - 1 + errorCount) % errorCount;
+    }
+    const errorSpan = errorSpans[currentErrorIndex];
+    if (errorSpan) {
+      handleSpanSelect(errorSpan.span.spanId);
     }
   }
 
@@ -407,34 +465,62 @@
         <section class="waterfall-section">
           <div class="waterfall-header">
             <h3>Trace Timeline</h3>
-            <div class="search-controls">
-              <input
-                type="text"
-                bind:value={spanSearchQuery}
-                placeholder="Search spans..."
-                class="span-search-input"
-              />
-              {#if matchCount > 0}
-                <div class="search-navigation">
+            <div class="header-controls">
+              {#if errorCount > 0}
+                <div class="error-navigation">
+                  <span class="error-badge-nav"
+                    >Spans with errors {errorCount}</span
+                  >
                   <button
-                    onclick={handlePreviousMatch}
+                    onclick={handlePreviousError}
                     class="nav-button"
-                    title="Previous match"
+                    title="Previous error"
                   >
                     ↑
                   </button>
                   <button
-                    onclick={handleNextMatch}
+                    onclick={handleNextError}
                     class="nav-button"
-                    title="Next match"
+                    title="Next error"
                   >
                     ↓
                   </button>
-                  <span class="match-count"
-                    >{matchCount} span{matchCount !== 1 ? "s" : ""} found</span
+                  <span class="position-indicator"
+                    >{currentErrorIndex === -1
+                      ? 0
+                      : currentErrorIndex + 1}/{errorCount}</span
                   >
                 </div>
               {/if}
+              <div class="search-controls">
+                <input
+                  type="text"
+                  bind:value={spanSearchQuery}
+                  placeholder="Search spans..."
+                  class="span-search-input"
+                />
+                {#if matchCount > 0}
+                  <div class="search-navigation">
+                    <button
+                      onclick={handlePreviousMatch}
+                      class="nav-button"
+                      title="Previous match"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onclick={handleNextMatch}
+                      class="nav-button"
+                      title="Next match"
+                    >
+                      ↓
+                    </button>
+                    <span class="match-count"
+                      >{matchCount} span{matchCount !== 1 ? "s" : ""} found</span
+                    >
+                  </div>
+                {/if}
+              </div>
             </div>
             <div class="trace-duration">
               Total: <strong>{traceDuration}</strong>
@@ -892,6 +978,36 @@
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
+  }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+  }
+
+  .error-navigation {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .error-badge-nav {
+    background: #ffebee;
+    color: #c62828;
+    padding: 0.375rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .position-indicator {
+    font-size: 0.75rem;
+    color: #666;
+    font-family: monospace;
+    white-space: nowrap;
   }
 
   .search-controls {
