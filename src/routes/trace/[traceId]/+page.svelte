@@ -531,6 +531,7 @@
               {/if}
               <div class="search-controls">
                 <input
+                  id="span-search"
                   type="text"
                   bind:value={spanSearchQuery}
                   placeholder="Search spans..."
@@ -806,6 +807,7 @@
                         {/if}
                       </h4>
                       <input
+                        id="attribute-filter"
                         type="text"
                         bind:value={attributeFilter}
                         placeholder="Filter attributes..."

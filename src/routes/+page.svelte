@@ -147,7 +147,11 @@
         <div class="filter-group">
           <label for="status">Status</label>
           <label class="checkbox-label">
-            <input type="checkbox" bind:checked={showErrorsOnly} />
+            <input
+              id="errors-only"
+              type="checkbox"
+              bind:checked={showErrorsOnly}
+            />
             <span>Errors Only</span>
           </label>
         </div>
