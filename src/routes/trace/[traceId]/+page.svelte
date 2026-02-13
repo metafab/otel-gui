@@ -41,6 +41,9 @@
   let showTraceDetails = $state<boolean>(true);
   let showSpanDetails = $state<boolean>(true);
   let waterfallContainer = $state<HTMLDivElement | null>(null);
+  let sidebarWidth = $state<number>(400);
+  let isDraggingSplitter = $state<boolean>(false);
+  let contentGridElement = $state<HTMLDivElement | null>(null);
 
   // Derived: trace duration for waterfall calculation
   const traceDurationNs = $derived(
@@ -197,6 +200,19 @@
     }
   });
 
+  // Add mouse event listeners for splitter dragging
+  $effect(() => {
+    if (typeof window === "undefined") return;
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  });
+
   async function loadTrace() {
     if (!traceId) {
       error = "No trace ID provided";
@@ -235,6 +251,28 @@
     } finally {
       isLoading = false;
     }
+  }
+
+  // Splitter drag handlers
+  function handleSplitterMouseDown(e: MouseEvent) {
+    isDraggingSplitter = true;
+    document.body.classList.add("dragging-splitter");
+    e.preventDefault();
+  }
+
+  function handleMouseMove(e: MouseEvent) {
+    if (!isDraggingSplitter || !contentGridElement) return;
+
+    const gridRect = contentGridElement.getBoundingClientRect();
+    const newWidth = gridRect.right - e.clientX;
+
+    // Constrain width between 300px and 800px
+    sidebarWidth = Math.max(300, Math.min(800, newWidth));
+  }
+
+  function handleMouseUp() {
+    isDraggingSplitter = false;
+    document.body.classList.remove("dragging-splitter");
   }
 
   function handleSpanSelect(spanId: string) {
@@ -516,7 +554,14 @@
       {/if}
 
       <!-- Main Content Grid -->
-      <div class="content-grid" class:full-width={!showSpanDetails}>
+      <div
+        class="content-grid"
+        class:full-width={!showSpanDetails}
+        bind:this={contentGridElement}
+        style:grid-template-columns={showSpanDetails
+          ? `1fr 8px ${sidebarWidth}px`
+          : "1fr"}
+      >
         <!-- Waterfall Section (Left) -->
         <section class="waterfall-section">
           <div class="waterfall-header">
@@ -636,6 +681,18 @@
             {/each}
           </div>
         </section>
+
+        <!-- Splitter -->
+        {#if showSpanDetails}
+          <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+          <div
+            class="splitter"
+            onmousedown={handleSplitterMouseDown}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize panels"
+          ></div>
+        {/if}
 
         <!-- Span Details Sidebar (Right) -->
         {#if showSpanDetails}
@@ -867,6 +924,11 @@
 </div>
 
 <style>
+  :global(body.dragging-splitter) {
+    cursor: col-resize !important;
+    user-select: none;
+  }
+
   .trace-detail {
     min-height: 100vh;
     background: #fafafa;
@@ -1010,20 +1072,59 @@
 
   .content-grid {
     display: grid;
-    grid-template-columns: 1fr 400px;
-    gap: 1.5rem;
+    grid-template-columns: 1fr 8px 400px;
+    gap: 0;
+    position: relative;
   }
 
   .content-grid.full-width {
     grid-template-columns: 1fr;
   }
 
-  .waterfall-section,
+  .waterfall-section {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-right: 0;
+  }
+
   .sidebar-section {
     background: white;
     border-radius: 8px;
     padding: 1.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-left: 0;
+  }
+
+  .splitter {
+    width: 8px;
+    background: transparent;
+    cursor: col-resize;
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+  }
+
+  .splitter::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 40px;
+    background: #e0e0e0;
+    border-radius: 1px;
+    transition: background 0.2s ease;
+  }
+
+  .splitter:hover::before {
+    background: #1976d2;
+  }
+
+  .splitter:hover {
+    background: rgba(25, 118, 210, 0.05);
   }
 
   .waterfall-header {
@@ -1213,7 +1314,6 @@
 
   .span-details {
     font-size: 0.875rem;
-    max-height: 700px;
     overflow-y: auto;
   }
 
