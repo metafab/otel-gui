@@ -10,6 +10,7 @@
     traceStartNano: string;
     traceDurationNs: bigint;
     isSelected: boolean;
+    isHighlighted?: boolean;
     onSelect: () => void;
     onEventClick?: (eventIndex: number) => void;
   }
@@ -20,6 +21,7 @@
     traceStartNano,
     traceDurationNs,
     isSelected,
+    isHighlighted = false,
     onSelect,
     onEventClick,
   }: Props = $props();
@@ -70,6 +72,7 @@
 <div
   class="waterfall-row"
   class:selected={isSelected}
+  class:highlighted={isHighlighted}
   class:error={hasError}
   onclick={onSelect}
   onkeydown={(e) => e.key === "Enter" && onSelect()}
@@ -149,6 +152,25 @@
 
   .waterfall-row.error:hover {
     background: #ffebeb;
+  }
+
+  .waterfall-row.highlighted {
+    background: #fff9e6;
+    border-left: 3px solid #ffa726;
+    padding-left: calc(0.5rem - 3px);
+  }
+
+  .waterfall-row.highlighted:hover {
+    background: #fff3d9;
+  }
+
+  .waterfall-row.selected.highlighted {
+    /* Blend of selected blue and highlighted yellow */
+    background: linear-gradient(to right, #fff3d9 0%, #e3f2fd 8px);
+    /* Use orange border to show search match */
+    border-left: 3px solid #ffa726;
+    /* Add a subtle blue secondary indicator */
+    box-shadow: inset 3px 0 0 0 #1976d2;
   }
 
   .span-info {

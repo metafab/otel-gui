@@ -25,6 +25,9 @@
   let spanTree = $state<SpanTreeNode[]>([]);
   let selectedSpanId = $state<string | null>(null);
   let selectedEventIndex = $state<number | null>(null);
+  let attributeFilter = $state<string>("");
+  let spanSearchQuery = $state<string>("");
+  let currentMatchIndex = $state<number>(0);
   let isLoading = $state<boolean>(true);
   let error = $state<string | null>(null);
 
@@ -37,6 +40,89 @@
   const traceDuration = $derived(
     trace ? formatDuration(trace.startTimeUnixNano, trace.endTimeUnixNano) : "",
   );
+
+  // Span search matching
+  const matchingSpanIds = $derived.by(() => {
+    if (!spanSearchQuery.trim() || !trace) return new Set<string>();
+
+    const query = spanSearchQuery.toLowerCase();
+    const matches = new Set<string>();
+
+    for (const node of spanTree) {
+      const span = node.span;
+      const serviceName =
+        (span.resource["service.name"] as string) || "unknown";
+
+      // Match on span name
+      if (span.name.toLowerCase().includes(query)) {
+        matches.add(span.spanId);
+        continue;
+      }
+
+      // Match on service name
+      if (serviceName.toLowerCase().includes(query)) {
+        matches.add(span.spanId);
+        continue;
+      }
+
+      // Match on span kind
+      if (spanKindLabel(span.kind).toLowerCase().includes(query)) {
+        matches.add(span.spanId);
+        continue;
+      }
+
+      // Match on attribute keys or values
+      for (const [key, value] of Object.entries(span.attributes)) {
+        if (
+          key.toLowerCase().includes(query) ||
+          JSON.stringify(value).toLowerCase().includes(query)
+        ) {
+          matches.add(span.spanId);
+          break;
+        }
+      }
+
+      // Match on event names or event attributes
+      for (const event of span.events) {
+        // Match on event name
+        if (event.name.toLowerCase().includes(query)) {
+          matches.add(span.spanId);
+          break;
+        }
+
+        // Match on event attribute keys or values
+        for (const [key, value] of Object.entries(event.attributes)) {
+          if (
+            key.toLowerCase().includes(query) ||
+            JSON.stringify(value).toLowerCase().includes(query)
+          ) {
+            matches.add(span.spanId);
+            break;
+          }
+        }
+
+        // If we already matched this span via event, stop checking more events
+        if (matches.has(span.spanId)) {
+          break;
+        }
+      }
+    }
+
+    return matches;
+  });
+
+  const matchingSpans = $derived(
+    spanTree.filter((node) => matchingSpanIds.has(node.span.spanId)),
+  );
+
+  const matchCount = $derived(matchingSpanIds.size);
+
+  // Reset current match index when search changes
+  $effect(() => {
+    if (spanSearchQuery) {
+      currentMatchIndex = 0;
+    }
+  });
 
   // Load trace data on mount
   onMount(async () => {
@@ -94,6 +180,7 @@
   function handleSpanSelect(spanId: string) {
     selectedSpanId = spanId;
     selectedEventIndex = null; // Clear event selection when selecting a different span
+    attributeFilter = ""; // Clear attribute filter when selecting a different span
     // Update URL to include selected span (for bookmarking/sharing)
     const url = new URL(window.location.href);
     url.searchParams.set("spanId", spanId);
@@ -118,6 +205,24 @@
 
   function handleBack() {
     window.location.href = "/";
+  }
+
+  function handleNextMatch() {
+    if (matchCount === 0) return;
+    currentMatchIndex = (currentMatchIndex + 1) % matchCount;
+    const matchedSpan = matchingSpans[currentMatchIndex];
+    if (matchedSpan) {
+      handleSpanSelect(matchedSpan.span.spanId);
+    }
+  }
+
+  function handlePreviousMatch() {
+    if (matchCount === 0) return;
+    currentMatchIndex = (currentMatchIndex - 1 + matchCount) % matchCount;
+    const matchedSpan = matchingSpans[currentMatchIndex];
+    if (matchedSpan) {
+      handleSpanSelect(matchedSpan.span.spanId);
+    }
   }
 </script>
 
@@ -172,37 +277,77 @@
         <section class="waterfall-section">
           <div class="waterfall-header">
             <h3>Trace Timeline</h3>
+            <div class="search-controls">
+              <input
+                type="text"
+                bind:value={spanSearchQuery}
+                placeholder="Search spans..."
+                class="span-search-input"
+              />
+              {#if matchCount > 0}
+                <div class="search-navigation">
+                  <button
+                    onclick={handlePreviousMatch}
+                    class="nav-button"
+                    title="Previous match"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    onclick={handleNextMatch}
+                    class="nav-button"
+                    title="Next match"
+                  >
+                    ↓
+                  </button>
+                  <span class="match-count"
+                    >{matchCount} span{matchCount !== 1 ? "s" : ""} found</span
+                  >
+                </div>
+              {/if}
+            </div>
             <div class="trace-duration">
               Total: <strong>{traceDuration}</strong>
             </div>
           </div>
-          <div class="waterfall">
-            <!-- Time ruler -->
-            <div class="time-ruler">
-              <div class="ruler-labels">
-                <span>Span Name</span>
-              </div>
-              <div class="ruler-timeline">
-                <span class="ruler-mark">0ms</span>
-                <span class="ruler-mark">25%</span>
-                <span class="ruler-mark">50%</span>
-                <span class="ruler-mark">75%</span>
-                <span class="ruler-mark">{traceDuration}</span>
+          <div class="waterfall-container">
+            <!-- Time ruler header row -->
+            <div class="indicator-cell ruler-spacer"></div>
+            <div class="waterfall-cell">
+              <div class="time-ruler">
+                <div class="ruler-labels">
+                  <span>Span Name</span>
+                </div>
+                <div class="ruler-timeline">
+                  <span class="ruler-mark">0ms</span>
+                  <span class="ruler-mark">25%</span>
+                  <span class="ruler-mark">50%</span>
+                  <span class="ruler-mark">75%</span>
+                  <span class="ruler-mark">{traceDuration}</span>
+                </div>
               </div>
             </div>
 
-            <!-- Waterfall rows -->
+            <!-- Waterfall rows with indicators -->
             {#each spanTree as node (node.span.spanId)}
-              <WaterfallRow
-                span={node.span}
-                depth={node.depth}
-                traceStartNano={trace.startTimeUnixNano}
-                {traceDurationNs}
-                isSelected={node.span.spanId === selectedSpanId}
-                onSelect={() => handleSpanSelect(node.span.spanId)}
-                onEventClick={(eventIndex) =>
-                  handleEventClick(node.span.spanId, eventIndex)}
-              />
+              <div class="indicator-cell">
+                {#if node.span.spanId === selectedSpanId}
+                  <span class="selection-indicator-outer">▶</span>
+                {/if}
+              </div>
+              <div class="waterfall-cell">
+                <WaterfallRow
+                  span={node.span}
+                  depth={node.depth}
+                  traceStartNano={trace.startTimeUnixNano}
+                  {traceDurationNs}
+                  isSelected={node.span.spanId === selectedSpanId}
+                  isHighlighted={matchingSpanIds.has(node.span.spanId)}
+                  onSelect={() => handleSpanSelect(node.span.spanId)}
+                  onEventClick={(eventIndex) =>
+                    handleEventClick(node.span.spanId, eventIndex)}
+                />
+              </div>
             {/each}
           </div>
         </section>
@@ -371,18 +516,51 @@
                 {/if}
 
                 {#if Object.keys(selectedSpan.attributes).length > 0}
+                  {@const allAttributes = Object.entries(
+                    selectedSpan.attributes,
+                  )}
+                  {@const filteredAttributes = attributeFilter.trim()
+                    ? allAttributes.filter(([key, value]) => {
+                        const query = attributeFilter.toLowerCase();
+                        const keyMatch = key.toLowerCase().includes(query);
+                        const valueMatch = JSON.stringify(value)
+                          .toLowerCase()
+                          .includes(query);
+                        return keyMatch || valueMatch;
+                      })
+                    : allAttributes}
                   <div class="section-divider"></div>
-                  <h4 class="section-title">
-                    Attributes ({Object.keys(selectedSpan.attributes).length})
-                  </h4>
-                  <div class="attributes">
-                    {#each Object.entries(selectedSpan.attributes) as [key, value]}
-                      <div class="attribute-row">
-                        <span class="attr-key">{key}:</span>
-                        <span class="attr-value">{JSON.stringify(value)}</span>
-                      </div>
-                    {/each}
+                  <div class="section-header">
+                    <h4 class="section-title">
+                      Attributes
+                      {#if attributeFilter.trim()}
+                        ({filteredAttributes.length} of {allAttributes.length})
+                      {:else}
+                        ({allAttributes.length})
+                      {/if}
+                    </h4>
+                    <input
+                      type="text"
+                      bind:value={attributeFilter}
+                      placeholder="Filter attributes..."
+                      class="attribute-filter"
+                    />
                   </div>
+                  {#if filteredAttributes.length > 0}
+                    <div class="attributes">
+                      {#each filteredAttributes as [key, value]}
+                        <div class="attribute-row">
+                          <span class="attr-key">{key}:</span>
+                          <span class="attr-value">{JSON.stringify(value)}</span
+                          >
+                        </div>
+                      {/each}
+                    </div>
+                  {:else}
+                    <div class="no-attributes">
+                      No attributes match the filter.
+                    </div>
+                  {/if}
                 {/if}
               </div>
             {/if}
@@ -530,12 +708,69 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
   }
 
   .waterfall-header h3 {
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
+  }
+
+  .search-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    max-width: 500px;
+  }
+
+  .span-search-input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .span-search-input:focus {
+    outline: none;
+    border-color: #1976d2;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+  }
+
+  .search-navigation {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .nav-button {
+    padding: 0.375rem 0.5rem;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
+    min-width: 28px;
+  }
+
+  .nav-button:hover {
+    background: #f5f5f5;
+    border-color: #1976d2;
+  }
+
+  .nav-button:active {
+    background: #e0e0e0;
+  }
+
+  .match-count {
+    font-size: 0.75rem;
+    color: #666;
+    white-space: nowrap;
   }
 
   .trace-duration {
@@ -554,10 +789,29 @@
     font-weight: 600;
   }
 
-  .waterfall {
+  .waterfall-container {
+    display: grid;
+    grid-template-columns: 20px 1fr;
     border: 1px solid #e0e0e0;
     border-radius: 4px;
     overflow: hidden;
+  }
+
+  .indicator-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid #e0e0e0;
+  }
+
+  .indicator-cell.ruler-spacer {
+    background: #fafafa;
+  }
+
+  .selection-indicator-outer {
+    color: #1976d2;
+    font-size: 0.875rem;
+    line-height: 1;
   }
 
   .time-ruler {
@@ -664,6 +918,38 @@
     color: #333;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .section-header .section-title {
+    margin: 0;
+    flex: 1;
+  }
+
+  .attribute-filter {
+    padding: 0.375rem 0.5rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    width: 200px;
+    transition: all 0.15s ease;
+  }
+
+  .attribute-filter:focus {
+    outline: none;
+    border-color: #1976d2;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+  }
+
+  .attribute-filter::placeholder {
+    color: #999;
   }
 
   .event-item {
@@ -787,5 +1073,14 @@
     color: #666;
     font-family: monospace;
     word-break: break-all;
+  }
+
+  .no-attributes {
+    padding: 1rem;
+    text-align: center;
+    color: #999;
+    font-size: 0.875rem;
+    background: #f9f9f9;
+    border-radius: 4px;
   }
 </style>
