@@ -12,9 +12,14 @@ export const GET: RequestHandler = async ({ params }) => {
 		throw error(404, 'Trace not found');
 	}
 
-	// Convert spans Map to array for JSON serialization
+	// Convert spans Map to Record for JSON serialization
+	const spansRecord: Record<string, any> = {};
+	for (const [id, span] of trace.spans.entries()) {
+		spansRecord[id] = span;
+	}
+
 	return json({
 		...trace,
-		spans: Array.from(trace.spans.values())
+		spans: spansRecord
 	});
 };

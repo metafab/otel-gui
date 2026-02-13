@@ -37,13 +37,21 @@ Point your instrumented application's OTLP exporter to the viewer:
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 ```
 
-Or send traces via curl:
+Or send sample traces via curl:
 
 ```sh
+# Send a successful trace with 3 spans
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @sample-trace.json
+
+# Send a trace with errors (status.code = 2)
+curl -X POST http://localhost:4318/v1/traces \
+  -H "Content-Type: application/json" \
+  -d @sample-trace-error.json
 ```
+
+The UI auto-refreshes every 2 seconds to show new traces.
 
 ## Documentation
 
