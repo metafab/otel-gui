@@ -1,0 +1,20 @@
+// API endpoint to get individual trace detail
+import { json, error } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
+import { traceStore } from '$lib/server/traceStore';
+
+export const GET: RequestHandler = async ({ params }) => {
+	const { traceId } = params;
+
+	const trace = traceStore.getTrace(traceId);
+
+	if (!trace) {
+		throw error(404, 'Trace not found');
+	}
+
+	// Convert spans Map to array for JSON serialization
+	return json({
+		...trace,
+		spans: Array.from(trace.spans.values())
+	});
+};

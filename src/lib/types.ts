@@ -1,0 +1,74 @@
+// OTLP Trace Data Types
+
+export interface SpanEvent {
+	timeUnixNano: string;
+	name: string;
+	attributes: Record<string, any>;
+}
+
+export interface SpanLink {
+	traceId: string;
+	spanId: string;
+	traceState: string;
+	attributes: Record<string, any>;
+}
+
+export interface SpanStatus {
+	code: number; // 0=UNSET, 1=OK, 2=ERROR
+	message: string;
+}
+
+export interface StoredSpan {
+	traceId: string;
+	spanId: string;
+	parentSpanId: string;
+	name: string;
+	kind: number; // 0-5 (SpanKind enum)
+	startTimeUnixNano: string; // string to preserve precision
+	endTimeUnixNano: string;
+	attributes: Record<string, any>; // flattened from KeyValue[]
+	events: SpanEvent[];
+	links: SpanLink[];
+	status: SpanStatus;
+	resource: Record<string, any>; // flattened resource attributes
+	scopeName: string;
+	scopeVersion: string;
+}
+
+export interface StoredTrace {
+	traceId: string;
+	rootSpanName: string;
+	serviceName: string; // from resource service.name
+	startTimeUnixNano: string; // earliest span start
+	endTimeUnixNano: string; // latest span end
+	spanCount: number;
+	hasError: boolean; // any span with status.code === 2
+	spans: Map<string, StoredSpan>;
+}
+
+export interface TraceListItem {
+	traceId: string;
+	rootSpanName: string;
+	serviceName: string;
+	durationMs: number;
+	spanCount: number;
+	hasError: boolean;
+	startTime: string; // ISO timestamp for display
+}
+
+// Swappable storage interface
+export interface TraceStore {
+	ingest(resourceSpans: any[]): void;
+	getTraceList(limit?: number): TraceListItem[];
+	getTrace(traceId: string): StoredTrace | undefined;
+	clear(): void;
+	subscribe(fn: () => void): () => void;
+}
+
+// Span tree node for waterfall rendering
+export interface SpanTreeNode {
+	span: StoredSpan;
+	depth: number;
+	children: SpanTreeNode[];
+	collapsed: boolean;
+}
