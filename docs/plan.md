@@ -17,27 +17,33 @@ A lightweight, local OpenTelemetry trace viewer inspired by Honeycomb's trace de
 
 ## Architecture
 
-```
-┌─────────────────┐    OTLP/HTTP     ┌──────────────────────────────────┐
-│ Instrumented    │   POST /v1/traces │         SvelteKit Server          │
-│ Application     │──────────────────▶│                                  │
-│ (OTel SDK)      │   :4318           │  ┌─────────────┐ ┌────────────┐ │
-└─────────────────┘                   │  │ API Route   │ │ In-Memory  │ │
-                                      │  │ /v1/traces  │─▶│ TraceStore │ │
-                                      │  └─────────────┘ └─────┬──────┘ │
-                                      │                        │        │
-                                      │  ┌─────────────┐      │        │
-                                      │  │ GET /api/*  │◀─────┘        │
-                                      │  └──────┬──────┘               │
-                                      └─────────┼──────────────────────┘
-                                                │ JSON
-                                      ┌─────────▼──────────────────────┐
-                                      │       Svelte 5 Frontend         │
-                                      │  ┌──────────┐ ┌──────────────┐ │
-                                      │  │ Trace    │ │ Trace Detail │ │
-                                      │  │ List     │ │ (4 sections) │ │
-                                      │  └──────────┘ └──────────────┘ │
-                                      └────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Client["Instrumented Application"]
+        App["OTel SDK"]
+    end
+    
+    subgraph Server["SvelteKit Server :4318"]
+        OTLP["API Route<br/>/v1/traces<br/>(POST)"]
+        Store[("In-Memory<br/>TraceStore")]
+        API["API Routes<br/>/api/*<br/>(GET)"]
+        
+        OTLP -->|Ingest| Store
+        Store -->|Read| API
+    end
+    
+    subgraph Frontend["Svelte 5 Frontend"]
+        List["Trace List"]
+        Detail["Trace Detail<br/>(4 sections)"]
+    end
+    
+    App -->|"OTLP/HTTP<br/>POST /v1/traces"| OTLP
+    API -->|JSON| Frontend
+    
+    style Client fill:#e1f5ff
+    style Server fill:#fff4e1
+    style Frontend fill:#e8f5e9
+    style Store fill:#f3e5f5
 ```
 
 ## File Structure
