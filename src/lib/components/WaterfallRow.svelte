@@ -53,6 +53,13 @@
   const serviceColor = $derived(getServiceColor(serviceName));
   const hasError = $derived(span.status.code === 2);
 
+  const spanKind = $derived(
+    (() => {
+      const label = spanKindLabel(span.kind);
+      return label === "UNKNOWN" || label === "UNSPECIFIED" ? null : label;
+    })(),
+  );
+
   // Calculate event positions on timeline
   const eventPositions = $derived(
     span.events.map((event) => {
@@ -125,10 +132,14 @@
       <span class="span-name-text">{span.name}</span>
     </div>
     <div class="span-meta">
-      <span class="service-badge" style="background: {serviceColor}"
-        >{serviceName}</span
+      <span
+        class="service-badge"
+        style="background: {serviceColor}"
+        title="Service">{serviceName}</span
       >
-      <span class="span-kind">{spanKindLabel(span.kind)}</span>
+      {#if spanKind}
+        <span class="span-kind" title="Span kind">{spanKind}</span>
+      {/if}
     </div>
   </div>
 

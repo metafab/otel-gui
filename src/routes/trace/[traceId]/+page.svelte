@@ -679,7 +679,7 @@
               {#if totalErrorCount > 0}
                 <div class="error-navigation">
                   <span class="error-badge-nav"
-                    >Spans with errors {totalErrorCount}</span
+                    >Spans with errors: {totalErrorCount}</span
                   >
                   {#if errorCount > 0}
                     <button
