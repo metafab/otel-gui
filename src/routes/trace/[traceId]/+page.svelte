@@ -213,6 +213,16 @@
     };
   });
 
+  // Auto-focus waterfall container when trace loads
+  $effect(() => {
+    if (waterfallContainer && trace && selectedSpanId && !isLoading) {
+      // Use setTimeout to ensure DOM is ready
+      setTimeout(() => {
+        waterfallContainer?.focus();
+      }, 0);
+    }
+  });
+
   async function loadTrace() {
     if (!traceId) {
       error = "No trace ID provided";
@@ -236,9 +246,12 @@
         spanTreeRoot = buildSpanTree(spansArray);
         spanTree = flattenSpanTree(spanTreeRoot);
 
-        // Auto-select span from URL query parameter if present, otherwise reset selection
+        // Auto-select span from URL query parameter if present, otherwise select root span
         if (spanIdFromUrl && spansMap.has(spanIdFromUrl)) {
           selectedSpanId = spanIdFromUrl;
+        } else if (spanTreeRoot.length > 0) {
+          // Preselect the root span (first node in tree)
+          selectedSpanId = spanTreeRoot[0].span.spanId;
         } else {
           selectedSpanId = null;
         }
