@@ -103,7 +103,7 @@
                 rx="1.2"
                 stroke="currentColor"
                 stroke-width="1.4"
-                fill="white"
+                style="fill: var(--bg-surface)"
               /></svg
             >
           </span>
@@ -169,7 +169,7 @@
 <style>
   .attribute-item {
     padding: 0.5rem 0;
-    border-bottom: 1px solid #efefef;
+    border-bottom: 1px solid var(--border-muted);
   }
 
   .attribute-item:last-child {
@@ -196,7 +196,7 @@
   .attr-key {
     font-size: 0.75rem;
     font-weight: 600;
-    color: #1976d2;
+    color: var(--accent);
     word-break: break-word;
   }
 
@@ -214,34 +214,34 @@
 
   /* Per-type colours */
   .attr-type--string {
-    color: #2e7d32;
-    border-color: #a5d6a7;
-    background: #f1f8f1;
+    color: var(--attr-string-text);
+    border-color: var(--attr-string-border);
+    background: var(--attr-string-bg);
   }
   .attr-type--number {
-    color: #1565c0;
-    border-color: #90caf9;
-    background: #f0f4ff;
+    color: var(--attr-number-text);
+    border-color: var(--attr-number-border);
+    background: var(--attr-number-bg);
   }
   .attr-type--boolean {
-    color: #6a1b9a;
-    border-color: #ce93d8;
-    background: #fdf4ff;
+    color: var(--attr-boolean-text);
+    border-color: var(--attr-boolean-border);
+    background: var(--attr-boolean-bg);
   }
   .attr-type--array {
-    color: #e65100;
-    border-color: #ffcc80;
-    background: #fff8f0;
+    color: var(--attr-array-text);
+    border-color: var(--attr-array-border);
+    background: var(--attr-array-bg);
   }
   .attr-type--object {
-    color: #4e342e;
-    border-color: #bcaaa4;
-    background: #fdf8f6;
+    color: var(--attr-object-text);
+    border-color: var(--attr-object-border);
+    background: var(--attr-object-bg);
   }
   .attr-type--null {
-    color: #757575;
-    border-color: #bdbdbd;
-    background: #f5f5f5;
+    color: var(--attr-null-text);
+    border-color: var(--attr-null-border);
+    background: var(--attr-null-bg);
   }
 
   .attr-actions {
@@ -264,11 +264,11 @@
     height: 22px;
     padding: 0;
     background: transparent;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--border);
     border-radius: 3px;
     cursor: pointer;
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-secondary);
     line-height: 1;
     transition:
       background 0.1s ease,
@@ -277,15 +277,15 @@
   }
 
   .attr-action-btn:hover {
-    background: #f0f4ff;
-    border-color: #1976d2;
-    color: #1976d2;
+    background: var(--attr-number-bg);
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   .attr-action-btn.copied {
-    background: #e8f5e9;
-    border-color: #388e3c;
-    color: #388e3c;
+    background: var(--ok-bg);
+    border-color: var(--ok-border);
+    color: var(--ok-text);
   }
 
   .icon-copy,
@@ -297,7 +297,7 @@
   .attr-value {
     font-family: monospace;
     font-size: 0.8125rem;
-    color: #333;
+    color: var(--text-primary);
     margin: 0;
     white-space: pre-wrap;
     word-break: break-all;
@@ -307,10 +307,10 @@
   }
 
   .attr-value.multiline {
-    background: #f6f8fa;
+    background: var(--bg-code);
     border-radius: 3px;
     padding: 0.375rem 0.5rem;
-    border: 1px solid #e8e8e8;
+    border: 1px solid var(--border);
     word-break: break-word;
   }
 
@@ -321,13 +321,13 @@
     border: none;
     cursor: pointer;
     font-size: 0.75rem;
-    color: #1976d2;
+    color: var(--accent);
     text-decoration: underline;
     text-underline-offset: 2px;
     transition: color 0.1s ease;
   }
 
   .expand-btn:hover {
-    color: #1565c0;
+    color: var(--accent-hover);
   }
 </style>

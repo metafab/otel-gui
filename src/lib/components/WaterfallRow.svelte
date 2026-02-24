@@ -2,6 +2,7 @@
   import type { StoredSpan } from "$lib/types";
   import { formatDuration } from "$lib/utils/time";
   import { getServiceColor } from "$lib/utils/colors";
+  import { themeStore } from "$lib/stores/theme.svelte";
   import { spanKindLabel } from "$lib/utils/spans";
   import ServiceBadge from "$lib/components/ServiceBadge.svelte";
 
@@ -51,7 +52,10 @@
   const serviceName = $derived(
     (span.resource["service.name"] as string) || "unknown",
   );
-  const serviceColor = $derived(getServiceColor(serviceName));
+  // themeStore.current is a reactive dependency — color updates on theme toggle
+  const serviceColor = $derived(
+    getServiceColor(serviceName, themeStore.current),
+  );
   const hasError = $derived(span.status.code === 2);
 
   const spanKind = $derived(
@@ -177,7 +181,7 @@
     grid-template-columns: 300px 1fr;
     gap: 1rem;
     padding: 0.5rem;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-light);
     cursor: pointer;
     transition: background 0.15s ease;
     min-height: 48px;
@@ -185,40 +189,41 @@
   }
 
   .waterfall-row:hover {
-    background: #f9f9f9;
+    background: var(--bg-surface-hover);
   }
 
   .waterfall-row.selected {
-    background: #e3f2fd;
-    border-left: 3px solid #1976d2;
+    background: var(--selected-bg);
+    border-left: 3px solid var(--selected-border);
     padding-left: calc(0.5rem - 3px);
   }
 
   .waterfall-row.error {
-    background: #fff3f3;
+    background: var(--error-bg-row);
   }
 
   .waterfall-row.error:hover {
-    background: #ffebeb;
+    background: var(--error-bg-row-hover);
   }
 
   .waterfall-row.highlighted {
-    background: #fff9e6;
-    border-left: 3px solid #ffa726;
+    background: var(--highlight-bg);
+    border-left: 3px solid var(--highlight-border);
     padding-left: calc(0.5rem - 3px);
   }
 
   .waterfall-row.highlighted:hover {
-    background: #fff3d9;
+    background: var(--highlight-bg-hover);
   }
 
   .waterfall-row.selected.highlighted {
-    /* Blend of selected blue and highlighted yellow */
-    background: linear-gradient(to right, #fff3d9 0%, #e3f2fd 8px);
-    /* Use orange border to show search match */
-    border-left: 3px solid #ffa726;
-    /* Add a subtle blue secondary indicator */
-    box-shadow: inset 3px 0 0 0 #1976d2;
+    background: linear-gradient(
+      to right,
+      var(--highlight-bg-hover) 0%,
+      var(--selected-bg) 8px
+    );
+    border-left: 3px solid var(--highlight-border);
+    box-shadow: inset 3px 0 0 0 var(--selected-border);
   }
 
   .span-info {
@@ -242,7 +247,7 @@
   .collapse-toggle {
     background: none;
     border: none;
-    color: #666;
+    color: var(--collapse-text);
     cursor: pointer;
     padding: 0;
     width: 20px;
@@ -256,11 +261,11 @@
   }
 
   .collapse-toggle:hover {
-    color: #333;
+    color: var(--collapse-text-hover);
   }
 
   .collapse-toggle:focus {
-    outline: 2px solid #1976d2;
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
 
@@ -278,7 +283,7 @@
   }
 
   .span-kind {
-    color: #999;
+    color: var(--text-muted);
     text-transform: uppercase;
     font-size: 0.6875rem;
   }
@@ -286,7 +291,7 @@
   .timeline {
     position: relative;
     height: 28px;
-    background: #f5f5f5;
+    background: var(--timeline-bg);
     border-radius: 4px;
   }
 
@@ -307,13 +312,13 @@
   }
 
   .error-bar {
-    background: #fca5a5 !important;
-    border: 2px solid #dc2626 !important;
-    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+    background: var(--error-bar) !important;
+    border: 2px solid var(--error-bar-border) !important;
+    box-shadow: 0 0 0 2px var(--error-bar-ring);
   }
 
   .duration-label {
-    color: #374151;
+    color: var(--badge-text);
     font-size: 0.75rem;
     font-weight: 600;
     white-space: nowrap;
@@ -333,10 +338,10 @@
     top: 50%;
     width: 10px;
     height: 10px;
-    background: #ff9800;
+    background: var(--event-color);
     transform: translate(-50%, -50%) rotate(45deg);
     cursor: pointer;
-    border: 2px solid white;
+    border: 2px solid var(--event-border);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     transition: all 0.15s ease;
     z-index: 10;
@@ -348,7 +353,7 @@
   }
 
   .event-marker:focus {
-    outline: 2px solid #ff9800;
+    outline: 2px solid var(--event-color);
     outline-offset: 2px;
   }
 </style>
