@@ -30,8 +30,7 @@ function ingest(resourceSpans: any[]): void {
 		for (const ss of scopeSpansList) {
 			const scopeName = ss.scope?.name || '';
 			const scopeVersion = ss.scope?.version || '';
-
-			// Process all spans
+			const scopeAttributes = flattenAttributes(ss.scope?.attributes);
 			const spans = ss.spans || [];
 			for (const span of spans) {
 				const traceId = span.traceId;
@@ -88,7 +87,8 @@ function ingest(resourceSpans: any[]): void {
 					},
 					resource: resourceAttrs,
 					scopeName,
-					scopeVersion
+					scopeVersion,
+					scopeAttributes
 				};
 
 				// Add span to trace

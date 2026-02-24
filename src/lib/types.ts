@@ -33,6 +33,7 @@ export interface StoredSpan {
 	resource: Record<string, any>; // flattened resource attributes
 	scopeName: string;
 	scopeVersion: string;
+	scopeAttributes: Record<string, any>; // flattened scope attributes
 }
 
 export interface StoredTrace {

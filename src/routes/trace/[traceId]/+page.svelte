@@ -36,6 +36,10 @@
   let selectedSpanId = $state<string | null>(null);
   let selectedEventIndex = $state<number | null>(null);
   let attributeFilter = $state<string>("");
+  let resourceFilter = $state<string>("");
+  let scopeFilter = $state<string>("");
+  let resourceCollapsed = $state<boolean>(true);
+  let scopeCollapsed = $state<boolean>(true);
   let spanSearchQuery = $state<string>("");
   let currentMatchIndex = $state<number>(0);
   let currentErrorIndex = $state<number>(-1);
@@ -400,6 +404,8 @@
     showSpanDetails = true;
     selectedEventIndex = null; // Clear event selection when selecting a different span
     attributeFilter = ""; // Clear attribute filter when selecting a different span
+    resourceFilter = "";
+    scopeFilter = "";
     // Update URL to include selected span (for bookmarking/sharing)
     const url = new URL(window.location.href);
     url.searchParams.set("spanId", spanId);
@@ -1250,6 +1256,151 @@
                       </div>
                     {/if}
                   {/if}
+
+                  {#if Object.keys(selectedSpan.resource).length > 0}
+                    {@const allResourceEntries = Object.entries(
+                      selectedSpan.resource,
+                    ).sort(([a], [b]) => a.localeCompare(b))}
+                    {@const filteredResource = resourceFilter.trim()
+                      ? allResourceEntries.filter(([key, value]) => {
+                          const q = resourceFilter.toLowerCase();
+                          return (
+                            key.toLowerCase().includes(q) ||
+                            JSON.stringify(value).toLowerCase().includes(q)
+                          );
+                        })
+                      : allResourceEntries}
+                    <div class="section-divider"></div>
+                    <div class="section-header">
+                      <button
+                        class="section-toggle"
+                        onclick={() => (resourceCollapsed = !resourceCollapsed)}
+                        aria-expanded={!resourceCollapsed}
+                        title={resourceCollapsed
+                          ? "Expand resource"
+                          : "Collapse resource"}
+                      >
+                        <span
+                          class="toggle-chevron"
+                          class:rotated={!resourceCollapsed}>▶</span
+                        >
+                        <h4 class="section-title">
+                          Resource
+                          {#if resourceFilter.trim()}
+                            ({filteredResource.length} of {allResourceEntries.length})
+                          {:else}
+                            ({allResourceEntries.length})
+                          {/if}
+                        </h4>
+                      </button>
+                      {#if !resourceCollapsed}
+                        <input
+                          type="text"
+                          bind:value={resourceFilter}
+                          placeholder="Filter resource..."
+                          class="attribute-filter"
+                        />
+                      {/if}
+                    </div>
+                    {#if !resourceCollapsed}
+                      {#if filteredResource.length > 0}
+                        <div class="attributes">
+                          {#each filteredResource as [key, value]}
+                            <AttributeItem
+                              attrKey={key}
+                              {value}
+                              onFullscreen={openFullscreen}
+                            />
+                          {/each}
+                        </div>
+                      {:else}
+                        <div class="no-attributes">
+                          No resource attributes match the filter.
+                        </div>
+                      {/if}
+                    {/if}
+                  {/if}
+
+                  {#if selectedSpan.scopeName || selectedSpan.scopeVersion || Object.keys(selectedSpan.scopeAttributes).length > 0}
+                    {@const allScopeEntries = Object.entries(
+                      selectedSpan.scopeAttributes,
+                    ).sort(([a], [b]) => a.localeCompare(b))}
+                    {@const filteredScope = scopeFilter.trim()
+                      ? allScopeEntries.filter(([key, value]) => {
+                          const q = scopeFilter.toLowerCase();
+                          return (
+                            key.toLowerCase().includes(q) ||
+                            JSON.stringify(value).toLowerCase().includes(q)
+                          );
+                        })
+                      : allScopeEntries}
+                    <div class="section-divider"></div>
+                    <div class="section-header">
+                      <button
+                        class="section-toggle"
+                        onclick={() => (scopeCollapsed = !scopeCollapsed)}
+                        aria-expanded={!scopeCollapsed}
+                        title={scopeCollapsed
+                          ? "Expand scope"
+                          : "Collapse scope"}
+                      >
+                        <span
+                          class="toggle-chevron"
+                          class:rotated={!scopeCollapsed}>▶</span
+                        >
+                        <h4 class="section-title">
+                          Scope
+                          {#if allScopeEntries.length > 0}
+                            {#if scopeFilter.trim()}
+                              ({filteredScope.length} of {allScopeEntries.length}
+                              attrs)
+                            {:else}
+                              ({allScopeEntries.length} attrs)
+                            {/if}
+                          {/if}
+                        </h4>
+                      </button>
+                      {#if !scopeCollapsed && allScopeEntries.length > 0}
+                        <input
+                          type="text"
+                          bind:value={scopeFilter}
+                          placeholder="Filter scope attrs..."
+                          class="attribute-filter"
+                        />
+                      {/if}
+                    </div>
+                    {#if !scopeCollapsed}
+                      {#if selectedSpan.scopeName}
+                        <div class="detail-row">
+                          <span class="label">Name:</span>
+                          <span class="value">{selectedSpan.scopeName}</span>
+                        </div>
+                      {/if}
+                      {#if selectedSpan.scopeVersion}
+                        <div class="detail-row">
+                          <span class="label">Version:</span>
+                          <span class="value">{selectedSpan.scopeVersion}</span>
+                        </div>
+                      {/if}
+                      {#if allScopeEntries.length > 0}
+                        {#if filteredScope.length > 0}
+                          <div class="attributes">
+                            {#each filteredScope as [key, value]}
+                              <AttributeItem
+                                attrKey={key}
+                                {value}
+                                onFullscreen={openFullscreen}
+                              />
+                            {/each}
+                          </div>
+                        {:else}
+                          <div class="no-attributes">
+                            No scope attributes match the filter.
+                          </div>
+                        {/if}
+                      {/if}
+                    {/if}
+                  {/if}
                 </div>
               {/if}
             {:else}
@@ -1958,6 +2109,41 @@
   .section-header .section-title {
     margin: 0;
     flex: 1;
+  }
+
+  .section-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .section-toggle:hover .section-title {
+    color: var(--accent, var(--text-primary));
+  }
+
+  .section-toggle .section-title {
+    margin: 0;
+    flex: 1;
+  }
+
+  .toggle-chevron {
+    font-size: 0.6rem;
+    color: var(--text-secondary);
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+    display: inline-block;
+  }
+
+  .toggle-chevron.rotated {
+    transform: rotate(90deg);
   }
 
   .attribute-filter {
