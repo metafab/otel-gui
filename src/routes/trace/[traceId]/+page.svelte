@@ -849,7 +849,9 @@
             <span class="separator">•</span>
             <span class="root-span">{trace.rootSpanName}</span>
             <span class="separator">•</span>
-            <span class="spans">{trace.spanCount} spans</span>
+            <span class="spans"
+              >{trace.spanCount} span{trace.spanCount !== 1 ? "s" : ""}</span
+            >
             <span class="separator">•</span>
             <span class="services"
               >{serviceCount} service{serviceCount !== 1 ? "s" : ""}</span
