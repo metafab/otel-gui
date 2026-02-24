@@ -41,6 +41,7 @@
   let error = $state<string | null>(null);
   let showTraceDetails = $state<boolean>(true);
   let showSpanDetails = $state<boolean>(true);
+  let isMaximized = $derived(!showTraceDetails && !showSpanDetails);
   let waterfallContainer = $state<HTMLDivElement | null>(null);
   let sidebarWidth = $state<number>(400);
   let isDraggingSplitter = $state<boolean>(false);
@@ -257,6 +258,16 @@
     };
   });
 
+  // Auto-restore span details panel when a span is selected.
+  // NOTE: must NOT read showSpanDetails here — doing so would make it a
+  // reactive dependency, causing the effect to re-run (and immediately
+  // undo) whenever the user clicks "Hide Span Details".
+  $effect(() => {
+    if (selectedSpanId) {
+      showSpanDetails = true;
+    }
+  });
+
   // Auto-focus waterfall container when trace loads
   $effect(() => {
     if (waterfallContainer && trace && selectedSpanId && !isLoading) {
@@ -323,8 +334,9 @@
     const gridRect = contentGridElement.getBoundingClientRect();
     const newWidth = gridRect.right - e.clientX;
 
-    // Constrain width between 300px and 800px
-    sidebarWidth = Math.max(300, Math.min(800, newWidth));
+    // Constrain: sidebar min 200px, timeline (left side) min 200px
+    const maxSidebar = gridRect.width - 8 - 200;
+    sidebarWidth = Math.max(200, Math.min(maxSidebar, newWidth));
   }
 
   function handleMouseUp() {
@@ -332,8 +344,23 @@
     document.body.classList.remove("dragging-splitter");
   }
 
+  // Focus restoration for header buttons
+  let previousFocus: Element | null = null;
+
+  function captureWaterfallFocus() {
+    previousFocus = document.activeElement;
+  }
+
+  function restoreWaterfallFocus() {
+    const target = previousFocus;
+    if (target && target !== document.body) {
+      requestAnimationFrame(() => (target as HTMLElement).focus?.());
+    }
+  }
+
   function handleSpanSelect(spanId: string) {
     selectedSpanId = spanId;
+    showSpanDetails = true;
     selectedEventIndex = null; // Clear event selection when selecting a different span
     attributeFilter = ""; // Clear attribute filter when selecting a different span
     // Update URL to include selected span (for bookmarking/sharing)
@@ -552,18 +579,74 @@
       <div class="view-controls">
         <button
           class="toggle-button"
-          onclick={() => (showTraceDetails = !showTraceDetails)}
+          onpointerdown={captureWaterfallFocus}
+          onclick={() => {
+            showTraceDetails = !showTraceDetails;
+            restoreWaterfallFocus();
+          }}
           title={showTraceDetails ? "Hide trace details" : "Show trace details"}
         >
           {showTraceDetails ? "Hide" : "Show"} Trace Details
         </button>
         <button
           class="toggle-button"
-          onclick={() => (showSpanDetails = !showSpanDetails)}
+          onpointerdown={captureWaterfallFocus}
+          onclick={() => {
+            showSpanDetails = !showSpanDetails;
+            restoreWaterfallFocus();
+          }}
           title={showSpanDetails ? "Hide span details" : "Show span details"}
         >
           {showSpanDetails ? "Hide" : "Show"} Span Details
         </button>
+        {#if !isMaximized}
+          <button
+            class="toggle-button maximize-button"
+            onpointerdown={captureWaterfallFocus}
+            onclick={() => {
+              showTraceDetails = false;
+              showSpanDetails = false;
+              restoreWaterfallFocus();
+            }}
+            title="Maximize timeline"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              aria-hidden="true"
+              style="vertical-align: -1px; margin-right: 5px;"
+            >
+              <!-- top-left arrow -->
+              <polyline
+                points="5,1 1,1 1,5"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <!-- bottom-right arrow -->
+              <polyline
+                points="9,13 13,13 13,9"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <!-- diagonal line -->
+              <line
+                x1="1.5"
+                y1="1.5"
+                x2="12.5"
+                y2="12.5"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
+            </svg>Maximize
+          </button>
+        {/if}
       </div>
     {/if}
   </header>
@@ -1179,6 +1262,18 @@
     background: var(--selected-bg);
   }
 
+  .maximize-button {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .maximize-button:hover {
+    background: var(--selected-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
   .loading,
   .error {
     text-align: center;
@@ -1191,9 +1286,8 @@
   }
 
   .trace-container {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 2rem;
+    width: 100%;
+    padding: 0.75rem 0.75rem 1rem;
   }
 
   .trace-identification {
