@@ -81,6 +81,29 @@ $effect(() => {
 - **Type imports**: `import type { ... }` for interfaces
 - **No external UI libs**: Custom waterfall rendering (Honeycomb-inspired)
 
+## Keyboard Shortcuts Pattern
+
+Global shortcuts use `<svelte:window onkeydown={handleGlobalKeydown} />` in each page. Always guard with `isInputFocused()` from `$lib/utils/keyboard` before acting:
+
+```typescript
+if (e.key === "/" && !isInputFocused()) {
+  e.preventDefault();
+  searchInputEl?.focus();
+}
+```
+
+Shortcuts implemented:
+| Key | Trace list | Trace detail |
+|-----|-----------|--------------|
+| `/` | Focus search | Focus span search |
+| `Esc` | Clear search (if focused) | Clear search or go back |
+| `Alt/⌥+⌫` | Clear all traces | — |
+| `Enter` / `Shift+Enter` | — | Next / prev match (when search focused) |
+| `n` / `Shift+N` | — | Next / prev search match |
+| `e` / `Shift+E` | — | Next / prev error span |
+| `↑↓←→` / `Enter` | — | Waterfall tree navigation |
+| `?` | Toggle shortcuts overlay | Toggle shortcuts overlay |
+
 ## Key Constraints
 
 1. **Port 4318 non-negotiable** — OTLP/HTTP standard (zero config for exporters)
@@ -95,6 +118,8 @@ $effect(() => {
 - [protobuf.ts](src/lib/server/protobuf.ts) — Protobuf decoder for OTLP traces
 - [attributes.ts](src/lib/utils/attributes.ts) — OTLP AnyValue extraction
 - [time.ts](src/lib/utils/time.ts) — BigInt nanosecond formatting
+- [keyboard.ts](src/lib/utils/keyboard.ts) — `isInputFocused()` guard for global keyboard shortcuts
+- [KeyboardShortcutsHelp.svelte](src/lib/components/KeyboardShortcutsHelp.svelte) — `?` help overlay component
 - [types.ts](src/lib/types.ts) — Complete OTLP data model
 - [stream/+server.ts](src/routes/api/traces/stream/+server.ts) — SSE endpoint (debounced, heartbeat)
 - [docs/research.md](docs/research.md) — OTLP protocol details, data model, Honeycomb UI reference, gotchas

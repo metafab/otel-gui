@@ -16,6 +16,8 @@
   } from "$lib/utils/time";
   import WaterfallRow from "$lib/components/WaterfallRow.svelte";
   import AttributeItem from "$lib/components/AttributeItem.svelte";
+  import { isInputFocused, isMac } from "$lib/utils/keyboard";
+  import KeyboardShortcutsHelp from "$lib/components/KeyboardShortcutsHelp.svelte";
   import type { StoredTrace, SpanTreeNode } from "$lib/types";
 
   // Get trace ID from URL
@@ -51,6 +53,8 @@
   let fullscreenAttr = $state<{ key: string; value: string } | null>(null);
   let fullscreenCopied = $state(false);
   let traceIdCopied = $state(false);
+  let spanSearchInputEl = $state<HTMLInputElement | null>(null);
+  let showShortcuts = $state(false);
 
   async function copyTraceId() {
     if (!trace) return;
@@ -552,6 +556,19 @@
 
   // Keyboard navigation handler
   function handleWaterfallKeydown(e: KeyboardEvent) {
+    // Handle Esc explicitly here so it works regardless of browser ARIA behavior.
+    // role="treegrid" caused Firefox to consume Escape at the native accessibility layer
+    // before any JS handler saw it (per WAI-ARIA treegrid spec); role="tree" does not
+    // define an Escape behavior so Firefox passes it through — but we keep explicit
+    // handling here as a belt-and-suspenders guard.
+    // stopPropagation prevents the global svelte:window handler from double-firing.
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      handleBack();
+      return;
+    }
+
     if (!selectedSpanId || spanTree.length === 0) return;
 
     const currentIndex = spanTree.findIndex(
@@ -599,11 +616,80 @@
         break;
     }
   }
+
+  function handleGlobalKeydown(e: KeyboardEvent) {
+    // Belt-and-suspenders: fullscreen modal handles Escape itself via stopPropagation
+    if (fullscreenAttr) return;
+
+    // '/' focuses span search (only when not in an input)
+    if (e.key === "/" && !isInputFocused()) {
+      e.preventDefault();
+      spanSearchInputEl?.focus();
+      return;
+    }
+
+    // Escape: close shortcuts overlay first; clear search if input focused; else go back.
+    // (Esc when waterfall has focus is handled in handleWaterfallKeydown instead.)
+    if (e.key === "Escape") {
+      if (showShortcuts) {
+        showShortcuts = false;
+        return;
+      }
+      if (isInputFocused()) {
+        spanSearchQuery = "";
+        spanSearchInputEl?.blur();
+        // Explicitly return focus to the waterfall so the next Esc press reliably
+        // fires handleWaterfallKeydown → handleBack(). Without this, Firefox keeps
+        // document.activeElement pointing at the input after programmatic blur(),
+        // making isInputFocused() return true on the second press indefinitely.
+        waterfallContainer?.focus();
+      } else {
+        handleBack();
+      }
+      return;
+    }
+
+    // n: next search match
+    if (e.key === "n" && !e.shiftKey && !isInputFocused() && matchCount > 0) {
+      e.preventDefault();
+      handleNextMatch();
+      return;
+    }
+
+    // Shift+N: previous search match
+    if (e.key === "N" && e.shiftKey && !isInputFocused() && matchCount > 0) {
+      e.preventDefault();
+      handlePreviousMatch();
+      return;
+    }
+
+    // e: next error span
+    if (e.key === "e" && !e.shiftKey && !isInputFocused() && errorCount > 0) {
+      e.preventDefault();
+      handleNextError();
+      return;
+    }
+
+    // Shift+E: previous error span
+    if (e.key === "E" && e.shiftKey && !isInputFocused() && errorCount > 0) {
+      e.preventDefault();
+      handlePreviousError();
+      return;
+    }
+
+    // '?': toggle shortcuts help
+    if (e.key === "?" && !isInputFocused()) {
+      e.preventDefault();
+      showShortcuts = !showShortcuts;
+    }
+  }
 </script>
 
 <svelte:head>
   <title>{pageTitle}</title>
 </svelte:head>
+
+<svelte:window onkeydown={handleGlobalKeydown} />
 
 <div class="trace-detail">
   <header class="header">
@@ -681,6 +767,12 @@
           </button>
         {/if}
       </div>
+      <button
+        class="shortcut-help-btn"
+        onclick={() => (showShortcuts = !showShortcuts)}
+        title="Keyboard shortcuts (?)"
+        aria-label="Keyboard shortcuts">?</button
+      >
     {/if}
   </header>
 
@@ -831,8 +923,15 @@
                   id="span-search"
                   type="text"
                   bind:value={spanSearchQuery}
+                  bind:this={spanSearchInputEl}
                   placeholder="Search spans..."
                   class="span-search-input"
+                  onkeydown={(e) => {
+                    if (e.key === "Enter" && matchCount > 0) {
+                      e.preventDefault();
+                      e.shiftKey ? handlePreviousMatch() : handleNextMatch();
+                    }
+                  }}
                 />
                 {#if matchCount > 0}
                   <div class="search-navigation">
@@ -865,7 +964,7 @@
             bind:this={waterfallContainer}
             class="waterfall-container"
             onkeydown={handleWaterfallKeydown}
-            role="treegrid"
+            role="tree"
             tabindex="0"
             aria-label="Span tree"
           >
@@ -1185,7 +1284,10 @@
       class="fullscreen-modal"
       tabindex="-1"
       onkeydown={(e) => {
-        if (e.key === "Escape") closeFullscreen();
+        if (e.key === "Escape") {
+          e.stopPropagation();
+          closeFullscreen();
+        }
       }}
       use:autoFocus
     >
@@ -1253,6 +1355,36 @@
       <pre class="fullscreen-value">{fullscreenAttr.value}</pre>
     </div>
   </div>
+{/if}
+
+{#if showShortcuts}
+  <KeyboardShortcutsHelp
+    shortcuts={[
+      { keys: ["/"], description: "Focus span search" },
+      {
+        keys: ["Esc"],
+        description:
+          "Dismiss search (when search focused) / Go back to trace list",
+      },
+      {
+        keys: ["Enter"],
+        description: "Next search match (when search focused)",
+      },
+      {
+        keys: ["Shift+Enter"],
+        description: "Previous search match (when search focused)",
+      },
+      { keys: ["n"], description: "Next search match" },
+      { keys: ["Shift+N"], description: "Previous search match" },
+      { keys: ["e"], description: "Next error span" },
+      { keys: ["Shift+E"], description: "Previous error span" },
+      { keys: ["↑ / ↓"], description: "Navigate spans up / down" },
+      { keys: ["← / →"], description: "Collapse / expand selected span" },
+      { keys: ["Enter"], description: "Toggle collapse on selected span" },
+      { keys: ["?"], description: "Toggle keyboard shortcuts" },
+    ]}
+    onclose={() => (showShortcuts = false)}
+  />
 {/if}
 
 <style>
@@ -1323,6 +1455,28 @@
 
   .maximize-button:hover {
     background: var(--selected-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .shortcut-help-btn {
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    line-height: 1;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .shortcut-help-btn:hover {
+    background: var(--bg-muted);
     border-color: var(--accent);
     color: var(--accent);
   }

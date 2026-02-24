@@ -315,7 +315,7 @@ interface TraceStore {
 | Resizable columns | Drag column borders |
 | Change color-by field | Click column header → "Color rows based on this field" |
 | Batch collapse/expand | Context menu: "Collapse spans at this depth", "Collapse spans with this ServiceName and Name" |
-| Keyboard navigation | Arrow keys to navigate waterfall |
+| ~~Keyboard navigation~~ | ~~Arrow keys to navigate waterfall~~ — **Done**: full shortcut set implemented (`/` focus search, `n`/`Shift+N` next/prev match, `e`/`Shift+E` next/prev error, `Esc` dismiss search / go back, `Alt/⌥+Delete` clear all, `?` help overlay, arrow keys for waterfall tree) |
 | SQLite persistence | Swap `TraceStore` implementation for on-disk storage |
 | Span search in sidebar | Sidebar filter that persists across span selections |
 | Minigraph | Heatmap view of selected span relative to others (Honeycomb feature) |
@@ -339,3 +339,5 @@ interface TraceStore {
 7. **`service.name` as default color dimension**: Honeycomb defaults to this too. It's the most useful visual cue in multi-service traces.
 
 8. **Store interface for swappable storage**: The `TraceStore` interface allows dropping in SQLite later without touching API routes or frontend code.
+
+9. **Keyboard shortcuts follow web conventions**: `/` to focus search (GitHub/YouTube pattern), `n`/`Shift+N` for next/previous match (browser devtools pattern), `e`/`Shift+E` for error navigation, `Esc` for contextual dismiss/back, `Alt/⌥+Delete` for destructive clear (no browser conflicts, hard to hit accidentally), `?` for help overlay. All shortcuts guard against firing when focus is inside an input. The `?` overlay uses the same modal pattern as the attribute fullscreen viewer.

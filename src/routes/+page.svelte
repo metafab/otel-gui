@@ -1,6 +1,8 @@
 <script lang="ts">
   import { traceStore } from "$lib/stores/traces.svelte";
   import ServiceBadge from "$lib/components/ServiceBadge.svelte";
+  import { isInputFocused, isMac } from "$lib/utils/keyboard";
+  import KeyboardShortcutsHelp from "$lib/components/KeyboardShortcutsHelp.svelte";
 
   // Connect to SSE stream for real-time trace updates
   traceStore.connectSSE();
@@ -13,6 +15,8 @@
   // Filter state
   let searchQuery = $state("");
   let selectedService = $state<string>("all");
+  let searchInputEl = $state<HTMLInputElement | null>(null);
+  let showShortcuts = $state(false);
   let showErrorsOnly = $state(false);
   let minDuration = $state<number | null>(null);
   let maxDuration = $state<number | null>(null);
@@ -85,16 +89,59 @@
       await traceStore.clearAllTraces();
     }
   }
+
+  function handleGlobalKeydown(e: KeyboardEvent) {
+    // '/' focuses search (only when not in an input)
+    if (e.key === "/" && !isInputFocused()) {
+      e.preventDefault();
+      searchInputEl?.focus();
+      return;
+    }
+    // Alt/Option+Delete: Clear All.
+    // On macOS the ⌫ key fires e.key === "Backspace"; "Delete" is fn+⌫ (forward delete).
+    // Check both so the shortcut works on all platforms.
+    if (
+      (e.key === "Delete" || e.key === "Backspace") &&
+      e.altKey &&
+      !e.metaKey &&
+      !e.ctrlKey &&
+      !e.shiftKey &&
+      !isInputFocused()
+    ) {
+      e.preventDefault();
+      handleClearAll();
+      return;
+    }
+    // Escape: clear search if input focused
+    if (e.key === "Escape" && isInputFocused()) {
+      searchQuery = "";
+      searchInputEl?.blur();
+      return;
+    }
+    // '?': toggle shortcuts help
+    if (e.key === "?" && !isInputFocused()) {
+      e.preventDefault();
+      showShortcuts = !showShortcuts;
+    }
+  }
 </script>
 
 <svelte:head>
   <title>otel-gui – Traces</title>
 </svelte:head>
 
+<svelte:window onkeydown={handleGlobalKeydown} />
+
 <div class="container">
   <header>
     <h1>OpenTelemetry Traces</h1>
     <div class="actions">
+      <button
+        class="shortcut-help-btn"
+        onclick={() => (showShortcuts = !showShortcuts)}
+        title="Keyboard shortcuts (?)"
+        aria-label="Keyboard shortcuts">?</button
+      >
       <button
         onclick={handleClearAll}
         disabled={isLoading || traces.length === 0}
@@ -125,6 +172,7 @@
             id="search"
             type="text"
             bind:value={searchQuery}
+            bind:this={searchInputEl}
             placeholder="Search by trace ID, operation, or service..."
             class="search-input"
           />
@@ -242,6 +290,25 @@
   {/if}
 </div>
 
+{#if showShortcuts}
+  <KeyboardShortcutsHelp
+    shortcuts={[
+      { keys: ["/"], description: "Focus search" },
+      {
+        keys: ["Esc"],
+        description:
+          "Dismiss search (when search focused) / Go back to trace list",
+      },
+      {
+        keys: [isMac ? "Option+⌫" : "Alt+Delete"],
+        description: "Clear all traces (opens confirm dialog)",
+      },
+      { keys: ["?"], description: "Toggle keyboard shortcuts" },
+    ]}
+    onclose={() => (showShortcuts = false)}
+  />
+{/if}
+
 <style>
   .container {
     max-width: 1400px;
@@ -262,7 +329,7 @@
     margin: 0;
   }
 
-  .actions button {
+  .actions button:not(.shortcut-help-btn) {
     padding: 0.5rem 1rem;
     background: var(--error-border);
     color: white;
@@ -272,13 +339,35 @@
     font-size: 0.875rem;
   }
 
-  .actions button:hover:not(:disabled) {
+  .actions button:not(.shortcut-help-btn):hover:not(:disabled) {
     background: var(--error-text);
   }
 
-  .actions button:disabled {
+  .actions button:not(.shortcut-help-btn):disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .shortcut-help-btn {
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    line-height: 1;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .shortcut-help-btn:hover {
+    background: var(--bg-muted);
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   .error {
