@@ -3,6 +3,7 @@
   import { formatDuration } from "$lib/utils/time";
   import { getServiceColor } from "$lib/utils/colors";
   import { spanKindLabel } from "$lib/utils/spans";
+  import ServiceBadge from "$lib/components/ServiceBadge.svelte";
 
   interface Props {
     span: StoredSpan;
@@ -132,11 +133,7 @@
       <span class="span-name-text">{span.name}</span>
     </div>
     <div class="span-meta">
-      <span
-        class="service-badge"
-        style="background: {serviceColor}"
-        title="Service">{serviceName}</span
-      >
+      <ServiceBadge {serviceName} />
       {#if spanKind}
         <span class="span-kind" title="Span kind">{spanKind}</span>
       {/if}
@@ -278,16 +275,6 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.75rem;
-  }
-
-  .service-badge {
-    display: inline-block;
-    padding: 0.125rem 0.5rem;
-    color: #374151;
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 0.6875rem;
-    border: 1px solid rgba(0, 0, 0, 0.12);
   }
 
   .span-kind {

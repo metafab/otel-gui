@@ -1,6 +1,6 @@
 <script lang="ts">
   import { traceStore } from "$lib/stores/traces.svelte";
-  import { getServiceColor } from "$lib/utils/colors";
+  import ServiceBadge from "$lib/components/ServiceBadge.svelte";
 
   // Start polling for traces
   traceStore.startPolling();
@@ -220,14 +220,7 @@
               onclick={() => handleRowClick(trace.traceId)}
               class:error={trace.hasError}
             >
-              <td>
-                <span
-                  class="service-badge"
-                  style="--color: {getServiceColor(trace.serviceName)}"
-                >
-                  {trace.serviceName}
-                </span>
-              </td>
+              <td><ServiceBadge serviceName={trace.serviceName} /></td>
               <td class="operation">{trace.rootSpanName}</td>
               <td class="duration">{trace.durationMs.toFixed(2)}ms</td>
               <td class="span-count">{trace.spanCount}</td>
@@ -482,16 +475,6 @@
   td {
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
-  }
-
-  .service-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    background: var(--color);
-    color: white;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
   }
 
   .operation {
