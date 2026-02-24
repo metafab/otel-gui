@@ -2,21 +2,14 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { traceStore } from '$lib/server/traceStore';
+import { decodeProtobuf } from '$lib/server/protobuf';
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const contentType = request.headers.get('content-type') || '';
 		const contentEncoding = request.headers.get('content-encoding') || '';
 
-		// Check for unsupported protobuf format
-		if (contentType.includes('application/x-protobuf')) {
-			return json(
-				{ error: 'Protobuf format not yet supported. Please use application/json.' },
-				{ status: 400 }
-			);
-		}
-
-		// Check for gzip compression
+		// Check for gzip compression (not yet supported)
 		if (contentEncoding.includes('gzip')) {
 			return json(
 				{ error: 'Gzip compression not yet supported.' },
@@ -24,30 +17,39 @@ export const POST: RequestHandler = async ({ request }) => {
 			);
 		}
 
-		// Parse JSON body
-		if (contentType.includes('application/json')) {
-			const body = await request.json();
+		let body: { resourceSpans: any[] };
 
-			// Validate basic structure
-			if (!body.resourceSpans) {
-				return json(
-					{ error: 'Invalid OTLP payload: missing resourceSpans' },
-					{ status: 400 }
-				);
-			}
-
-			// Ingest spans
-			traceStore.ingest(body.resourceSpans);
-
-			// Return successful response (empty is valid)
-			return json({}, { status: 200 });
+		// Handle Protobuf format
+		if (contentType.includes('application/x-protobuf') || contentType.includes('application/protobuf')) {
+			const arrayBuffer = await request.arrayBuffer();
+			const buffer = new Uint8Array(arrayBuffer);
+			body = await decodeProtobuf(buffer);
+		}
+		// Handle JSON format
+		else if (contentType.includes('application/json')) {
+			body = await request.json();
+		}
+		// Unsupported content type
+		else {
+			return json(
+				{ error: 'Unsupported Content-Type. Expected application/json or application/x-protobuf.' },
+				{ status: 400 }
+			);
 		}
 
-		// Unsupported content type
-		return json(
-			{ error: 'Unsupported Content-Type. Expected application/json.' },
-			{ status: 400 }
-		);
+		// Validate basic structure
+		if (!body.resourceSpans) {
+			return json(
+				{ error: 'Invalid OTLP payload: missing resourceSpans' },
+				{ status: 400 }
+			);
+		}
+
+		// Ingest spans
+		traceStore.ingest(body.resourceSpans);
+
+		// Return successful response (empty is valid)
+		return json({}, { status: 200 });
 	} catch (error) {
 		console.error('Error processing OTLP request:', error);
 		return json(

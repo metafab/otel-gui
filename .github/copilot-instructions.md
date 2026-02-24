@@ -85,13 +85,14 @@ $effect(() => {
 
 1. **Port 4318 non-negotiable** — OTLP/HTTP standard (zero config for exporters)
 2. **adapter-node required** — In-memory `Map` must persist across requests
-3. **JSON only (v1)** — Protobuf deferred to v2
+3. **Protobuf and JSON supported** — Both `application/json` and `application/x-protobuf` content types accepted
 4. **No gzip yet** — Request body decompression deferred to v2
 5. **Max 1000 traces** — FIFO eviction to prevent memory leaks
 
 ## Reference Files
 
 - [traceStore.ts](src/lib/server/traceStore.ts) — Ingestion, span merging, eviction
+- [protobuf.ts](src/lib/server/protobuf.ts) — Protobuf decoder for OTLP traces
 - [attributes.ts](src/lib/utils/attributes.ts) — OTLP AnyValue extraction
 - [time.ts](src/lib/utils/time.ts) — BigInt nanosecond formatting
 - [types.ts](src/lib/types.ts) — Complete OTLP data model

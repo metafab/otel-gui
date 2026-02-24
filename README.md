@@ -29,6 +29,15 @@ pnpm run build
 
 Preview the production build with `pnpm run preview`.
 
+## Supported Formats
+
+The viewer accepts OTLP trace data in both formats:
+
+- **JSON** - `Content-Type: application/json`
+- **Protobuf** - `Content-Type: application/x-protobuf` or `application/protobuf`
+
+Most OpenTelemetry SDKs support both formats. The viewer automatically detects and decodes the format based on the Content-Type header.
+
 ## Sending Traces
 
 ### Quick Demo (Recommended)
