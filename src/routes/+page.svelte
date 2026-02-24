@@ -206,9 +206,9 @@
       <table>
         <thead>
           <tr>
-            <th>Service</th>
-            <th>Operation</th>
-            <th>Duration</th>
+            <th>Root Service</th>
+            <th>Root Name</th>
+            <th>Root Duration</th>
             <th>Spans</th>
             <th>Time</th>
             <th>Status</th>
