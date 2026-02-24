@@ -272,10 +272,11 @@
   .service-badge {
     display: inline-block;
     padding: 0.125rem 0.5rem;
-    color: white;
+    color: #374151;
     border-radius: 10px;
     font-weight: 600;
     font-size: 0.6875rem;
+    border: 1px solid rgba(0, 0, 0, 0.12);
   }
 
   .span-kind {
@@ -300,6 +301,7 @@
     padding: 0 0.5rem;
     transition: opacity 0.15s ease;
     min-width: 2px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
   }
 
   .timeline-bar:hover {
@@ -307,16 +309,16 @@
   }
 
   .error-bar {
-    border: 2px solid #c62828;
-    box-shadow: 0 0 0 1px rgba(198, 40, 40, 0.2);
+    background: #fca5a5 !important;
+    border: 2px solid #dc2626 !important;
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
   }
 
   .duration-label {
-    color: white;
+    color: #374151;
     font-size: 0.75rem;
     font-weight: 600;
     white-space: nowrap;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     overflow: hidden;
     text-overflow: ellipsis;
   }

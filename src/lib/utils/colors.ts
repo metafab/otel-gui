@@ -1,22 +1,23 @@
-// Deterministic color palette for service names
+// Deterministic pastel color palette for service names
+// Avoids red (reserved for error spans)
 
 const COLOR_PALETTE = [
-	'#3b82f6', // blue
-	'#10b981', // green
-	'#f59e0b', // amber
-	'#ef4444', // red
-	'#8b5cf6', // purple
-	'#ec4899', // pink
-	'#14b8a6', // teal
-	'#f97316', // orange
-	'#6366f1', // indigo
-	'#84cc16', // lime
-	'#06b6d4', // cyan
-	'#a855f7', // violet
-	'#eab308', // yellow
-	'#22c55e', // green-500
-	'#0ea5e9', // sky
-	'#f43f5e' // rose
+	'#93c5fd', // pastel blue
+	'#6ee7b7', // pastel emerald
+	'#fcd34d', // pastel amber
+	'#c4b5fd', // pastel violet
+	'#a5f3fc', // pastel cyan-light
+	'#5eead4', // pastel teal
+	'#fdba74', // pastel orange
+	'#a5b4fc', // pastel indigo
+	'#bef264', // pastel lime
+	'#67e8f9', // pastel cyan
+	'#d8b4fe', // pastel purple
+	'#fde047', // pastel yellow
+	'#86efac', // pastel green
+	'#7dd3fc', // pastel sky
+	'#ddd6fe', // pastel lavender
+	'#99f6e4' // pastel teal-light
 ];
 
 // Simple hash function for strings
@@ -33,7 +34,7 @@ function hashString(str: string): number {
 // Get color for service name (deterministic)
 export function getServiceColor(serviceName: string): string {
 	if (!serviceName) {
-		return '#6b7280'; // gray for unknown services
+		return '#d1d5db'; // pastel gray for unknown services
 	}
 
 	const index = hashString(serviceName) % COLOR_PALETTE.length;
