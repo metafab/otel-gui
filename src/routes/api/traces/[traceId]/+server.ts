@@ -1,7 +1,7 @@
 // API endpoint to get individual trace detail
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { traceStore } from '$lib/server/traceStore';
+import { traceStore, resolveRootSpanName } from '$lib/server/traceStore';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const { traceId } = params;
@@ -20,6 +20,7 @@ export const GET: RequestHandler = async ({ params }) => {
 
 	return json({
 		...trace,
+		rootSpanName: resolveRootSpanName(trace),
 		spans: spansRecord
 	});
 };

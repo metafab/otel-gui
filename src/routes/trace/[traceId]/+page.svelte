@@ -633,7 +633,7 @@
           <div class="trace-meta">
             <span class="service">{trace.serviceName}</span>
             <span class="separator">•</span>
-            <span class="operation">{trace.rootSpanName}</span>
+            <span class="root-span">{trace.rootSpanName}</span>
             <span class="separator">•</span>
             <span class="spans">{trace.spanCount} spans</span>
             {#if trace.hasError}
@@ -1291,7 +1291,7 @@
     color: #1976d2;
   }
 
-  .operation {
+  .root-span {
     font-family: monospace;
   }
 

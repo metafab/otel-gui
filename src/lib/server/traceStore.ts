@@ -126,6 +126,26 @@ function ingest(resourceSpans: any[]): void {
 	notifyListeners();
 }
 
+// Find the effective root span name for a trace.
+// Tries true root (no parentSpanId) first, then falls back to the earliest
+// orphan — a span whose parent is not present in this trace (typical in
+// multi-service traces where the gateway root arrives in a separate batch
+// or was never instrumented).
+export function resolveRootSpanName(trace: StoredTrace): string {
+	const spans = Array.from(trace.spans.values());
+	let rootSpan = spans.find((s) => !s.parentSpanId || s.parentSpanId === '');
+	if (!rootSpan) {
+		const orphans = spans.filter((s) => !trace.spans.has(s.parentSpanId));
+		if (orphans.length > 0) {
+			orphans.sort((a, b) =>
+				BigInt(a.startTimeUnixNano) < BigInt(b.startTimeUnixNano) ? -1 : 1
+			);
+			rootSpan = orphans[0];
+		}
+	}
+	return rootSpan?.name || 'unknown';
+}
+
 function getTraceList(limit = 100): TraceListItem[] {
 	const traceArray = Array.from(traces.values());
 
@@ -136,32 +156,15 @@ function getTraceList(limit = 100): TraceListItem[] {
 		return aBigInt > bBigInt ? 1 : aBigInt < bBigInt ? -1 : 0;
 	});
 
-	return traceArray.slice(0, limit).map((trace) => {
-		// Find effective root: span with no parent first, then fall back to orphan
-		// (a span whose parent ID is not present in the trace — common in multi-service traces
-		// where the gateway root span arrives from a different service batch or never arrives)
-		const spans = Array.from(trace.spans.values());
-		let rootSpan = spans.find((s) => !s.parentSpanId || s.parentSpanId === '');
-		if (!rootSpan) {
-			const orphans = spans.filter((s) => !trace.spans.has(s.parentSpanId));
-			if (orphans.length > 0) {
-				orphans.sort((a, b) =>
-					BigInt(a.startTimeUnixNano) < BigInt(b.startTimeUnixNano) ? -1 : 1
-				);
-				rootSpan = orphans[0];
-			}
-		}
-
-		return {
+	return traceArray.slice(0, limit).map((trace) => ({
 			traceId: trace.traceId,
-			rootSpanName: rootSpan?.name || 'unknown',
+			rootSpanName: resolveRootSpanName(trace),
 			serviceName: trace.serviceName,
 			durationMs: getDurationMs(trace.startTimeUnixNano, trace.endTimeUnixNano),
 			spanCount: trace.spanCount,
 			hasError: trace.hasError,
 			startTime: formatTimestamp(trace.startTimeUnixNano)
-		};
-	});
+		}));
 }
 
 function getTrace(traceId: string): StoredTrace | undefined {
