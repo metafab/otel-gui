@@ -15,6 +15,7 @@
     formatRelativeTime,
   } from "$lib/utils/time";
   import WaterfallRow from "$lib/components/WaterfallRow.svelte";
+  import AttributeItem from "$lib/components/AttributeItem.svelte";
   import type { StoredTrace, SpanTreeNode } from "$lib/types";
 
   // Get trace ID from URL
@@ -44,6 +45,49 @@
   let sidebarWidth = $state<number>(400);
   let isDraggingSplitter = $state<boolean>(false);
   let contentGridElement = $state<HTMLDivElement | null>(null);
+  let fullscreenAttr = $state<{ key: string; value: string } | null>(null);
+  let fullscreenCopied = $state(false);
+  let traceIdCopied = $state(false);
+
+  async function copyTraceId() {
+    if (!trace) return;
+    try {
+      await navigator.clipboard.writeText(trace.traceId);
+      traceIdCopied = true;
+      setTimeout(() => {
+        traceIdCopied = false;
+      }, 1500);
+    } catch {
+      // ignore
+    }
+  }
+
+  function openFullscreen(key: string, formatted: string) {
+    fullscreenAttr = { key, value: formatted };
+    fullscreenCopied = false;
+  }
+
+  function closeFullscreen() {
+    fullscreenAttr = null;
+    fullscreenCopied = false;
+  }
+
+  async function copyFullscreenValue() {
+    if (!fullscreenAttr) return;
+    try {
+      await navigator.clipboard.writeText(fullscreenAttr.value);
+      fullscreenCopied = true;
+      setTimeout(() => {
+        fullscreenCopied = false;
+      }, 1500);
+    } catch {
+      // ignore
+    }
+  }
+
+  function autoFocus(node: HTMLElement) {
+    node.focus();
+  }
 
   // Derived: trace duration for waterfall calculation
   const traceDurationNs = $derived(
@@ -533,7 +577,59 @@
       <!-- Trace Identification Section -->
       {#if showTraceDetails}
         <section class="trace-identification">
-          <h2>Trace {trace.traceId}</h2>
+          <div class="trace-id-row">
+            <h2>Trace {trace.traceId}</h2>
+            <button
+              class="trace-id-copy-btn"
+              class:copied={traceIdCopied}
+              onclick={copyTraceId}
+              title="Copy trace ID"
+              aria-label="Copy trace ID"
+            >
+              {#if traceIdCopied}
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  aria-hidden="true"
+                  ><polyline
+                    points="2,7 5.5,10.5 12,3"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  /></svg
+                >
+              {:else}
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  aria-hidden="true"
+                  ><rect
+                    x="4"
+                    y="1"
+                    width="9"
+                    height="10"
+                    rx="1.2"
+                    stroke="currentColor"
+                    stroke-width="1.4"
+                  /><rect
+                    x="1"
+                    y="3"
+                    width="9"
+                    height="10"
+                    rx="1.2"
+                    stroke="currentColor"
+                    stroke-width="1.4"
+                    fill="white"
+                  /></svg
+                >
+              {/if}
+            </button>
+          </div>
           <div class="trace-meta">
             <span class="service">{trace.serviceName}</span>
             <span class="separator">•</span>
@@ -809,12 +905,11 @@
                         {#if Object.keys(event.attributes).length > 0}
                           <div class="event-attributes">
                             {#each Object.entries(event.attributes) as [key, value]}
-                              <div class="attribute-row">
-                                <span class="attr-key">{key}:</span>
-                                <span class="attr-value"
-                                  >{JSON.stringify(value)}</span
-                                >
-                              </div>
+                              <AttributeItem
+                                attrKey={key}
+                                {value}
+                                onFullscreen={openFullscreen}
+                              />
                             {/each}
                           </div>
                         {/if}
@@ -860,12 +955,11 @@
                         {#if Object.keys(link.attributes).length > 0}
                           <div class="link-attributes">
                             {#each Object.entries(link.attributes) as [key, value]}
-                              <div class="attribute-row">
-                                <span class="attr-key">{key}:</span>
-                                <span class="attr-value"
-                                  >{JSON.stringify(value)}</span
-                                >
-                              </div>
+                              <AttributeItem
+                                attrKey={key}
+                                {value}
+                                onFullscreen={openFullscreen}
+                              />
                             {/each}
                           </div>
                         {/if}
@@ -908,12 +1002,11 @@
                     {#if filteredAttributes.length > 0}
                       <div class="attributes">
                         {#each filteredAttributes as [key, value]}
-                          <div class="attribute-row">
-                            <span class="attr-key">{key}:</span>
-                            <span class="attr-value"
-                              >{JSON.stringify(value)}</span
-                            >
-                          </div>
+                          <AttributeItem
+                            attrKey={key}
+                            {value}
+                            onFullscreen={openFullscreen}
+                          />
                         {/each}
                       </div>
                     {:else}
@@ -935,6 +1028,96 @@
     </div>
   {/if}
 </div>
+
+<!-- Fullscreen attribute value modal -->
+{#if fullscreenAttr}
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <div
+    class="fullscreen-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Full attribute value"
+  >
+    <button
+      class="fullscreen-backdrop"
+      onclick={closeFullscreen}
+      aria-label="Close"
+      tabindex="-1"
+    ></button>
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="fullscreen-modal"
+      tabindex="-1"
+      onkeydown={(e) => {
+        if (e.key === "Escape") closeFullscreen();
+      }}
+      use:autoFocus
+    >
+      <div class="fullscreen-header">
+        <span class="fullscreen-key">{fullscreenAttr.key}</span>
+        <div class="fullscreen-actions">
+          <button
+            class="fullscreen-action-btn"
+            class:copied={fullscreenCopied}
+            onclick={copyFullscreenValue}
+            title="Copy value"
+          >
+            {#if fullscreenCopied}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                aria-hidden="true"
+                ><polyline
+                  points="2,7 5.5,10.5 12,3"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                /></svg
+              >
+              Copied
+            {:else}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                aria-hidden="true"
+                ><rect
+                  x="4"
+                  y="1"
+                  width="9"
+                  height="10"
+                  rx="1.2"
+                  stroke="currentColor"
+                  stroke-width="1.4"
+                /><rect
+                  x="1"
+                  y="3"
+                  width="9"
+                  height="10"
+                  rx="1.2"
+                  stroke="currentColor"
+                  stroke-width="1.4"
+                  fill="white"
+                /></svg
+              >
+              Copy
+            {/if}
+          </button>
+          <button
+            class="fullscreen-close-btn"
+            onclick={closeFullscreen}
+            title="Close (Esc)">✕</button
+          >
+        </div>
+      </div>
+      <pre class="fullscreen-value">{fullscreenAttr.value}</pre>
+    </div>
+  </div>
+{/if}
 
 <style>
   :global(body.dragging-splitter) {
@@ -1019,10 +1202,48 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 
+  .trace-id-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
   .trace-identification h2 {
     font-size: 1.25rem;
-    margin: 0 0 0.75rem 0;
+    margin: 0;
     font-family: monospace;
+  }
+
+  .trace-id-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #999;
+    flex-shrink: 0;
+    transition:
+      background 0.1s ease,
+      border-color 0.1s ease,
+      color 0.1s ease;
+  }
+
+  .trace-id-copy-btn:hover {
+    background: #f0f4ff;
+    border-color: #1976d2;
+    color: #1976d2;
+  }
+
+  .trace-id-copy-btn.copied {
+    background: #e8f5e9;
+    border-color: #388e3c;
+    color: #388e3c;
   }
 
   .trace-meta {
@@ -1522,28 +1743,8 @@
 
   .attributes {
     background: #f9f9f9;
-    padding: 0.75rem;
+    padding: 0.5rem 0.75rem;
     border-radius: 4px;
-  }
-
-  .attribute-row {
-    padding: 0.375rem 0;
-    font-size: 0.8125rem;
-    display: grid;
-    grid-template-columns: 180px 1fr;
-    gap: 0.5rem;
-  }
-
-  .attr-key {
-    color: #1976d2;
-    font-weight: 500;
-    word-break: break-word;
-  }
-
-  .attr-value {
-    color: #666;
-    font-family: monospace;
-    word-break: break-all;
   }
 
   .no-attributes {
@@ -1553,5 +1754,132 @@
     font-size: 0.875rem;
     background: #f9f9f9;
     border-radius: 4px;
+  }
+
+  /* Fullscreen modal */
+  .fullscreen-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .fullscreen-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    border: none;
+    padding: 0;
+    cursor: default;
+  }
+
+  .fullscreen-modal {
+    position: relative;
+    z-index: 1;
+    background: white;
+    border-radius: 8px;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.2),
+      0 2px 8px rgba(0, 0, 0, 0.1);
+    width: 75vw;
+    height: 75vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    outline: none;
+  }
+
+  .fullscreen-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid #e0e0e0;
+    background: #f6f8fa;
+    gap: 1rem;
+    flex-shrink: 0;
+  }
+
+  .fullscreen-key {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1976d2;
+    font-family: monospace;
+    word-break: break-all;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .fullscreen-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .fullscreen-action-btn {
+    padding: 0.375rem 0.75rem;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    color: #333;
+    transition:
+      background 0.1s ease,
+      border-color 0.1s ease,
+      color 0.1s ease;
+  }
+
+  .fullscreen-action-btn:hover {
+    background: #f0f4ff;
+    border-color: #1976d2;
+    color: #1976d2;
+  }
+
+  .fullscreen-action-btn.copied {
+    background: #e8f5e9;
+    border-color: #388e3c;
+    color: #388e3c;
+  }
+
+  .fullscreen-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #666;
+    transition:
+      background 0.1s ease,
+      color 0.1s ease;
+  }
+
+  .fullscreen-close-btn:hover {
+    background: #ffebee;
+    border-color: #c62828;
+    color: #c62828;
+  }
+
+  .fullscreen-value {
+    font-family: monospace;
+    font-size: 0.875rem;
+    color: #333;
+    padding: 1rem;
+    margin: 0;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.6;
+    flex: 1;
   }
 </style>
