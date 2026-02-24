@@ -46,6 +46,8 @@
   let sidebarWidth = $state<number>(400);
   let isDraggingSplitter = $state<boolean>(false);
   let contentGridElement = $state<HTMLDivElement | null>(null);
+  let nameColumnWidth = $state<number>(300);
+  let isColumnSplitterDragging = $state<boolean>(false);
   let fullscreenAttr = $state<{ key: string; value: string } | null>(null);
   let fullscreenCopied = $state(false);
   let traceIdCopied = $state(false);
@@ -321,26 +323,42 @@
     }
   }
 
-  // Splitter drag handlers
+  // Splitter drag handlers - sidebar (right panel)
   function handleSplitterMouseDown(e: MouseEvent) {
     isDraggingSplitter = true;
     document.body.classList.add("dragging-splitter");
     e.preventDefault();
   }
 
+  // Column splitter drag handler - name column vs timeline
+  function handleColumnSplitterMouseDown(e: MouseEvent) {
+    isColumnSplitterDragging = true;
+    document.body.classList.add("dragging-splitter");
+    e.preventDefault();
+  }
+
   function handleMouseMove(e: MouseEvent) {
-    if (!isDraggingSplitter || !contentGridElement) return;
+    if (isDraggingSplitter && contentGridElement) {
+      const gridRect = contentGridElement.getBoundingClientRect();
+      const newWidth = gridRect.right - e.clientX;
+      // Constrain: sidebar min 200px, timeline (left side) min 200px
+      const maxSidebar = gridRect.width - 8 - 200;
+      sidebarWidth = Math.max(200, Math.min(maxSidebar, newWidth));
+    }
 
-    const gridRect = contentGridElement.getBoundingClientRect();
-    const newWidth = gridRect.right - e.clientX;
-
-    // Constrain: sidebar min 200px, timeline (left side) min 200px
-    const maxSidebar = gridRect.width - 8 - 200;
-    sidebarWidth = Math.max(200, Math.min(maxSidebar, newWidth));
+    if (isColumnSplitterDragging && waterfallContainer) {
+      const rect = waterfallContainer.getBoundingClientRect();
+      // 20px indicator column + 8px left padding of the row
+      const newWidth = e.clientX - rect.left - 20 - 8;
+      // Min 120px, max: leave at least 200px for the timeline
+      const maxNameCol = rect.width - 20 - 16 - 200;
+      nameColumnWidth = Math.max(120, Math.min(maxNameCol, newWidth));
+    }
   }
 
   function handleMouseUp() {
     isDraggingSplitter = false;
+    isColumnSplitterDragging = false;
     document.body.classList.remove("dragging-splitter");
   }
 
@@ -833,9 +851,22 @@
             <!-- Time ruler header row -->
             <div class="indicator-cell ruler-spacer"></div>
             <div class="waterfall-cell">
-              <div class="time-ruler">
+              <div
+                class="time-ruler"
+                style:grid-template-columns="{nameColumnWidth}px 1fr"
+              >
                 <div class="ruler-labels">
                   <span>Span Name</span>
+                  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                  <div
+                    class="col-resizer"
+                    class:active={isColumnSplitterDragging}
+                    onmousedown={handleColumnSplitterMouseDown}
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label="Resize name column"
+                    title="Drag to resize span name column"
+                  ></div>
                 </div>
                 <div class="ruler-timeline">
                   <span class="ruler-mark">0ms</span>
@@ -860,6 +891,7 @@
                   depth={node.depth}
                   traceStartNano={trace.startTimeUnixNano}
                   {traceDurationNs}
+                  {nameColumnWidth}
                   isSelected={node.span.spanId === selectedSpanId}
                   isHighlighted={matchingSpanIds.has(node.span.spanId)}
                   hasChildren={node.children.length > 0}
@@ -1624,6 +1656,35 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    position: relative;
+  }
+
+  .col-resizer {
+    position: absolute;
+    right: -12px;
+    top: 0;
+    bottom: 0;
+    width: 16px;
+    cursor: col-resize;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .col-resizer::after {
+    content: "";
+    display: block;
+    width: 3px;
+    height: 60%;
+    border-radius: 2px;
+    background: var(--border);
+    transition: background 0.15s ease;
+  }
+
+  .col-resizer:hover::after,
+  .col-resizer.active::after {
+    background: var(--accent);
   }
 
   .ruler-timeline {

@@ -15,6 +15,7 @@
     isHighlighted?: boolean;
     hasChildren?: boolean;
     isCollapsed?: boolean;
+    nameColumnWidth?: number;
     onSelect: () => void;
     onToggleCollapse?: () => void;
     onEventClick?: (eventIndex: number) => void;
@@ -29,6 +30,7 @@
     isHighlighted = false,
     hasChildren = false,
     isCollapsed = false,
+    nameColumnWidth = 300,
     onSelect,
     onToggleCollapse,
     onEventClick,
@@ -103,6 +105,7 @@
   class:selected={isSelected}
   class:highlighted={isHighlighted}
   class:error={hasError}
+  style:grid-template-columns="{nameColumnWidth}px 1fr"
   onclick={onSelect}
   onkeydown={() => {
     // Keyboard navigation handled at container level
@@ -178,7 +181,7 @@
 <style>
   .waterfall-row {
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 300px 1fr; /* overridden by inline style */
     gap: 1rem;
     padding: 0.5rem;
     border-bottom: 1px solid var(--border-light);
