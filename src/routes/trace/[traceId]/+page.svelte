@@ -102,6 +102,21 @@
     trace ? formatDuration(trace.startTimeUnixNano, trace.endTimeUnixNano) : "",
   );
 
+  // Derived: unique service count and max tree depth
+  const serviceCount = $derived(
+    trace
+      ? new Set(
+          Array.from(trace.spans.values()).map(
+            (s) => (s.resource["service.name"] as string) || "unknown",
+          ),
+        ).size
+      : 0,
+  );
+
+  const maxDepth = $derived(
+    spanTree.length > 0 ? Math.max(...spanTree.map((n) => n.depth)) + 1 : 0,
+  );
+
   // Span search matching
   const matchingSpanIds = $derived.by(() => {
     if (!spanSearchQuery.trim() || !trace) return new Set<string>();
@@ -737,6 +752,12 @@
             <span class="root-span">{trace.rootSpanName}</span>
             <span class="separator">•</span>
             <span class="spans">{trace.spanCount} spans</span>
+            <span class="separator">•</span>
+            <span class="services"
+              >{serviceCount} service{serviceCount !== 1 ? "s" : ""}</span
+            >
+            <span class="separator">•</span>
+            <span class="depth">depth {maxDepth}</span>
             {#if trace.hasError}
               <span class="separator">•</span>
               <span class="error-badge">ERROR</span>
