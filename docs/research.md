@@ -265,9 +265,10 @@ No Svelte-specific trace/gantt library exists. All serious trace viewers (Jaeger
 
 | Approach    | Pros | Cons | Verdict |
 |-------------|------|------|---------|
-| **Polling**     | Simplest implementation | Higher latency, unnecessary requests | **v1** — 2s interval is fine for local dev |
-| **SSE**         | Simple, built-in `EventSource` API, uni-directional | No binary support | **v2** upgrade |
-| **WebSocket**   | Bi-directional, binary | Complex setup, SvelteKit lacks native WS support | Overkill |
+| **Polling**          | Simplest implementation | Higher latency, unnecessary requests | Replaced by SSE |
+| **SSE**              | Simple, built-in `EventSource` API, uni-directional, auto-reconnect | No binary support | **Implemented** — `GET /api/traces/stream` |
+| **Streaming HTTP**   | Same transport as SSE, works with `fetch` + `ReadableStream` | No built-in reconnect, no event framing — must implement both manually | Inferior to SSE for this use case |
+| **WebSocket**        | Bi-directional, binary | Complex setup, SvelteKit lacks native WS support | Overkill |
 
 ### Swappable Storage Interface
 

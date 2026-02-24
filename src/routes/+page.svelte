@@ -2,8 +2,8 @@
   import { traceStore } from "$lib/stores/traces.svelte";
   import ServiceBadge from "$lib/components/ServiceBadge.svelte";
 
-  // Start polling for traces
-  traceStore.startPolling();
+  // Connect to SSE stream for real-time trace updates
+  traceStore.connectSSE();
 
   // Reactive state from store
   const traces = $derived(traceStore.traces);

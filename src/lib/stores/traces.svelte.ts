@@ -1,9 +1,6 @@
 // Client-side reactive store for traces using Svelte 5 runes
 import type { TraceListItem, StoredTrace } from '$lib/types';
 
-// Polling interval (ms)
-const POLL_INTERVAL = 2000;
-
 // State management
 let traces = $state.raw<TraceListItem[]>([]);
 let selectedId = $state<string | null>(null);
@@ -13,33 +10,26 @@ let error = $state<string | null>(null);
 // Derived state
 const selected = $derived(traces.find((t) => t.traceId === selectedId) || null);
 
-// Fetch trace list from API
-async function fetchTraces() {
-	try {
-		const response = await fetch('/api/traces?limit=1000');
-		if (!response.ok) {
-			throw new Error(`Failed to fetch traces: ${response.statusText}`);
-		}
-		const data = await response.json();
-		traces = data;
-		error = null;
-	} catch (err) {
-		error = err instanceof Error ? err.message : 'Unknown error fetching traces';
-		console.error('Error fetching traces:', err);
-	}
-}
-
-// Start polling - to be called from component's $effect
-function startPolling() {
+// Connect to SSE stream — receives trace list pushes in real-time
+function connectSSE() {
 	$effect(() => {
-		const interval = setInterval(() => {
-			fetchTraces();
-		}, POLL_INTERVAL);
+		const es = new EventSource('/api/traces/stream');
 
-		// Initial fetch
-		fetchTraces();
+		es.addEventListener('traces', (event: MessageEvent) => {
+			traces = JSON.parse(event.data);
+			error = null;
+		});
 
-		return () => clearInterval(interval);
+		es.addEventListener('open', () => {
+			error = null;
+		});
+
+		es.onerror = () => {
+			// EventSource auto-reconnects — note it but don't surface as fatal
+			console.warn('SSE connection lost, reconnecting...');
+		};
+
+		return () => es.close();
 	});
 }
 
@@ -107,5 +97,5 @@ export const traceStore = {
 	fetchTrace,
 	selectTrace,
 	clearAllTraces,
-	startPolling
+	connectSSE
 };

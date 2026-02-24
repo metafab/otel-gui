@@ -11,7 +11,7 @@ A lightweight, local OpenTelemetry trace viewer inspired by Honeycomb's trace de
 | Language    | TypeScript                       | Full-stack type safety.                                       |
 | Storage     | In-memory (`Map`) behind interface | Simplest for v1. Swappable to SQLite via same interface.     |
 | OTLP format | JSON and Protobuf                | Both `application/json` and `application/x-protobuf` supported. |
-| Real-time   | Polling 2s (v1)                  | Simplest. Upgrade to SSE in v2.                               |
+| Real-time   | SSE (`EventSource`)              | Single persistent connection, instant push on ingest.         |
 | Port        | 4318                             | Standard OTLP/HTTP port — zero config on exporter side.       |
 | Visualization | Custom HTML/CSS waterfall      | Industry standard approach (Honeycomb, Jaeger all do this).   |
 
@@ -61,7 +61,7 @@ src/
 │   │   ├── spans.ts                      # spanKindLabel(), statusLabel(), buildSpanTree()
 │   │   └── colors.ts                     # Service name → color palette
 │   ├── stores/
-│   │   └── traces.svelte.ts              # Client-side reactive store (polling)
+│   │   └── traces.svelte.ts              # Client-side reactive store (SSE)
 │   └── components/
 │       ├── TraceIdentification.svelte    # Section 1: top bar
 │       ├── TraceSummary.svelte           # Section 2: collapsible minimap
@@ -76,7 +76,9 @@ src/
 │   │       └── +server.ts                # OTLP receiver endpoint
 │   ├── api/
 │   │   └── traces/
-│   │       ├── +server.ts                # GET /api/traces (list)
+│   │       ├── +server.ts                # GET /api/traces (list), DELETE (clear)
+│   │       ├── stream/
+│   │       │   └── +server.ts            # GET /api/traces/stream (SSE)
 │   │       └── [traceId]/
 │   │           └── +server.ts            # GET /api/traces/:id (detail)
 │   └── traces/
@@ -165,7 +167,7 @@ interface TraceStore {
 - `getTraceList()`: return sorted summaries (newest first), with configurable limit
 - `getTrace()`: return full trace with all spans
 - `clear()`: reset all data
-- `subscribe()`: listener registration for future SSE support
+- `subscribe()`: listener registration used by SSE stream endpoint
 - Max traces eviction: keep at most 1000 traces, evict oldest when exceeded
 
 #### Step 4 — Utility helpers (`$lib/utils/`)
@@ -195,14 +197,14 @@ interface TraceStore {
 #### Step 7 — Client-side reactive store (`$lib/stores/traces.svelte.ts`)
 - `$state.raw<TraceListItem[]>([])` for trace list (avoids deep proxying overhead)
 - `$state<string | null>(null)` for `selectedTraceId`
-- `$effect()` with `setInterval` polling `GET /api/traces` every 2s
+- `$effect()` opens `EventSource('/api/traces/stream')`, updates state on `traces` event, closes on cleanup
 - Export as module-level runes (`.svelte.ts` file)
 
 #### Step 8 — Trace list page (`src/routes/+page.svelte`)
 - Table/list showing: service name, root span name, duration (ms), span count, error indicator (red badge), timestamp
 - Click row → `goto('/traces/' + traceId)`
 - Header with app title and "Clear traces" button
-- Auto-refreshes via the polling store
+- Real-time updates via SSE stream (`/api/traces/stream`)
 - Empty state when no traces received yet
 
 ### Phase 4: Frontend — Trace Detail (Honeycomb-Inspired)
@@ -307,7 +309,7 @@ interface TraceStore {
 
 | Feature | Description |
 |---------|-------------|
-| SSE real-time push | Replace polling with Server-Sent Events |
+| ~~SSE real-time push~~ | ~~Replace polling with Server-Sent Events~~ — **Done** |
 | Subtree zoom | Magnifying glass per parent span, re-scales timeline |
 | Customizable columns | "Fields" button to add attribute columns to waterfall |
 | Resizable columns | Drag column borders |
@@ -324,7 +326,7 @@ interface TraceStore {
 
 1. **JSON and Protobuf OTLP support**: Both `application/json` and `application/x-protobuf` formats are supported using `protobufjs` with vendored `.proto` files from the OpenTelemetry specification. Byte fields (traceId, spanId) are automatically converted from base64 to hex to match OTLP JSON format.
 
-2. **Polling over SSE for v1**: 2s polling is adequate for a local dev tool. SSE requires `ReadableStream` management and has reconnection quirks. Easy upgrade path.
+2. **SSE over polling**: `EventSource` provides instant push on ingest with zero client-side interval management. The server endpoint debounces rapid batched exports (100 ms), sends a heartbeat every 30 s to keep proxies alive, and uses `traceStore.subscribe()` for decoupled notification. The `EventSource` API auto-reconnects on drop.
 
 3. **Custom waterfall over charting library**: No suitable off-the-shelf Svelte trace/gantt component exists. All serious trace viewers build custom waterfalls with CSS-positioned divs.
 

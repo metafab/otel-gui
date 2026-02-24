@@ -91,15 +91,16 @@ $effect(() => {
 
 ## Reference Files
 
-- [traceStore.ts](src/lib/server/traceStore.ts) — Ingestion, span merging, eviction
+- [traceStore.ts](src/lib/server/traceStore.ts) — Ingestion, span merging, eviction, SSE subscriber notifications
 - [protobuf.ts](src/lib/server/protobuf.ts) — Protobuf decoder for OTLP traces
 - [attributes.ts](src/lib/utils/attributes.ts) — OTLP AnyValue extraction
 - [time.ts](src/lib/utils/time.ts) — BigInt nanosecond formatting
 - [types.ts](src/lib/types.ts) — Complete OTLP data model
+- [stream/+server.ts](src/routes/api/traces/stream/+server.ts) — SSE endpoint (debounced, heartbeat)
 - [docs/research.md](docs/research.md) — OTLP protocol details, data model, Honeycomb UI reference, gotchas
 - [docs/plan.md](docs/plan.md) — Full implementation plan (16 steps), architecture diagram, deferred v2 features
 - [docs/testing.md](docs/testing.md) — Testing strategy, priority test cases, sample test data
 
 ## Implementation Philosophy
 
-Deliberately minimal: no UI libraries, no OTLP libraries, no database. Clean upgrade path via swappable interfaces (`TraceStore` for future SQLite, polling → SSE).
+Deliberately minimal: no UI libraries, no OTLP libraries, no database. Clean upgrade path via swappable interfaces (`TraceStore` for future SQLite). Real-time updates use SSE (`GET /api/traces/stream`) — `traceStore.subscribe()` notifies the stream handler, which debounces and pushes `event: traces` to the client.
