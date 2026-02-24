@@ -16,7 +16,7 @@ const selected = $derived(traces.find((t) => t.traceId === selectedId) || null);
 // Fetch trace list from API
 async function fetchTraces() {
 	try {
-		const response = await fetch('/api/traces');
+		const response = await fetch('/api/traces?limit=1000');
 		if (!response.ok) {
 			throw new Error(`Failed to fetch traces: ${response.statusText}`);
 		}
