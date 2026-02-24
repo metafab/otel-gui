@@ -1712,11 +1712,11 @@
   }
 
   .detail-row {
-    padding: 0.75rem 0;
+    padding: 0.35rem 0;
     border-bottom: 1px solid var(--border-light);
     display: grid;
-    grid-template-columns: 100px 1fr;
-    gap: 0.75rem;
+    grid-template-columns: 80px 1fr;
+    gap: 0.4rem;
   }
 
   .detail-row .label {
