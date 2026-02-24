@@ -904,7 +904,7 @@
                         </div>
                         {#if Object.keys(event.attributes).length > 0}
                           <div class="event-attributes">
-                            {#each Object.entries(event.attributes) as [key, value]}
+                            {#each Object.entries(event.attributes).sort( ([a], [b]) => a.localeCompare(b), ) as [key, value]}
                               <AttributeItem
                                 attrKey={key}
                                 {value}
@@ -954,7 +954,7 @@
                         </div>
                         {#if Object.keys(link.attributes).length > 0}
                           <div class="link-attributes">
-                            {#each Object.entries(link.attributes) as [key, value]}
+                            {#each Object.entries(link.attributes).sort( ([a], [b]) => a.localeCompare(b), ) as [key, value]}
                               <AttributeItem
                                 attrKey={key}
                                 {value}
@@ -970,7 +970,7 @@
                   {#if Object.keys(selectedSpan.attributes).length > 0}
                     {@const allAttributes = Object.entries(
                       selectedSpan.attributes,
-                    )}
+                    ).sort(([a], [b]) => a.localeCompare(b))}
                     {@const filteredAttributes = attributeFilter.trim()
                       ? allAttributes.filter(([key, value]) => {
                           const query = attributeFilter.toLowerCase();
