@@ -10,7 +10,7 @@ A lightweight, local OpenTelemetry trace viewer inspired by Honeycomb's trace de
 | Adapter     | `@sveltejs/adapter-node`         | Required for persistent in-memory state and SSE support.      |
 | Language    | TypeScript                       | Full-stack type safety.                                       |
 | Storage     | In-memory (`Map`) behind interface | Simplest for v1. Swappable to SQLite via same interface.     |
-| OTLP format | JSON only (v1)                   | No extra dependencies. Most SDKs support JSON export.         |
+| OTLP format | JSON and Protobuf                | Both `application/json` and `application/x-protobuf` supported. |
 | Real-time   | Polling 2s (v1)                  | Simplest. Upgrade to SSE in v2.                               |
 | Port        | 4318                             | Standard OTLP/HTTP port — zero config on exporter side.       |
 | Visualization | Custom HTML/CSS waterfall      | Industry standard approach (Honeycomb, Jaeger all do this).   |
@@ -47,7 +47,8 @@ src/
 ├── lib/
 │   ├── types.ts                          # TypeScript types (StoredSpan, StoredTrace, etc.)
 │   ├── server/
-│   │   └── traceStore.ts                 # In-memory TraceStore (server-only)
+│   │   ├── traceStore.ts                 # In-memory TraceStore (server-only)
+│   │   └── protobuf.ts                   # Protobuf decoder for OTLP traces
 │   ├── utils/
 │   │   ├── attributes.ts                 # flattenAttributes(), extractAnyValue()
 │   │   ├── time.ts                       # formatDuration(), formatTimestamp()
@@ -172,11 +173,11 @@ interface TraceStore {
 #### Step 5 — OTLP endpoint (`src/routes/v1/traces/+server.ts`)
 - `POST` handler
 - Check `Content-Type: application/json` → `request.json()`
-- Check `Content-Encoding: gzip` → decompress via `DecompressionStream` before parsing
+- Check `Content-Type: application/x-protobuf` or `application/protobuf` → decode via `decodeProtobuf()` from `$lib/server/protobuf`
+- Check `Content-Encoding: gzip` → decompress via `DecompressionStream` before parsing (deferred to v2)
 - Call `traceStore.ingest(body.resourceSpans)`
 - Return `200` with `{}` body
 - Return `400` for malformed requests
-- Log `Content-Type: application/x-protobuf` as unsupported (v2)
 
 #### Step 6 — Frontend API routes
 - `GET /api/traces` → returns `TraceListItem[]` JSON, sorted by start time descending, limit 100
@@ -300,7 +301,6 @@ interface TraceStore {
 
 | Feature | Description |
 |---------|-------------|
-| Protobuf support | `application/x-protobuf` via `protobufjs` + vendored `.proto` files |
 | SSE real-time push | Replace polling with Server-Sent Events |
 | Subtree zoom | Magnifying glass per parent span, re-scales timeline |
 | Customizable columns | "Fields" button to add attribute columns to waterfall |
@@ -316,7 +316,7 @@ interface TraceStore {
 
 ## Key Design Decisions
 
-1. **JSON-only OTLP for v1**: Most SDK exporters support JSON. Protobuf adds `protobufjs` + `.proto` file management complexity. JSON can be parsed with built-in `request.json()`.
+1. **JSON and Protobuf OTLP support**: Both `application/json` and `application/x-protobuf` formats are supported using `protobufjs` with vendored `.proto` files from the OpenTelemetry specification. Byte fields (traceId, spanId) are automatically converted from base64 to hex to match OTLP JSON format.
 
 2. **Polling over SSE for v1**: 2s polling is adequate for a local dev tool. SSE requires `ReadableStream` management and has reconnection quirks. Easy upgrade path.
 
