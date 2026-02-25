@@ -36,8 +36,7 @@ echo ""
 echo "🔍 Check the UI - you should see the initial spans from frontend and backend-api"
 echo "   Trace ID: 7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c"
 echo ""
-echo "⏳ Waiting 3 seconds before sending remaining spans..."
-sleep 3
+read -r -p "⏳ Press Enter to send remaining spans..."
 
 # Send second batch of spans (simulating delayed arrival)
 echo ""
