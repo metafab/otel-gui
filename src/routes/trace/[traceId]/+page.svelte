@@ -1061,7 +1061,7 @@
           >
             <!-- Time ruler header row -->
             <div class="indicator-cell ruler-spacer"></div>
-            <div class="waterfall-cell">
+            <div class="waterfall-cell ruler-cell">
               <div
                 class="time-ruler"
                 style:grid-template-columns="{nameColumnWidth}px 1fr"
@@ -2112,6 +2112,15 @@
 
   .indicator-cell.ruler-spacer {
     background: var(--bg-page);
+    position: sticky;
+    top: 0;
+    z-index: 11;
+  }
+
+  .waterfall-cell.ruler-cell {
+    position: sticky;
+    top: 0;
+    z-index: 11;
   }
 
   .selection-indicator-outer {
@@ -2129,9 +2138,6 @@
     border-bottom: 2px solid var(--border);
     font-size: 0.75rem;
     color: var(--text-secondary);
-    position: sticky;
-    top: 0;
-    z-index: 10;
   }
 
   .ruler-labels {
