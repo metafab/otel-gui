@@ -45,7 +45,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 git clone https://github.com/metafab/otel-gui
 cd otel-gui
 pnpm install
-pnpm run dev
+pnpm dev
 ```
 
 Open [http://localhost:4318](http://localhost:4318) — the OTLP endpoint is live at the same address.
@@ -117,8 +117,8 @@ See [SAMPLE_TRACES.md](./SAMPLE_TRACES.md) for a full feature exploration guide.
 ## 🏗️ Building
 
 ```sh
-pnpm run build
-node build   # starts on port 4318
+pnpm build
+PORT=4318 node build
 ```
 
 The production build uses `@sveltejs/adapter-node`. In-memory state is kept alive by the Node.js process — no external store required for local use.
