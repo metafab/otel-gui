@@ -1,1 +1,0 @@
-Core OTLP ingestion/merge behavior is introduced here (incremental span arrival, eviction, metadata updates) but there are no automated tests added alongside it. Adding Vitest coverage for ingest() (merging across multiple POSTs, out-of-order root span, eviction at MAX_TRACES, error propagation) matches the project’s stated testing priorities.
