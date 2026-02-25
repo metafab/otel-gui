@@ -19,6 +19,7 @@
   import ServiceMap from "$lib/components/ServiceMap.svelte";
   import { isInputFocused, isMac } from "$lib/utils/keyboard";
   import KeyboardShortcutsHelp from "$lib/components/KeyboardShortcutsHelp.svelte";
+  import ChevronIcon from "$lib/components/ChevronIcon.svelte";
   import type { StoredTrace, SpanTreeNode, ServiceMapData } from "$lib/types";
 
   // Get trace ID from URL
@@ -923,25 +924,7 @@
                 onclick={() => (showMiniMap = !showMiniMap)}
                 aria-expanded={showMiniMap}
               >
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  aria-hidden="true"
-                  style:transform={showMiniMap
-                    ? "rotate(90deg)"
-                    : "rotate(0deg)"}
-                  style:transition="transform 0.15s ease"
-                >
-                  <path
-                    d="M4 2l4 4-4 4"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
+                <ChevronIcon expanded={showMiniMap} />
                 Service Map
                 <span class="mini-map-count"
                   >{miniMapData.nodes.length} service{miniMapData.nodes
@@ -1365,10 +1348,7 @@
                           ? "Expand resource"
                           : "Collapse resource"}
                       >
-                        <span
-                          class="toggle-chevron"
-                          class:rotated={!resourceCollapsed}>▶</span
-                        >
+                        <ChevronIcon expanded={!resourceCollapsed} />
                         <h4 class="section-title">
                           Resource
                           {#if resourceFilter.trim()}
@@ -1429,10 +1409,7 @@
                           ? "Expand scope"
                           : "Collapse scope"}
                       >
-                        <span
-                          class="toggle-chevron"
-                          class:rotated={!scopeCollapsed}>▶</span
-                        >
+                        <ChevronIcon expanded={!scopeCollapsed} />
                         <h4 class="section-title">
                           Scope
                           {#if allScopeEntries.length > 0}
@@ -2264,18 +2241,6 @@
   .section-toggle .section-title {
     margin: 0;
     flex: 1;
-  }
-
-  .toggle-chevron {
-    font-size: 0.6rem;
-    color: var(--text-secondary);
-    transition: transform 0.15s ease;
-    flex-shrink: 0;
-    display: inline-block;
-  }
-
-  .toggle-chevron.rotated {
-    transform: rotate(90deg);
   }
 
   .attribute-filter {

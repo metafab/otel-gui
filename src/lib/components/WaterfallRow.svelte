@@ -5,6 +5,7 @@
   import { themeStore } from "$lib/stores/theme.svelte";
   import { spanKindLabel } from "$lib/utils/spans";
   import ServiceBadge from "$lib/components/ServiceBadge.svelte";
+  import ChevronIcon from "$lib/components/ChevronIcon.svelte";
 
   interface Props {
     span: StoredSpan;
@@ -134,7 +135,7 @@
             : "Collapse: ← Left • Toggle: Enter"}
           tabindex="-1"
         >
-          {isCollapsed ? "▶" : "▼"}
+          <ChevronIcon expanded={!isCollapsed} />
         </button>
       {/if}
       <span class="span-name-text">{span.name}</span>
