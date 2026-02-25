@@ -12,6 +12,7 @@
   import {
     formatDuration,
     formatTimestamp,
+    formatTimestampLocal,
     formatRelativeTime,
   } from "$lib/utils/time";
   import WaterfallRow from "$lib/components/WaterfallRow.svelte";
@@ -900,14 +901,18 @@
           <div class="trace-timestamps">
             <div class="timestamp-item">
               <span class="timestamp-label">Started:</span>
-              <span class="timestamp-value"
-                >{formatTimestamp(trace.startTimeUnixNano)}</span
+              <span
+                class="timestamp-value"
+                title={formatTimestamp(trace.startTimeUnixNano)}
+                >{formatTimestampLocal(trace.startTimeUnixNano)}</span
               >
             </div>
             <div class="timestamp-item">
               <span class="timestamp-label">Ended:</span>
-              <span class="timestamp-value"
-                >{formatTimestamp(trace.endTimeUnixNano)}</span
+              <span
+                class="timestamp-value"
+                title={formatTimestamp(trace.endTimeUnixNano)}
+                >{formatTimestampLocal(trace.endTimeUnixNano)}</span
               >
             </div>
             <div class="timestamp-item">
@@ -1126,14 +1131,22 @@
                   </div>
                   <div class="detail-row">
                     <span class="label">Started:</span>
-                    <span class="value"
-                      >{formatTimestamp(selectedSpan.startTimeUnixNano)}</span
+                    <span
+                      class="value"
+                      title={formatTimestamp(selectedSpan.startTimeUnixNano)}
+                      >{formatTimestampLocal(
+                        selectedSpan.startTimeUnixNano,
+                      )}</span
                     >
                   </div>
                   <div class="detail-row">
                     <span class="label">Ended:</span>
-                    <span class="value"
-                      >{formatTimestamp(selectedSpan.endTimeUnixNano)}</span
+                    <span
+                      class="value"
+                      title={formatTimestamp(selectedSpan.endTimeUnixNano)}
+                      >{formatTimestampLocal(
+                        selectedSpan.endTimeUnixNano,
+                      )}</span
                     >
                   </div>
                   <div class="detail-row">

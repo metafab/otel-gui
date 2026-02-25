@@ -31,10 +31,21 @@ export function formatDuration(startNano: string, endNano: string): string {
 	}
 }
 
+/**
+ * Converts nanoseconds to milliseconds for Date constructor
+ */
 export function formatTimestamp(nanoString: string): string {
-	// Convert nanoseconds to milliseconds for Date constructor
+	// 
 	const ms = Number(BigInt(nanoString) / 1_000_000n);
 	return new Date(ms).toISOString();
+}
+
+/**
+ * Returns a human-readable local time string
+ */
+export function formatTimestampLocal(nanoString: string): string {
+	const ms = Number(BigInt(nanoString) / 1_000_000n);
+	return new Date(ms).toLocaleString();
 }
 
 export function getDurationMs(startNano: string, endNano: string): number {
