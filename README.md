@@ -1,113 +1,162 @@
 # otel-gui
 
-A lightweight, local OpenTelemetry trace viewer inspired by Honeycomb's trace detail UI. Built with SvelteKit 5.
+A lightweight, zero-config OpenTelemetry trace viewer for local development. 
 
-## Quick Start
+Drop-in replacement for a collector endpoint — point your OTLP exporter at it and see traces immediately. No database required.
+
+![Trace list view](docs/screenshots/trace-detail.png)
+
+## Features
+
+- **Zero config** — listens on port 4318, the standard OTLP/HTTP port. Most exporters work without changing a single setting
+- **OTLP JSON & Protobuf** — accepts both `application/json` and `application/x-protobuf` payloads
+- **Real-time updates** — new traces appear instantly via SSE (Server-Sent Events), no polling
+- **Waterfall timeline** — Honeycomb-style span waterfall with resizable name column and sidebar
+- **Service map** — auto-generated graph of cross-service calls with error rates and latency (p50/p99)
+- **Search & filter** — filter trace list by text, service, status, and duration range; search spans inside a trace
+- **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `m` to toggle service map, escape key to clear search and go back to the trace list, `?` for shortcuts help
+- **Error navigation** — jump between error spans with one key
+- **Span details** — attributes, events with timeline markers, resource attributes, instrumentation scope, span links
+- **Collapse/expand** — hide subtrees in the waterfall for cleaner viewing
+- **Resizable panels** — drag splitters to resize the waterfall name column and the span details sidebar
+- **Dark mode** — toggle between light and dark themes
+- **Incremental ingestion** — spans from the same trace can arrive in separate requests and out of order; the store merges them correctly
+- **In-memory, no persistence** — stores up to 1 000 traces in memory (FIFO eviction), nothing written to disk
+
+## Screenshots
+
+### Trace list & filters
+
+![Trace list](docs/screenshots/trace-list.png)
+
+### Service map
+
+![Service map](docs/screenshots/service-map.png)
+
+### Trace detail — waterfall & span sidebar
+
+![Trace detail](docs/screenshots/trace-detail.png)
+
+## 🛠️ Quick Start
+
+**Requires**: Node.js ≥ 18, [pnpm](https://pnpm.io)
 
 ```sh
-# install dependencies
+git clone https://github.com/metafab/otel-gui
+cd otel-gui
 pnpm install
-```
-
-## Developing
-
-Start the development server on port 4318 (standard OTLP/HTTP port):
-
-```sh
 pnpm run dev
 ```
 
-The viewer will be accessible at `http://localhost:4318` and will receive OTLP traces at `POST http://localhost:4318/v1/traces`.
+Open [http://localhost:4318](http://localhost:4318) — the OTLP endpoint is live at the same address.
 
-## Building
+### Sending Traces
 
-To create a production version:
-
-```sh
-pnpm run build
-```
-
-Preview the production build with `pnpm run preview`.
-
-## Supported Formats
-
-The viewer accepts OTLP trace data in both formats:
-
-- **JSON** - `Content-Type: application/json`
-- **Protobuf** - `Content-Type: application/x-protobuf` or `application/protobuf`
-
-Most OpenTelemetry SDKs support both formats. The viewer automatically detects and decodes the format based on the Content-Type header.
-
-## Sending Traces
-
-### Quick Demo (Recommended)
-
-Try the interactive e-commerce demo to see all features:
-
-```sh
-./demo-ecommerce-trace.sh
-```
-
-This demonstrates:
-- Multi-service distributed tracing (frontend, backend-api, auth-service, database)
-- Incremental span arrival and merging
-- Parent-child span hierarchy with deep nesting
-- Error handling with automatic retry
-- Collapse/expand functionality
-
-### Manual Examples
-
-Point your instrumented application's OTLP exporter to the viewer:
+Point any OpenTelemetry SDK exporter at the viewer:
 
 ```sh
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 ```
 
-Or send sample traces via curl:
+No other configuration needed. The viewer accepts the standard `POST /v1/traces` endpoint.
+
+### Try the demo
+
+Run the bundled e-commerce demo to see all features immediately:
 
 ```sh
-# Simple trace with 3 spans
+./demo-ecommerce-trace.sh
+```
+
+This sends a realistic multi-service trace (frontend → backend-api → auth-service + database) with errors, retries, and incremental span arrival across two requests.
+
+### Manual curl examples
+
+```sh
+# Simple 3-span trace
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @sample-trace.json
 
-# E-commerce trace - Part 1 (frontend + backend-api)
+# E-commerce trace — part 1 (frontend + backend-api)
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @sample-trace-ecommerce-part1.json
 
-# E-commerce trace - Part 2 (auth-service + database with errors)
+# E-commerce trace — part 2 (auth-service + database with errors)
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @sample-trace-ecommerce-part2.json
 
-# Trace with errors (status.code = 2)
+# Trace with error spans (status.code = 2)
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @sample-trace-error.json
 
-# Trace with span links (demonstrates distributed tracing)
+# Trace with span links
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @sample-trace-links.json
 ```
 
-The UI auto-refreshes every 2 seconds to show new traces.
+See [SAMPLE_TRACES.md](./SAMPLE_TRACES.md) for a full feature exploration guide.
 
-For detailed examples and feature exploration guide, see **[SAMPLE_TRACES.md](./SAMPLE_TRACES.md)**.
+## ⌨️ Keyboard Shortcuts
 
-## Features
+| Key | Where | Action |
+|-----|-------|--------|
+| `/` | Everywhere | Focus search |
+| `Esc` | Everywhere | Clear search / go back |
+| `m` | Everywhere | Toggle Traces / Service Map tab |
+| `Alt+Backspace` | Trace list | Clear all traces |
+| `↑↓←→` / `Enter` | Trace detail | Navigate span tree |
+| `n` / `N` | Trace detail | Next / prev search match |
+| `e` / `E` | Trace detail | Next / prev error span |
+| `?` | Everywhere | Toggle shortcuts overlay |
 
-- 🔍 **Search & Filter** - Find spans by name, service, attributes, or events
-- ⌨️ **Keyboard Navigation** - Navigate span tree with arrow keys (↑↓←→ Enter)
-- ❌ **Error Navigation** - Jump between error spans with dedicated controls
-- 🌲 **Collapse/Expand** - Hide/show child spans for cleaner viewing
-- 📊 **Multi-Service** - Color-coded services with waterfall timeline
-- ⚡ **Events Timeline** - Event markers on span timeline with click navigation
-- 👁️ **Panel Toggles** - Hide/show trace details and span sidebar
-- 🔄 **Incremental Updates** - Handles spans arriving out-of-order
+## 🏗️ Building
 
-## Documentation
+```sh
+pnpm run build
+node build   # starts on port 4318
+```
 
-- **[SAMPLE_TRACES.md](./SAMPLE_TRACES.md)** - Sample traces, demo guide, and feature exploration
-- **[docs/](./docs)** - Implementation plan, architecture, and research notes
+The production build uses `@sveltejs/adapter-node`. In-memory state is kept alive by the Node.js process — no external store required for local use.
+
+## 📐 Architecture
+
+```
+POST /v1/traces          ← OTLP receiver (JSON + Protobuf)
+GET  /api/traces         ← trace list for the UI
+GET  /api/traces/:id     ← single trace
+GET  /api/traces/stream  ← SSE stream (real-time push)
+GET  /api/service-map    ← aggregated service graph
+```
+
+Server-only state lives in `src/lib/server/traceStore.ts` — a `Map<traceId, StoredTrace>` with FIFO eviction at 1 000 entries. SSE subscribers are notified on every write and receive a debounced `event: traces` message.
+
+## 💠 Tech Stack
+
+- [SvelteKit 5](https://kit.svelte.dev) with Svelte 5 runes (`$state`, `$derived`, `$effect`)
+- [`@sveltejs/adapter-node`](https://kit.svelte.dev/docs/adapter-node) for persistent in-memory state
+- [`protobufjs`](https://github.com/protobufjs/protobuf.js) for Protobuf decoding
+- No UI library — custom waterfall, service map SVG, and all components from scratch
+- TypeScript throughout
+
+## 🤝 Contributing
+
+You can [submit a new idea](https://github.com/metafab/otel-gui/issues/new).
+
+And of course, you can develop an existing or a new idea 😀:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes ~and add tests~
+4. ~Run tests (`pnpm test`)~
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+## 📄 License
+
+This project is open source. See the [LICENSE](./LICENSE) file for details.
