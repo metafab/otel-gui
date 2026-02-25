@@ -87,13 +87,10 @@
     ]
       .filter(Boolean)
       .join("\n");
-    const rect = (e.currentTarget as SVGElement)
-      .closest("svg")!
-      .getBoundingClientRect();
     tooltip = {
       visible: true,
-      x: e.clientX - rect.left + 12,
-      y: e.clientY - rect.top - 8,
+      x: e.clientX + 12,
+      y: e.clientY - 8,
       content: lines,
     };
   }
@@ -108,13 +105,10 @@
       `p50: ${formatMs(edge.p50Ms)}`,
       `p99: ${formatMs(edge.p99Ms)}`,
     ].join("\n");
-    const rect = (e.currentTarget as SVGElement)
-      .closest("svg")!
-      .getBoundingClientRect();
     tooltip = {
       visible: true,
-      x: e.clientX - rect.left + 12,
-      y: e.clientY - rect.top - 8,
+      x: e.clientX + 12,
+      y: e.clientY - 8,
       content: lines,
     };
   }
@@ -157,6 +151,11 @@
       role="img"
       aria-label="Service dependency map"
       onmouseleave={hideTooltip}
+      onmousemove={(e) => {
+        if (tooltip.visible) {
+          tooltip = { ...tooltip, x: e.clientX + 12, y: e.clientY - 8 };
+        }
+      }}
     >
       <defs>
         <!-- Default arrowhead -->
@@ -463,7 +462,7 @@
   }
 
   .tooltip {
-    position: absolute;
+    position: fixed;
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: 6px;
