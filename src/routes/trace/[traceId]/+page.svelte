@@ -348,6 +348,18 @@
     }
   });
 
+  // Auto-scroll selected span row into view
+  $effect(() => {
+    if (!selectedSpanId || !waterfallContainer) return;
+    // Run after the DOM has re-rendered with the new selection
+    requestAnimationFrame(() => {
+      const row = waterfallContainer?.querySelector(
+        `[data-span-id="${selectedSpanId}"]`,
+      );
+      row?.scrollIntoView({ block: "nearest" });
+    });
+  });
+
   async function loadTrace() {
     if (!traceId) {
       error = "No trace ID provided";
@@ -967,7 +979,7 @@
         <!-- Waterfall Section (Left) -->
         <section class="waterfall-section">
           <div class="waterfall-header">
-            <h3>Trace Timeline</h3>
+            <h3>Timeline</h3>
             <div class="header-controls">
               {#if totalErrorCount > 0}
                 <div class="error-navigation">
@@ -1079,7 +1091,7 @@
 
             <!-- Waterfall rows with indicators -->
             {#each spanTree as node (node.span.spanId)}
-              <div class="indicator-cell">
+              <div class="indicator-cell" data-span-id={node.span.spanId}>
                 {#if node.span.spanId === selectedSpanId}
                   <span class="selection-indicator-outer">▶</span>
                 {/if}
@@ -1621,7 +1633,10 @@
   }
 
   .trace-detail {
-    min-height: 100vh;
+    height: calc(100vh - 56px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     background: var(--bg-page);
   }
 
@@ -1721,7 +1736,12 @@
 
   .trace-container {
     width: 100%;
-    padding: 0.75rem 0.75rem 1rem;
+    padding: 0.75rem 0.75rem 0;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .trace-identification {
@@ -1885,6 +1905,10 @@
     grid-template-columns: 1fr 8px 400px;
     gap: 0;
     position: relative;
+    flex: 1;
+    min-height: 0;
+    align-items: stretch;
+    padding-bottom: 0.75rem;
   }
 
   .content-grid.full-width {
@@ -1897,6 +1921,10 @@
     padding: 1.5rem;
     box-shadow: 0 1px 3px var(--shadow);
     margin-right: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .sidebar-section {
@@ -1905,6 +1933,8 @@
     padding: 1.5rem;
     box-shadow: 0 1px 3px var(--shadow);
     margin-left: 0;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .splitter {
@@ -2059,9 +2089,13 @@
   .waterfall-container {
     display: grid;
     grid-template-columns: 20px 1fr;
+    align-content: start;
     border: 1px solid var(--border);
     border-radius: 4px;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
   }
 
   .waterfall-container:focus {
