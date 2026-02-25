@@ -289,6 +289,43 @@
     };
   });
 
+  // Handle Escape in capture phase so it fires before browser-native input
+  // handling (Chrome resets/blurs inputs on Esc before bubbling; Firefox
+  // consumes Esc at the accessibility layer for certain roles) and before
+  // any element-level keydown handlers.
+  $effect(() => {
+    if (typeof document === "undefined") return;
+
+    function handleEscCapture(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      if (fullscreenAttr) return; // fullscreen modal handles its own Esc
+
+      if (showShortcuts) {
+        e.preventDefault();
+        showShortcuts = false;
+        return;
+      }
+
+      // If the span search is focused: clear it and move focus to waterfall.
+      // Any other focused element (including filter inputs, buttons, waterfall): go back.
+      if (spanSearchInputEl && document.activeElement === spanSearchInputEl) {
+        e.preventDefault();
+        spanSearchQuery = "";
+        spanSearchInputEl.blur();
+        waterfallContainer?.focus();
+      } else {
+        e.preventDefault();
+        handleBack();
+      }
+    }
+
+    document.addEventListener("keydown", handleEscCapture, { capture: true });
+    return () =>
+      document.removeEventListener("keydown", handleEscCapture, {
+        capture: true,
+      });
+  });
+
   // Auto-restore span details panel when a span is selected.
   // NOTE: must NOT read showSpanDetails here — doing so would make it a
   // reactive dependency, causing the effect to re-run (and immediately
@@ -580,18 +617,9 @@
 
   // Keyboard navigation handler
   function handleWaterfallKeydown(e: KeyboardEvent) {
-    // Handle Esc explicitly here so it works regardless of browser ARIA behavior.
-    // role="treegrid" caused Firefox to consume Escape at the native accessibility layer
-    // before any JS handler saw it (per WAI-ARIA treegrid spec); role="tree" does not
-    // define an Escape behavior so Firefox passes it through — but we keep explicit
-    // handling here as a belt-and-suspenders guard.
-    // stopPropagation prevents the global svelte:window handler from double-firing.
-    if (e.key === "Escape") {
-      e.preventDefault();
-      e.stopPropagation();
-      handleBack();
-      return;
-    }
+    // Esc is handled by the capture-phase listener above; skip it here to
+    // avoid double-firing.
+    if (e.key === "Escape") return;
 
     if (!selectedSpanId || spanTree.length === 0) return;
 
@@ -652,26 +680,7 @@
       return;
     }
 
-    // Escape: close shortcuts overlay first; clear search if input focused; else go back.
-    // (Esc when waterfall has focus is handled in handleWaterfallKeydown instead.)
-    if (e.key === "Escape") {
-      if (showShortcuts) {
-        showShortcuts = false;
-        return;
-      }
-      if (isInputFocused()) {
-        spanSearchQuery = "";
-        spanSearchInputEl?.blur();
-        // Explicitly return focus to the waterfall so the next Esc press reliably
-        // fires handleWaterfallKeydown → handleBack(). Without this, Firefox keeps
-        // document.activeElement pointing at the input after programmatic blur(),
-        // making isInputFocused() return true on the second press indefinitely.
-        waterfallContainer?.focus();
-      } else {
-        handleBack();
-      }
-      return;
-    }
+    // Escape is handled by the capture-phase $effect listener; skip here.
 
     // n: next search match
     if (e.key === "n" && !e.shiftKey && !isInputFocused() && matchCount > 0) {
