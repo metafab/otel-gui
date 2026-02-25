@@ -115,6 +115,7 @@ interface StoredSpan {
   resource: Record<string, any>;       // flattened resource attributes
   scopeName: string;
   scopeVersion: string;
+  scopeAttributes: Record<string, any>; // flattened scope attributes
 }
 
 interface StoredTrace {
@@ -269,8 +270,9 @@ interface TraceStore {
 **Fields tab** (default):
 - Filter input at top (search within field names/values)
 - Standard fields first: name, kind (label), status (label + message), duration, start time, end time, spanId, traceId, parentSpanId
-- Then span attributes (sorted alphabetically)
-- Then resource attributes (prefixed with `resource.`)
+- Then span attributes (sorted alphabetically, filterable)
+- Then resource attributes in a collapsible **Resource** section (collapsed by default, filterable)
+- Then scope name/version and scope attributes in a collapsible **Scope** section (collapsed by default, filterable)
 - Each field: key on left, value on right, in a compact table
 
 **Span Events tab**:

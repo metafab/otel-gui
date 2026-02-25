@@ -44,6 +44,8 @@ Use `flattenAttributes()` from [attributes.ts](src/lib/utils/attributes.ts) — 
 
 **Service name extraction**: Lives in `ResourceSpans.resource.attributes['service.name']`, not in spans. Must propagate during ingestion.
 
+**Scope attributes**: `InstrumentationScope.attributes` are flattened and stored as `scopeAttributes` on each `StoredSpan` (alongside `scopeName` and `scopeVersion`). The span detail sidebar shows them in a collapsible **Scope** section below Attributes.
+
 **Span merging**: Traces arrive incrementally across multiple POST requests. Store merges spans by `traceId`, handles out-of-order root spans. See [traceStore.ts](src/lib/server/traceStore.ts#L40-L125).
 
 ## Svelte 5 Runes (Planned)
