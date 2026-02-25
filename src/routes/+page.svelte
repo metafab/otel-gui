@@ -1,8 +1,10 @@
 <script lang="ts">
   import { traceStore } from "$lib/stores/traces.svelte";
   import ServiceBadge from "$lib/components/ServiceBadge.svelte";
+  import ServiceMap from "$lib/components/ServiceMap.svelte";
   import { isInputFocused, isMac } from "$lib/utils/keyboard";
   import KeyboardShortcutsHelp from "$lib/components/KeyboardShortcutsHelp.svelte";
+  import type { ServiceMapData } from "$lib/types";
 
   // Connect to SSE stream for real-time trace updates
   traceStore.connectSSE();
@@ -11,6 +13,42 @@
   const traces = $derived(traceStore.traces);
   const error = $derived(traceStore.error);
   const isLoading = $derived(traceStore.isLoading);
+
+  // Tab navigation
+  let activeTab = $state<"traces" | "map">("traces");
+
+  // Service map state
+  let serviceMapData = $state<ServiceMapData | null>(null);
+  let serviceMapLoading = $state(false);
+  let serviceMapError = $state<string | null>(null);
+
+  async function fetchServiceMap() {
+    serviceMapLoading = true;
+    serviceMapError = null;
+    try {
+      const res = await fetch("/api/service-map");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      serviceMapData = await res.json();
+    } catch (e) {
+      serviceMapError = e instanceof Error ? e.message : String(e);
+    } finally {
+      serviceMapLoading = false;
+    }
+  }
+
+  // Re-fetch service map when switching to map tab or when traces update
+  $effect(() => {
+    if (activeTab === "map") {
+      // Re-fetch whenever trace count changes so the map stays current
+      void traceStore.traces.length; // reactive dependency
+      fetchServiceMap();
+    }
+  });
+
+  function handleMapNodeSelect(serviceName: string) {
+    selectedService = serviceName;
+    activeTab = "traces";
+  }
 
   // Filter state
   let searchQuery = $state("");
@@ -123,18 +161,41 @@
       e.preventDefault();
       showShortcuts = !showShortcuts;
     }
+    // 'm': toggle between Traces and Map tabs
+    if (e.key === "m" && !isInputFocused()) {
+      e.preventDefault();
+      activeTab = activeTab === "traces" ? "map" : "traces";
+    }
   }
 </script>
 
 <svelte:head>
-  <title>otel-gui – Traces</title>
+  <title>otel-gui – {activeTab === "map" ? "Service Map" : "Traces"}</title>
 </svelte:head>
 
 <svelte:window onkeydown={handleGlobalKeydown} />
 
 <div class="container">
   <header>
-    <h1>OpenTelemetry Traces</h1>
+    <div class="tab-bar" role="tablist">
+      <button
+        role="tab"
+        aria-selected={activeTab === "traces"}
+        class="tab-btn"
+        class:active={activeTab === "traces"}
+        onclick={() => (activeTab = "traces")}
+        >Traces {#if traces.length > 0}<span class="tab-count"
+            >{traces.length}</span
+          >{/if}</button
+      >
+      <button
+        role="tab"
+        aria-selected={activeTab === "map"}
+        class="tab-btn"
+        class:active={activeTab === "map"}
+        onclick={() => (activeTab = "map")}>Service Map</button
+      >
+    </div>
     <div class="actions">
       <button
         class="shortcut-help-btn"
@@ -151,142 +212,158 @@
     </div>
   </header>
 
-  {#if error}
-    <div class="error">{error}</div>
-  {/if}
+  {#if activeTab === "traces"}
+    {#if error}
+      <div class="error">{error}</div>
+    {/if}
 
-  {#if traces.length === 0}
-    <div class="empty">
-      <p>No traces received yet.</p>
-      <p class="hint">
-        Send OTLP traces to <code>http://localhost:4318/v1/traces</code>
-      </p>
-    </div>
-  {:else}
-    <!-- Filters Section -->
-    <div class="filters">
-      <div class="filter-row">
-        <div class="filter-group search-group">
-          <label for="search">Search</label>
-          <input
-            id="search"
-            type="text"
-            bind:value={searchQuery}
-            bind:this={searchInputEl}
-            placeholder="Search by trace ID, operation, or service..."
-            class="search-input"
-          />
-        </div>
-
-        <div class="filter-group">
-          <label for="service">Service</label>
-          <select
-            id="service"
-            bind:value={selectedService}
-            class="filter-select"
-          >
-            <option value="all">All Services</option>
-            {#each services as service}
-              <option value={service}>{service}</option>
-            {/each}
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <span class="filter-label">Status</span>
-          <label class="checkbox-label">
+    {#if traces.length === 0}
+      <div class="empty">
+        <p>No traces received yet.</p>
+        <p class="hint">
+          Send OTLP traces to <code>http://localhost:4318/v1/traces</code>
+        </p>
+      </div>
+    {:else}
+      <!-- Filters Section -->
+      <div class="filters">
+        <div class="filter-row">
+          <div class="filter-group search-group">
+            <label for="search">Search</label>
             <input
-              id="errors-only"
-              type="checkbox"
-              bind:checked={showErrorsOnly}
+              id="search"
+              type="text"
+              bind:value={searchQuery}
+              bind:this={searchInputEl}
+              placeholder="Search by trace ID, operation, or service..."
+              class="search-input"
             />
-            <span>Errors Only</span>
-          </label>
+          </div>
+
+          <div class="filter-group">
+            <label for="service">Service</label>
+            <select
+              id="service"
+              bind:value={selectedService}
+              class="filter-select"
+            >
+              <option value="all">All Services</option>
+              {#each services as service}
+                <option value={service}>{service}</option>
+              {/each}
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label">Status</span>
+            <label class="checkbox-label">
+              <input
+                id="errors-only"
+                type="checkbox"
+                bind:checked={showErrorsOnly}
+              />
+              <span>Errors Only</span>
+            </label>
+          </div>
+
+          <div class="filter-group">
+            <label for="minDuration">Min Duration (ms)</label>
+            <input
+              id="minDuration"
+              type="number"
+              bind:value={minDuration}
+              placeholder="0"
+              class="duration-input"
+              min="0"
+              step="0.1"
+            />
+          </div>
+
+          <div class="filter-group">
+            <label for="maxDuration">Max Duration (ms)</label>
+            <input
+              id="maxDuration"
+              type="number"
+              bind:value={maxDuration}
+              placeholder="∞"
+              class="duration-input"
+              min="0"
+              step="0.1"
+            />
+          </div>
+
+          {#if hasActiveFilters}
+            <button onclick={handleClearFilters} class="clear-filters-btn">
+              Clear Filters
+            </button>
+          {/if}
         </div>
 
-        <div class="filter-group">
-          <label for="minDuration">Min Duration (ms)</label>
-          <input
-            id="minDuration"
-            type="number"
-            bind:value={minDuration}
-            placeholder="0"
-            class="duration-input"
-            min="0"
-            step="0.1"
-          />
+        <div class="filter-stats">
+          Showing <strong>{filteredTraces.length}</strong> of
+          <strong>{traces.length}</strong> traces
         </div>
+      </div>
 
-        <div class="filter-group">
-          <label for="maxDuration">Max Duration (ms)</label>
-          <input
-            id="maxDuration"
-            type="number"
-            bind:value={maxDuration}
-            placeholder="∞"
-            class="duration-input"
-            min="0"
-            step="0.1"
-          />
-        </div>
-
-        {#if hasActiveFilters}
+      {#if filteredTraces.length === 0}
+        <div class="empty">
+          <p>No traces match the current filters.</p>
           <button onclick={handleClearFilters} class="clear-filters-btn">
             Clear Filters
           </button>
-        {/if}
-      </div>
-
-      <div class="filter-stats">
-        Showing <strong>{filteredTraces.length}</strong> of
-        <strong>{traces.length}</strong> traces
-      </div>
-    </div>
-
-    {#if filteredTraces.length === 0}
-      <div class="empty">
-        <p>No traces match the current filters.</p>
-        <button onclick={handleClearFilters} class="clear-filters-btn">
-          Clear Filters
-        </button>
-      </div>
-    {:else}
-      <table>
-        <thead>
-          <tr>
-            <th>Root Service</th>
-            <th>Root Name</th>
-            <th>Root Duration</th>
-            <th>Spans</th>
-            <th>Time</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each filteredTraces as trace (trace.traceId)}
-            <tr
-              onclick={() => handleRowClick(trace.traceId)}
-              class:error={trace.hasError}
-            >
-              <td><ServiceBadge serviceName={trace.serviceName} /></td>
-              <td class="operation">{trace.rootSpanName}</td>
-              <td class="duration">{trace.durationMs.toFixed(2)}ms</td>
-              <td class="span-count">{trace.spanCount}</td>
-              <td class="timestamp" title={trace.startTime}>
-                {new Date(trace.startTime).toLocaleString()}
-              </td>
-              <td class="status">
-                {#if trace.hasError}
-                  <span class="error-badge">ERROR</span>
-                {:else}
-                  <span class="ok-badge">OK</span>
-                {/if}
-              </td>
+        </div>
+      {:else}
+        <table>
+          <thead>
+            <tr>
+              <th>Root Service</th>
+              <th>Root Name</th>
+              <th>Root Duration</th>
+              <th>Spans</th>
+              <th>Time</th>
+              <th>Status</th>
             </tr>
-          {/each}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {#each filteredTraces as trace (trace.traceId)}
+              <tr
+                onclick={() => handleRowClick(trace.traceId)}
+                class:error={trace.hasError}
+              >
+                <td><ServiceBadge serviceName={trace.serviceName} /></td>
+                <td class="operation">{trace.rootSpanName}</td>
+                <td class="duration">{trace.durationMs.toFixed(2)}ms</td>
+                <td class="span-count">{trace.spanCount}</td>
+                <td class="timestamp" title={trace.startTime}>
+                  {new Date(trace.startTime).toLocaleString()}
+                </td>
+                <td class="status">
+                  {#if trace.hasError}
+                    <span class="error-badge">ERROR</span>
+                  {:else}
+                    <span class="ok-badge">OK</span>
+                  {/if}
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      {/if}
     {/if}
+  {:else}
+    <!-- Service Map tab -->
+    <div class="map-content">
+      {#if serviceMapLoading}
+        <div class="map-status">Loading service map…</div>
+      {:else if serviceMapError}
+        <div class="error">{serviceMapError}</div>
+      {:else if serviceMapData}
+        <ServiceMap
+          data={serviceMapData}
+          onSelectService={handleMapNodeSelect}
+        />
+      {/if}
+    </div>
   {/if}
 </div>
 
@@ -303,7 +380,8 @@
         keys: [isMac ? "Option+⌫" : "Alt+Delete"],
         description: "Clear all traces (opens confirm dialog)",
       },
-      { keys: ["?"], description: "Toggle keyboard shortcuts" },
+      { keys: ["m"], description: "Toggle Traces / Service Map tab" },
+      { keys: ["?"], description: "Toggle keyboard shortcuts help" },
     ]}
     onclose={() => (showShortcuts = false)}
   />
@@ -323,10 +401,72 @@
     margin-bottom: 2rem;
   }
 
-  h1 {
-    font-size: 1.5rem;
+  /* Tab navigation */
+  .tab-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--border);
+    align-self: flex-end;
+  }
+
+  .tab-btn {
+    padding: 0.5rem 1.25rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .tab-btn:hover {
+    color: var(--text-primary);
+  }
+
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
     font-weight: 600;
-    margin: 0;
+  }
+
+  .tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    background: var(--bg-muted);
+    color: var(--text-secondary);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .tab-btn.active .tab-count {
+    background: var(--accent-ring);
+    color: var(--accent);
+  }
+
+  /* Service map container */
+  .map-content {
+    padding: 0;
+  }
+
+  .map-status {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
   }
 
   .actions button:not(.shortcut-help-btn) {

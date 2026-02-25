@@ -57,11 +57,39 @@ export interface TraceListItem {
 	startTime: string; // ISO timestamp for display
 }
 
+// Service map types
+export interface ServiceMapNode {
+	serviceName: string;
+	spanCount: number;
+	errorCount: number;
+	/** Detected system type: 'service' | 'database' | 'messaging' | 'rpc' */
+	nodeType: 'service' | 'database' | 'messaging' | 'rpc';
+	/** For external nodes: db.system / messaging.system value */
+	system?: string;
+}
+
+export interface ServiceMapEdge {
+	source: string; // caller service name
+	target: string; // callee service/system name
+	callCount: number;
+	errorCount: number;
+	/** Sorted durations array (nanoseconds as numbers) for percentile computation */
+	durations: number[];
+	p50Ms: number;
+	p99Ms: number;
+}
+
+export interface ServiceMapData {
+	nodes: ServiceMapNode[];
+	edges: ServiceMapEdge[];
+}
+
 // Swappable storage interface
 export interface TraceStore {
 	ingest(resourceSpans: any[]): void;
 	getTraceList(limit?: number): TraceListItem[];
 	getTrace(traceId: string): StoredTrace | undefined;
+	getServiceMap(traceId?: string): ServiceMapData;
 	clear(): void;
 	subscribe(fn: () => void): () => void;
 }

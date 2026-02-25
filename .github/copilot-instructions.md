@@ -14,7 +14,7 @@ pnpm run test    # Run tests (when added - see docs/testing.md)
 
 ## Architecture
 
-- **Routes**: `/v1/traces` (OTLP receiver), `/api/traces` (frontend API)
+- **Routes**: `/v1/traces` (OTLP receiver), `/api/traces` (frontend API), `/api/service-map` (service graph)
 - **Server-only code**: `$lib/server/` — never bundled for client
 - **Utilities**: `$lib/utils/` — shared helpers for OTLP data transformation
 - **Types**: `$lib/types.ts` — all interfaces (use `import type`)
@@ -99,8 +99,7 @@ Shortcuts implemented:
 |-----|-----------|--------------|
 | `/` | Focus search | Focus span search |
 | `Esc` | Clear search (if focused) | Clear search or go back |
-| `Alt/⌥+⌫` | Clear all traces | — |
-| `Enter` / `Shift+Enter` | — | Next / prev match (when search focused) |
+| `Alt/⌥+⌫` | Clear all traces | — || `m` | Toggle Traces/Map tab | Toggle mini service map || `Enter` / `Shift+Enter` | — | Next / prev match (when search focused) |
 | `n` / `Shift+N` | — | Next / prev search match |
 | `e` / `Shift+E` | — | Next / prev error span |
 | `↑↓←→` / `Enter` | — | Waterfall tree navigation |
@@ -116,14 +115,17 @@ Shortcuts implemented:
 
 ## Reference Files
 
-- [traceStore.ts](src/lib/server/traceStore.ts) — Ingestion, span merging, eviction, SSE subscriber notifications
+- [traceStore.ts](src/lib/server/traceStore.ts) — Ingestion, span merging, eviction, SSE subscriber notifications, `getServiceMap()`
 - [protobuf.ts](src/lib/server/protobuf.ts) — Protobuf decoder for OTLP traces
 - [attributes.ts](src/lib/utils/attributes.ts) — OTLP AnyValue extraction
 - [time.ts](src/lib/utils/time.ts) — BigInt nanosecond formatting
+- [graph.ts](src/lib/utils/graph.ts) — Layered graph layout (Sugiyama-style): layer assignment, barycenter ordering, coordinate assignment, Bézier edge paths
 - [keyboard.ts](src/lib/utils/keyboard.ts) — `isInputFocused()` guard for global keyboard shortcuts
 - [KeyboardShortcutsHelp.svelte](src/lib/components/KeyboardShortcutsHelp.svelte) — `?` help overlay component
-- [types.ts](src/lib/types.ts) — Complete OTLP data model
+- [ServiceMap.svelte](src/lib/components/ServiceMap.svelte) — SVG service map component (full + mini mode); nodes are service/database/messaging shapes; edges show call count, error rate, p50/p99 latency
+- [types.ts](src/lib/types.ts) — Complete OTLP data model + `ServiceMapNode`, `ServiceMapEdge`, `ServiceMapData`
 - [stream/+server.ts](src/routes/api/traces/stream/+server.ts) — SSE endpoint (debounced, heartbeat)
+- [service-map/+server.ts](src/routes/api/service-map/+server.ts) — `GET /api/service-map?traceId=` endpoint
 - [docs/research.md](docs/research.md) — OTLP protocol details, data model, Honeycomb UI reference, gotchas
 - [docs/plan.md](docs/plan.md) — Full implementation plan (16 steps), architecture diagram, deferred v2 features
 - [docs/testing.md](docs/testing.md) — Testing strategy, priority test cases, sample test data
@@ -131,3 +133,21 @@ Shortcuts implemented:
 ## Implementation Philosophy
 
 Deliberately minimal: no UI libraries, no OTLP libraries, no database. Clean upgrade path via swappable interfaces (`TraceStore` for future SQLite). Real-time updates use SSE (`GET /api/traces/stream`) — `traceStore.subscribe()` notifies the stream handler, which debounces and pushes `event: traces` to the client.
+
+## Service Map
+
+The service map (`GET /api/service-map?traceId=`) aggregates cross-service relationships from all stored traces (or a single trace when `traceId` is provided).
+
+**Edge detection algorithm** (in `traceStore.getServiceMap()`):
+
+1. **Cross-service parent→child**: if a span's `resource['service.name']` differs from its parent span's, record an edge `parentService → childService`.
+2. **External systems**: CLIENT spans (`kind === 3`) with `db.system`, `messaging.system`, `rpc.system`, `peer.service`, or `net.peer.name` attributes generate synthetic external nodes (type `database` / `messaging` / `rpc` / `service`).
+
+**Edge metrics** computed per edge: `callCount`, `errorCount`, `p50Ms`, `p99Ms` (derived from sorted callee span durations in nanoseconds).
+
+**Layout** (`graph.ts`): simplified Sugiyama — topological BFS layer assignment → barycenter ordering within each layer → even coordinate assignment → cubic Bézier edge paths. Constants: `NODE_W=140`, `NODE_H=52`, `LAYER_GAP_X=220`, `NODE_GAP_Y=80`.
+
+**UI integration**:
+
+- Trace list page: **Traces / Service Map** tab switcher (`m` to toggle). Map re-fetches whenever `traceStore.traces.length` changes.
+- Trace detail page: collapsible **Service Map** section in the trace-identification area (`m` to toggle). Scoped to the current `traceId`. Only shown when there are >1 node or >0 edges.

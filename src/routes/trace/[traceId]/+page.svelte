@@ -16,9 +16,10 @@
   } from "$lib/utils/time";
   import WaterfallRow from "$lib/components/WaterfallRow.svelte";
   import AttributeItem from "$lib/components/AttributeItem.svelte";
+  import ServiceMap from "$lib/components/ServiceMap.svelte";
   import { isInputFocused, isMac } from "$lib/utils/keyboard";
   import KeyboardShortcutsHelp from "$lib/components/KeyboardShortcutsHelp.svelte";
-  import type { StoredTrace, SpanTreeNode } from "$lib/types";
+  import type { StoredTrace, SpanTreeNode, ServiceMapData } from "$lib/types";
 
   // Get trace ID from URL
   const traceId = $derived($page.params.traceId);
@@ -57,6 +58,11 @@
   let fullscreenAttr = $state<{ key: string; value: string } | null>(null);
   let fullscreenCopied = $state(false);
   let traceIdCopied = $state(false);
+
+  // Mini service map
+  let showMiniMap = $state(false);
+  let miniMapData = $state<ServiceMapData | null>(null);
+  let miniMapLoading = $state(false);
   let spanSearchInputEl = $state<HTMLInputElement | null>(null);
   let showShortcuts = $state(false);
 
@@ -337,6 +343,18 @@
         }
       } else {
         error = "Trace not found";
+      }
+      // Load mini service map for this trace
+      miniMapLoading = true;
+      try {
+        const mapRes = await fetch(`/api/service-map?traceId=${traceId}`);
+        if (mapRes.ok) {
+          miniMapData = await mapRes.json();
+        }
+      } catch {
+        // silently ignore map errors
+      } finally {
+        miniMapLoading = false;
       }
     } catch (err) {
       error =
@@ -683,6 +701,12 @@
       return;
     }
 
+    // 'm': toggle mini service map
+    if (e.key === "m" && !isInputFocused()) {
+      e.preventDefault();
+      showMiniMap = !showMiniMap;
+      return;
+    }
     // '?': toggle shortcuts help
     if (e.key === "?" && !isInputFocused()) {
       e.preventDefault();
@@ -881,6 +905,56 @@
               <span class="timestamp-value">{traceDuration}</span>
             </div>
           </div>
+
+          <!-- Mini Service Map -->
+          {#if miniMapData && (miniMapData.nodes.length > 1 || miniMapData.edges.length > 0)}
+            <div class="mini-map-section">
+              <button
+                class="mini-map-toggle"
+                onclick={() => (showMiniMap = !showMiniMap)}
+                aria-expanded={showMiniMap}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  aria-hidden="true"
+                  style:transform={showMiniMap
+                    ? "rotate(90deg)"
+                    : "rotate(0deg)"}
+                  style:transition="transform 0.15s ease"
+                >
+                  <path
+                    d="M4 2l4 4-4 4"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                Service Map
+                <span class="mini-map-count"
+                  >{miniMapData.nodes.length} service{miniMapData.nodes
+                    .length !== 1
+                    ? "s"
+                    : ""} · {miniMapData.edges.length} edge{miniMapData.edges
+                    .length !== 1
+                    ? "s"
+                    : ""}</span
+                >
+              </button>
+              {#if showMiniMap}
+                <div class="mini-map-wrap">
+                  {#if miniMapLoading}
+                    <div class="mini-map-loading">Loading…</div>
+                  {:else}
+                    <ServiceMap data={miniMapData} mini={true} />
+                  {/if}
+                </div>
+              {/if}
+            </div>
+          {/if}
         </section>
       {/if}
 
@@ -1534,7 +1608,8 @@
       { keys: ["↑ / ↓"], description: "Navigate spans up / down" },
       { keys: ["← / →"], description: "Collapse / expand selected span" },
       { keys: ["Enter"], description: "Toggle collapse on selected span" },
-      { keys: ["?"], description: "Toggle keyboard shortcuts" },
+      { keys: ["m"], description: "Toggle mini service map" },
+      { keys: ["?"], description: "Toggle keyboard shortcuts help" },
     ]}
     onclose={() => (showShortcuts = false)}
   />
@@ -1736,6 +1811,52 @@
     font-size: 0.875rem;
     color: var(--text-primary);
     font-family: monospace;
+  }
+
+  /* Mini service map */
+  .mini-map-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .mini-map-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: color 0.15s ease;
+  }
+
+  .mini-map-toggle:hover {
+    color: var(--text-primary);
+  }
+
+  .mini-map-count {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+  }
+
+  .mini-map-wrap {
+    margin-top: 0.75rem;
+    overflow: hidden;
+  }
+
+  .mini-map-loading {
+    padding: 1rem;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
   }
 
   .separator {
