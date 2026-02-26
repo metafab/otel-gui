@@ -1,0 +1,61 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          { "key": "service.name", "value": { "stringValue": "frontend" } }
+        ]
+      },
+      "scopeSpans": [{
+        "scope": { "name": "frontend-tracer" },
+        "spans": [{
+          "traceId": "AAAABBBBCCCCDDDD0000111122223333",
+          "spanId": "ROOT00000001",
+          "parentSpanId": "",
+          "name": "GET /checkout",
+          "kind": 2,
+          "startTimeUnixNano": "1700000000000000000",
+          "endTimeUnixNano": "1700000001000000000",
+          "attributes": [
+            { "key": "http.method", "value": { "stringValue": "GET" } }
+          ],
+          "status": { "code": 1 }
+        }]
+      }]
+    },
+    {
+      "resource": {
+        "attributes": [
+          { "key": "service.name", "value": { "stringValue": "backend" } }
+        ]
+      },
+      "scopeSpans": [{
+        "scope": { "name": "backend-tracer" },
+        "spans": [{
+          "traceId": "AAAABBBBCCCCDDDD0000111122223333",
+          "spanId": "BACK00000001",
+          "parentSpanId": "ROOT00000001",
+          "name": "processCheckout",
+          "kind": 1,
+          "startTimeUnixNano": "1700000000100000000",
+          "endTimeUnixNano": "1700000000900000000",
+          "attributes": [],
+          "status": { "code": 1 }
+        }, {
+          "traceId": "AAAABBBBCCCCDDDD0000111122223333",
+          "spanId": "BACK00000002",
+          "parentSpanId": "BACK00000001",
+          "name": "SELECT * FROM orders",
+          "kind": 3,
+          "startTimeUnixNano": "1700000000200000000",
+          "endTimeUnixNano": "1700000000500000000",
+          "attributes": [
+            { "key": "db.system", "value": { "stringValue": "postgresql" } },
+            { "key": "db.name", "value": { "stringValue": "orders" } }
+          ],
+          "status": { "code": 1 }
+        }]
+      }]
+    }
+  ]
+}

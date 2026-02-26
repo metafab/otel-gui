@@ -1,0 +1,48 @@
+[
+  {
+    "resourceSpans": [{
+      "resource": {
+        "attributes": [
+          { "key": "service.name", "value": { "stringValue": "api" } }
+        ]
+      },
+      "scopeSpans": [{
+        "scope": { "name": "api-tracer" },
+        "spans": [{
+          "traceId": "OUTOFORDER00000000000000000000AA",
+          "spanId": "CHILD000000001",
+          "parentSpanId": "ROOT0000000001",
+          "name": "childOperation",
+          "kind": 1,
+          "startTimeUnixNano": "1700000000100000000",
+          "endTimeUnixNano": "1700000000400000000",
+          "attributes": [],
+          "status": { "code": 1 }
+        }]
+      }]
+    }]
+  },
+  {
+    "resourceSpans": [{
+      "resource": {
+        "attributes": [
+          { "key": "service.name", "value": { "stringValue": "api" } }
+        ]
+      },
+      "scopeSpans": [{
+        "scope": { "name": "api-tracer" },
+        "spans": [{
+          "traceId": "OUTOFORDER00000000000000000000AA",
+          "spanId": "ROOT0000000001",
+          "parentSpanId": "",
+          "name": "GET /api/items",
+          "kind": 2,
+          "startTimeUnixNano": "1700000000000000000",
+          "endTimeUnixNano": "1700000000500000000",
+          "attributes": [],
+          "status": { "code": 1 }
+        }]
+      }]
+    }]
+  }
+]
