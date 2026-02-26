@@ -198,6 +198,40 @@
           break;
         }
       }
+
+      if (matches.has(span.spanId)) continue;
+
+      // Match on resource attribute keys or values
+      for (const [key, value] of Object.entries(span.resource)) {
+        if (
+          key.toLowerCase().includes(query) ||
+          JSON.stringify(value).toLowerCase().includes(query)
+        ) {
+          matches.add(span.spanId);
+          break;
+        }
+      }
+
+      if (matches.has(span.spanId)) continue;
+
+      // Match on scope name, version, or scope attribute keys/values
+      if (
+        span.scopeName.toLowerCase().includes(query) ||
+        span.scopeVersion.toLowerCase().includes(query)
+      ) {
+        matches.add(span.spanId);
+        continue;
+      }
+
+      for (const [key, value] of Object.entries(span.scopeAttributes)) {
+        if (
+          key.toLowerCase().includes(query) ||
+          JSON.stringify(value).toLowerCase().includes(query)
+        ) {
+          matches.add(span.spanId);
+          break;
+        }
+      }
     }
 
     return matches;
