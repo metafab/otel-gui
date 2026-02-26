@@ -66,22 +66,24 @@ $effect(() => {
 
 ## Testing
 
-**Current status**: 76 unit tests, all passing. Run with `pnpm run test`.
+**Current status**: 96 unit + integration tests, all passing. Run with `pnpm run test`.
 
 **Test files**:
 
-| File | What's covered |
-|------|----------------|
-| [attributes.test.ts](src/lib/utils/attributes.test.ts) | All 7 AnyValue variants, null/edge cases |
-| [time.test.ts](src/lib/utils/time.test.ts) | Duration formatting, negative/zero, timestamps, relative time |
-| [spans.test.ts](src/lib/utils/spans.test.ts) | Tree building, orphans, circular refs, child sort order |
-| [traceStore.test.ts](src/lib/server/traceStore.test.ts) | Ingestion, span merging, FIFO eviction, subscribe/unsubscribe, `resolveRootSpanName` |
+| File                                                    | What's covered                                                                                                             |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| [attributes.test.ts](src/lib/utils/attributes.test.ts)  | All 7 AnyValue variants, null/edge cases                                                                                   |
+| [time.test.ts](src/lib/utils/time.test.ts)              | Duration formatting, negative/zero, timestamps, relative time                                                              |
+| [spans.test.ts](src/lib/utils/spans.test.ts)            | Tree building, orphans, circular refs, child sort order                                                                    |
+| [traceStore.test.ts](src/lib/server/traceStore.test.ts) | Ingestion, span merging, FIFO eviction, subscribe/unsubscribe, `resolveRootSpanName`                                       |
+| [integration.test.ts](src/routes/integration.test.ts)   | Full POST→store→GET round-trip for all route handlers (`/v1/traces`, `/api/traces`, `/api/traces/:id`, `/api/service-map`) |
 
 **Fixtures** live in `tests/fixtures/` (simple, multi-service, error, out-of-order batches).
 
 **Tool**: Vitest (`vitest.config.ts`) — uses the SvelteKit Vite plugin so `$lib` aliases resolve correctly.
 
 **What's deferred to v2** (see [docs/testing.md](../docs/testing.md)):
+
 - UI component tests (`@testing-library/svelte`)
 - E2E tests (Playwright)
 

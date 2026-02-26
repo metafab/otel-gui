@@ -269,7 +269,7 @@ jobs:
 
 ## Current Status
 
-**76 unit tests passing** — run with `pnpm run test`.
+**96 tests passing** — run with `pnpm run test`.
 
 | File | Tests |
 |------|-------|
@@ -277,14 +277,14 @@ jobs:
 | `src/lib/utils/time.test.ts` | 18 |
 | `src/lib/utils/spans.test.ts` | 19 |
 | `src/lib/server/traceStore.test.ts` | 22 |
+| `src/routes/integration.test.ts` | 20 |
 
 Fixtures live in `tests/fixtures/` (simple-trace, multi-service-trace, error-trace, out-of-order-spans).
 
 **Next steps**:
-1. Add OTLP endpoint integration tests (`/v1/traces` POST → `/api/traces` GET round-trip)
-2. Add component tests when UI stabilises (`@testing-library/svelte`)
-3. Add E2E tests with Playwright
-4. Wire up CI (see GitHub Actions snippet above)
+1. Add component tests when UI stabilises (`@testing-library/svelte`)
+2. Add E2E tests with Playwright
+3. Wire up CI (see GitHub Actions snippet above)
 
 ## Resources
 
