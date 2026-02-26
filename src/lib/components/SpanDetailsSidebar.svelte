@@ -31,6 +31,8 @@
   let attributeFilter = $state("");
   let resourceFilter = $state("");
   let scopeFilter = $state("");
+  let eventsCollapsed = $state(false);
+  let attributesCollapsed = $state(false);
   let resourceCollapsed = $state(true);
   let scopeCollapsed = $state(true);
 
@@ -164,31 +166,43 @@
   <!-- Events -->
   {#if span.events.length > 0}
     <div class="section-divider"></div>
-    <h4 class="section-title">Events ({span.events.length})</h4>
-    {#each span.events as event, index}
-      <div
-        class="event-item"
-        id="event-{index}"
-        class:highlighted={highlightedEventIndex === index}
+    <div class="section-header">
+      <button
+        class="section-toggle"
+        onclick={() => (eventsCollapsed = !eventsCollapsed)}
+        aria-expanded={!eventsCollapsed}
+        title={eventsCollapsed ? "Expand events" : "Collapse events"}
       >
-        <div class="event-header">
-          <div class="event-name">{event.name}</div>
-          <div
-            class="event-timestamp"
-            title={formatTimestamp(event.timeUnixNano)}
-          >
-            {formatRelativeTime(span.startTimeUnixNano, event.timeUnixNano)}
+        <ChevronIcon expanded={!eventsCollapsed} />
+        <h4 class="section-title">Events ({span.events.length})</h4>
+      </button>
+    </div>
+    {#if !eventsCollapsed}
+      {#each span.events as event, index}
+        <div
+          class="event-item"
+          id="event-{index}"
+          class:highlighted={highlightedEventIndex === index}
+        >
+          <div class="event-header">
+            <div class="event-name">{event.name}</div>
+            <div
+              class="event-timestamp"
+              title={formatTimestamp(event.timeUnixNano)}
+            >
+              {formatRelativeTime(span.startTimeUnixNano, event.timeUnixNano)}
+            </div>
           </div>
+          {#if Object.keys(event.attributes).length > 0}
+            <div class="event-attributes">
+              {#each Object.entries(event.attributes).sort( ([a], [b]) => a.localeCompare(b), ) as [key, value]}
+                <AttributeItem attrKey={key} {value} {onFullscreen} />
+              {/each}
+            </div>
+          {/if}
         </div>
-        {#if Object.keys(event.attributes).length > 0}
-          <div class="event-attributes">
-            {#each Object.entries(event.attributes).sort( ([a], [b]) => a.localeCompare(b), ) as [key, value]}
-              <AttributeItem attrKey={key} {value} {onFullscreen} />
-            {/each}
-          </div>
-        {/if}
-      </div>
-    {/each}
+      {/each}
+    {/if}
   {/if}
 
   <!-- Links -->
@@ -240,30 +254,44 @@
   {#if allAttributes.length > 0}
     <div class="section-divider"></div>
     <div class="section-header">
-      <h4 class="section-title">
-        Attributes
-        {#if attributeFilter.trim()}
-          ({filteredAttributes.length} of {allAttributes.length})
-        {:else}
-          ({allAttributes.length})
-        {/if}
-      </h4>
-      <input
-        id="attribute-filter"
-        type="text"
-        bind:value={attributeFilter}
-        placeholder="Filter attributes..."
-        class="attribute-filter"
-      />
+      <button
+        class="section-toggle"
+        onclick={() => (attributesCollapsed = !attributesCollapsed)}
+        aria-expanded={!attributesCollapsed}
+        title={attributesCollapsed
+          ? "Expand attributes"
+          : "Collapse attributes"}
+      >
+        <ChevronIcon expanded={!attributesCollapsed} />
+        <h4 class="section-title">
+          Attributes
+          {#if attributeFilter.trim()}
+            ({filteredAttributes.length} of {allAttributes.length})
+          {:else}
+            ({allAttributes.length})
+          {/if}
+        </h4>
+      </button>
+      {#if !attributesCollapsed}
+        <input
+          id="attribute-filter"
+          type="text"
+          bind:value={attributeFilter}
+          placeholder="Filter attributes..."
+          class="attribute-filter"
+        />
+      {/if}
     </div>
-    {#if filteredAttributes.length > 0}
-      <div class="attributes">
-        {#each filteredAttributes as [key, value]}
-          <AttributeItem attrKey={key} {value} {onFullscreen} />
-        {/each}
-      </div>
-    {:else}
-      <div class="no-attributes">No attributes match the filter.</div>
+    {#if !attributesCollapsed}
+      {#if filteredAttributes.length > 0}
+        <div class="attributes">
+          {#each filteredAttributes as [key, value]}
+            <AttributeItem attrKey={key} {value} {onFullscreen} />
+          {/each}
+        </div>
+      {:else}
+        <div class="no-attributes">No attributes match the filter.</div>
+      {/if}
     {/if}
   {/if}
 

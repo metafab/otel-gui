@@ -40,7 +40,7 @@
   let showSpanDetails = $state<boolean>(true);
   let isMaximized = $derived(!showTraceDetails && !showSpanDetails);
   let waterfallContainer = $state<HTMLDivElement | null>(null);
-  let sidebarWidth = $state<number>(400);
+  let sidebarWidth = $state<number>(425);
   let isDraggingSplitter = $state<boolean>(false);
   let contentGridElement = $state<HTMLDivElement | null>(null);
   let nameColumnWidth = $state<number>(420);
