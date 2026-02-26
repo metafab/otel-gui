@@ -202,4 +202,40 @@ test.describe('Trace ingestion flow', () => {
 		await page.keyboard.press('Shift+E');
 		await expect(errorPosition).toHaveText('1/2');
 	});
+
+	test('supports waterfall tree navigation with arrows and Enter', async ({ page, request }) => {
+		await request.post('/v1/traces', {
+			headers: { 'Content-Type': 'application/json' },
+			data: multiServiceTrace
+		});
+
+		await page.goto('/trace/AAAABBBBCCCCDDDD0000111122223333');
+
+		const spanTree = page.getByRole('tree', { name: 'Span tree' });
+		const rows = page.locator('.waterfall-row');
+		const selectedName = page.locator('.span-details .detail-row', { hasText: 'Name:' }).locator('.value');
+
+		await expect(rows).toHaveCount(3);
+		await expect(selectedName).toHaveText('GET /checkout');
+
+		await spanTree.focus();
+
+		await page.keyboard.press('ArrowDown');
+		await expect(selectedName).toHaveText('processCheckout');
+
+		await page.keyboard.press('ArrowUp');
+		await expect(selectedName).toHaveText('GET /checkout');
+
+		await page.keyboard.press('ArrowLeft');
+		await expect(rows).toHaveCount(1);
+
+		await page.keyboard.press('ArrowRight');
+		await expect(rows).toHaveCount(3);
+
+		await page.keyboard.press('Enter');
+		await expect(rows).toHaveCount(1);
+
+		await page.keyboard.press('Enter');
+		await expect(rows).toHaveCount(3);
+	});
 });

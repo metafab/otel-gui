@@ -151,6 +151,7 @@ describe('OTLP E2E', () => {
 - Also covers keyboard shortcuts and search behavior (`/`, `Esc`, `m`) on trace list and trace detail pages.
 - Covers trace-detail mini service map toggling via button and keyboard (`m`).
 - Covers error span keyboard navigation on trace detail (`e` / `Shift+E`).
+- Covers waterfall tree keyboard navigation on trace detail (`↑↓←→`, `Enter`).
 
 ## Test Data
 
@@ -310,9 +311,9 @@ Fixtures live in `tests/fixtures/` (simple-trace, multi-service-trace, error-tra
 **Component test setup**: `@testing-library/svelte` + jsdom. Each component test file includes `// @vitest-environment jsdom`. `vitest.config.ts` sets `resolve.conditions: ['browser']` so Svelte's client bundle (not the SSR bundle) is loaded. The shared setup file (`src/lib/components/setup.ts`) imports `@testing-library/jest-dom/vitest` to extend Vitest's `expect` with DOM matchers.
 
 **Next steps**:
-1. Add E2E coverage for waterfall tree keyboard navigation (`↑↓←→`, `Enter`)
-2. Add E2E coverage for tabbed sidebar flows (Fields/Span Events/Links)
-3. Add E2E coverage for trace-detail collapse/expand controls (child badges)
+1. Add E2E coverage for tabbed sidebar flows (Fields/Span Events/Links)
+2. Add E2E coverage for trace-detail collapse/expand controls (child badges)
+3. Add E2E coverage for fullscreen attribute modal flow (open/copy/close)
 
 ## Resources
 
