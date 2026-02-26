@@ -269,13 +269,22 @@ jobs:
 
 ## Current Status
 
-**No tests yet** — backend implementation prioritized first. Test setup recommended before expanding to frontend UI components.
+**76 unit tests passing** — run with `pnpm run test`.
+
+| File | Tests |
+|------|-------|
+| `src/lib/utils/attributes.test.ts` | 17 |
+| `src/lib/utils/time.test.ts` | 18 |
+| `src/lib/utils/spans.test.ts` | 19 |
+| `src/lib/server/traceStore.test.ts` | 22 |
+
+Fixtures live in `tests/fixtures/` (simple-trace, multi-service-trace, error-trace, out-of-order-spans).
 
 **Next steps**:
-1. Install Vitest
-2. Add tests for `attributes.ts`, `time.ts` (highest risk areas)
-3. Add OTLP ingestion integration tests
-4. Add component tests when UI is built
+1. Add OTLP endpoint integration tests (`/v1/traces` POST → `/api/traces` GET round-trip)
+2. Add component tests when UI stabilises (`@testing-library/svelte`)
+3. Add E2E tests with Playwright
+4. Wire up CI (see GitHub Actions snippet above)
 
 ## Resources
 

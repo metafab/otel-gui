@@ -48,6 +48,16 @@ pnpm install
 pnpm dev
 ```
 
+### Development commands
+
+```sh
+pnpm run dev        # Start dev server on port 4318
+pnpm run check      # TypeScript type-check
+pnpm run test       # Run unit tests (Vitest)
+pnpm run test:watch # Tests in watch mode
+pnpm run build      # Production build
+```
+
 Open [http://localhost:4318](http://localhost:4318) — the OTLP endpoint is live at the same address.
 
 ### Sending Traces
@@ -151,8 +161,8 @@ And of course, you can develop an existing or a new idea 😀:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes ~and add tests~
-4. ~Run tests (`pnpm test`)~
+3. Make your changes and add tests if applicable
+4. Run `pnpm run check && pnpm run test` to validate
 5. Commit your changes (`git commit -m 'Add amazing feature'`)
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request

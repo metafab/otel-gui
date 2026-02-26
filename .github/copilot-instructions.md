@@ -5,9 +5,10 @@ A lightweight OpenTelemetry trace viewer built with SvelteKit 5. Port 4318 (OTLP
 ## Build & Dev
 
 ```sh
-pnpm run dev     # Start on port 4318
-pnpm run check   # Type-check before commits
-pnpm run test    # Run tests (when added - see docs/testing.md)
+pnpm run dev        # Start on port 4318
+pnpm run check      # Type-check before commits
+pnpm run test       # Run unit tests (Vitest)
+pnpm run test:watch # Tests in watch mode
 ```
 
 **Required**: `pnpm` (not npm/yarn), `@sveltejs/adapter-node` (persistent in-memory state)
@@ -65,16 +66,24 @@ $effect(() => {
 
 ## Testing
 
-**Current status**: No tests yet. Type checking via `pnpm run check` is primary validation.
+**Current status**: 76 unit tests, all passing. Run with `pnpm run test`.
 
-**Priority when adding tests** (see [docs/testing.md](../docs/testing.md)):
+**Test files**:
 
-1. OTLP data transformations (`flattenAttributes`, nanosecond handling)
-2. Span tree building (orphan spans, out-of-order roots)
-3. TraceStore span merging and eviction
-4. UI components deferred to v2
+| File | What's covered |
+|------|----------------|
+| [attributes.test.ts](src/lib/utils/attributes.test.ts) | All 7 AnyValue variants, null/edge cases |
+| [time.test.ts](src/lib/utils/time.test.ts) | Duration formatting, negative/zero, timestamps, relative time |
+| [spans.test.ts](src/lib/utils/spans.test.ts) | Tree building, orphans, circular refs, child sort order |
+| [traceStore.test.ts](src/lib/server/traceStore.test.ts) | Ingestion, span merging, FIFO eviction, subscribe/unsubscribe, `resolveRootSpanName` |
 
-**Tool**: Vitest (Vite-native, fast)
+**Fixtures** live in `tests/fixtures/` (simple, multi-service, error, out-of-order batches).
+
+**Tool**: Vitest (`vitest.config.ts`) — uses the SvelteKit Vite plugin so `$lib` aliases resolve correctly.
+
+**What's deferred to v2** (see [docs/testing.md](../docs/testing.md)):
+- UI component tests (`@testing-library/svelte`)
+- E2E tests (Playwright)
 
 ## Code Style
 
