@@ -137,7 +137,7 @@ describe('OTLP E2E', () => {
 - Focus on complex components (waterfall, span detail sidebar)
 - Test user interactions, not implementation details
 
-### 4. E2E Tests (Optional - v2)
+### 4. E2E Tests
 
 **Tool**: Playwright
 
@@ -145,6 +145,9 @@ describe('OTLP E2E', () => {
 - Send real OTLP traces from instrumented app
 - Verify waterfall rendering
 - Test search/filter interactions
+
+**Current baseline**:
+- `tests/e2e/traces.spec.ts` covers OTLP ingest (`POST /v1/traces`) and verifies trace list + trace detail navigation in the browser.
 
 ## Test Data
 
@@ -204,9 +207,19 @@ pnpm add -D vitest @vitest/ui
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed"
   }
 }
+```
+
+### Install Playwright
+
+```sh
+pnpm add -D @playwright/test
+pnpm exec playwright install chromium
 ```
 
 ### Create vitest.config.ts
@@ -294,7 +307,9 @@ Fixtures live in `tests/fixtures/` (simple-trace, multi-service-trace, error-tra
 **Component test setup**: `@testing-library/svelte` + jsdom. Each component test file includes `// @vitest-environment jsdom`. `vitest.config.ts` sets `resolve.conditions: ['browser']` so Svelte's client bundle (not the SSR bundle) is loaded. The shared setup file (`src/lib/components/setup.ts`) imports `@testing-library/jest-dom/vitest` to extend Vitest's `expect` with DOM matchers.
 
 **Next steps**:
-1. Add E2E tests with Playwright
+1. Add E2E coverage for keyboard shortcuts and search behavior
+2. Add E2E coverage for Service Map tab and trace-detail mini map
+3. Add E2E coverage for error trace highlighting and navigation (`e` / `Shift+E`)
 
 ## Resources
 
