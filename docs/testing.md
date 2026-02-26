@@ -247,24 +247,30 @@ tests/
 
 ## CI Integration
 
-### GitHub Actions (when added)
+GitHub Actions workflow at [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on every push and pull request to `main`:
 
 ```yaml
-name: Test
-on: [push, pull_request]
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
       - run: pnpm run check  # Type checking
-      - run: pnpm run test   # Unit tests
+      - run: pnpm run test   # Unit + integration tests
 ```
 
 ## Current Status
@@ -284,7 +290,6 @@ Fixtures live in `tests/fixtures/` (simple-trace, multi-service-trace, error-tra
 **Next steps**:
 1. Add component tests when UI stabilises (`@testing-library/svelte`)
 2. Add E2E tests with Playwright
-3. Wire up CI (see GitHub Actions snippet above)
 
 ## Resources
 

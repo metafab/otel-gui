@@ -82,8 +82,9 @@ $effect(() => {
 
 **Tool**: Vitest (`vitest.config.ts`) — uses the SvelteKit Vite plugin so `$lib` aliases resolve correctly.
 
-**What's deferred to v2** (see [docs/testing.md](../docs/testing.md)):
+**CI**: [`.github/workflows/ci.yml`](workflows/ci.yml) — runs `pnpm run check` then `pnpm run test` on every push/PR to `main` (Node 20, pnpm 10, `--frozen-lockfile`).
 
+**What's deferred to v2** (see [docs/testing.md](../docs/testing.md)):
 - UI component tests (`@testing-library/svelte`)
 - E2E tests (Playwright)
 
