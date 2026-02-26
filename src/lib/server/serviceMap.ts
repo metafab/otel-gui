@@ -4,16 +4,7 @@ import type {
 	ServiceMapNode,
 	ServiceMapEdge
 } from '$lib/types';
-
-/**
- * Returns the p-th percentile of an already-sorted array of nanosecond
- * durations, converted to milliseconds.
- */
-export function percentile(sorted: number[], p: number): number {
-	if (sorted.length === 0) return 0;
-	const idx = Math.ceil((p / 100) * sorted.length) - 1;
-	return sorted[Math.max(0, idx)] / 1_000_000; // ns → ms
-}
+import { percentileNsToMs } from '$lib/utils/stats';
 
 /**
  * Computes the service map from a collection of traces.
@@ -143,8 +134,8 @@ export function buildServiceMap(tracesToProcess: StoredTrace[]): ServiceMapData 
 			callCount: data.callCount,
 			errorCount: data.errorCount,
 			durations: sorted,
-			p50Ms: percentile(sorted, 50),
-			p99Ms: percentile(sorted, 99)
+		p50Ms: percentileNsToMs(sorted, 50),
+				p99Ms: percentileNsToMs(sorted, 99)
 		});
 	}
 
