@@ -309,4 +309,32 @@ test.describe('Trace ingestion flow', () => {
 		await attributeFilter.fill('does-not-exist');
 		await expect(page.getByText('No attributes match the filter.')).toBeVisible();
 	});
+
+	test('supports child-badge collapse and expand controls', async ({ page, request }) => {
+		await request.post('/v1/traces', {
+			headers: { 'Content-Type': 'application/json' },
+			data: multiServiceTrace
+		});
+
+		await page.goto('/trace/AAAABBBBCCCCDDDD0000111122223333');
+
+		const rows = page.locator('.waterfall-row');
+		await expect(rows).toHaveCount(3);
+
+		const rootRow = page.locator('.waterfall-row', { hasText: 'GET /checkout' }).first();
+		const rootBadge = rootRow.locator('button.child-badge');
+
+		await expect(rootBadge).toHaveAttribute('aria-label', 'Collapse');
+		await expect(rootBadge).toHaveAttribute('aria-expanded', 'true');
+
+		await rootBadge.click();
+		await expect(rows).toHaveCount(1);
+		await expect(rootBadge).toHaveAttribute('aria-label', 'Expand');
+		await expect(rootBadge).toHaveAttribute('aria-expanded', 'false');
+
+		await rootBadge.click();
+		await expect(rows).toHaveCount(3);
+		await expect(rootBadge).toHaveAttribute('aria-label', 'Collapse');
+		await expect(rootBadge).toHaveAttribute('aria-expanded', 'true');
+	});
 });

@@ -312,9 +312,9 @@ Fixtures live in `tests/fixtures/` (simple-trace, multi-service-trace, error-tra
 **Component test setup**: `@testing-library/svelte` + jsdom. Each component test file includes `// @vitest-environment jsdom`. `vitest.config.ts` sets `resolve.conditions: ['browser']` so Svelte's client bundle (not the SSR bundle) is loaded. The shared setup file (`src/lib/components/setup.ts`) imports `@testing-library/jest-dom/vitest` to extend Vitest's `expect` with DOM matchers.
 
 **Next steps**:
-1. Add E2E coverage for trace-detail collapse/expand controls (child badges)
-2. Add E2E coverage for fullscreen attribute modal flow (open/copy/close)
-3. Add E2E coverage for linked-trace navigation from sidebar links
+1. Add E2E coverage for fullscreen attribute modal flow (open/copy/close)
+2. Add E2E coverage for linked-trace navigation from sidebar links
+3. Add E2E coverage for parent-span jump action in sidebar
 
 ## Resources
 
