@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { copyToClipboard } from "$lib/utils/clipboard";
+  import CopyButton from "$lib/components/CopyButton.svelte";
   const TRUNCATE_LENGTH = 200;
 
   interface Props {
@@ -11,7 +11,6 @@
   let { attrKey, value, onFullscreen }: Props = $props();
 
   let isExpanded = $state(false);
-  let copied = $state(false);
 
   function formatValue(v: unknown): string {
     if (typeof v === "string") return v;
@@ -35,10 +34,6 @@
   }
 
   const typeLabel = $derived(valueType(value));
-
-  async function copyValue() {
-    await copyToClipboard(formatted, (v) => (copied = v));
-  }
 </script>
 
 <div class="attribute-item">
@@ -48,60 +43,12 @@
       <span class="attr-type attr-type--{typeLabel}">{typeLabel}</span>
     </div>
     <div class="attr-actions">
-      <button
+      <CopyButton
+        text={formatted}
+        size={12}
+        label={attrKey}
         class="attr-action-btn"
-        class:copied
-        onclick={copyValue}
-        title="Copy value"
-        aria-label="Copy value for {attrKey}"
-      >
-        {#if copied}
-          <span class="icon-copied">
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 14 14"
-              fill="none"
-              aria-hidden="true"
-              ><polyline
-                points="2,7 5.5,10.5 12,3"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              /></svg
-            >
-          </span>
-        {:else}
-          <span class="icon-copy">
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 14 14"
-              fill="none"
-              aria-hidden="true"
-              ><rect
-                x="4"
-                y="1"
-                width="9"
-                height="10"
-                rx="1.2"
-                stroke="currentColor"
-                stroke-width="1.4"
-              /><rect
-                x="1"
-                y="3"
-                width="9"
-                height="10"
-                rx="1.2"
-                stroke="currentColor"
-                stroke-width="1.4"
-                style="fill: var(--bg-surface)"
-              /></svg
-            >
-          </span>
-        {/if}
-      </button>
+      />
       {#if needsTruncation || isMultiline}
         <button
           class="attr-action-btn"
@@ -237,6 +184,15 @@
     background: var(--attr-null-bg);
   }
 
+  /* CopyButton override: match attr-action-btn sizing and border style */
+  .attribute-item :global(.copy-btn.attr-action-btn) {
+    width: 22px;
+    height: 22px;
+    border-color: var(--border);
+    border-radius: 3px;
+    color: var(--text-secondary);
+  }
+
   .attr-actions {
     display: flex;
     gap: 0.25rem;
@@ -281,8 +237,6 @@
     color: var(--ok-text);
   }
 
-  .icon-copy,
-  .icon-copied,
   .icon-expand {
     line-height: 1;
   }

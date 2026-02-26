@@ -10,9 +10,17 @@
     label?: string;
     /** Extra CSS classes forwarded to the button element. */
     class?: string;
+    /** When true, renders "Copy" / "Copied" text next to the icon. */
+    showLabel?: boolean;
   }
 
-  let { text, size = 12, label = "", class: extraClass = "" }: Props = $props();
+  let {
+    text,
+    size = 12,
+    label = "",
+    class: extraClass = "",
+    showLabel = false,
+  }: Props = $props();
 
   let copied = $state(false);
 
@@ -45,6 +53,7 @@
         /></svg
       >
     </span>
+    {#if showLabel}Copied{/if}
   {:else}
     <span class="icon-copy">
       <svg
@@ -73,6 +82,7 @@
         /></svg
       >
     </span>
+    {#if showLabel}Copy{/if}
   {/if}
 </button>
 

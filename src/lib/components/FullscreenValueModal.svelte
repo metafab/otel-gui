@@ -1,6 +1,6 @@
 <script lang="ts">
   import { autoFocus } from "$lib/actions/autoFocus";
-  import { copyToClipboard } from "$lib/utils/clipboard";
+  import CopyButton from "$lib/components/CopyButton.svelte";
 
   interface Props {
     /** The attribute key/value to display. Pass `null` to hide the modal. */
@@ -10,24 +10,12 @@
 
   let { attr, onclose }: Props = $props();
 
-  let copied = $state(false);
-
-  async function handleCopy() {
-    if (!attr) return;
-    await copyToClipboard(attr.value, (v) => (copied = v));
-  }
-
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === "Escape") {
       e.stopPropagation();
       onclose();
     }
   }
-
-  // Reset copied state when a different attribute is opened
-  $effect(() => {
-    if (attr) copied = false;
-  });
 </script>
 
 {#if attr}
@@ -54,57 +42,14 @@
       <div class="fullscreen-header">
         <span class="fullscreen-key">{attr.key}</span>
         <div class="fullscreen-actions">
-          <button
-            class="fullscreen-action-btn"
-            class:copied
-            onclick={handleCopy}
-            title="Copy value"
-          >
-            {#if copied}
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                aria-hidden="true"
-                ><polyline
-                  points="2,7 5.5,10.5 12,3"
-                  stroke="currentColor"
-                  stroke-width="1.8"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                /></svg
-              >
-              Copied
-            {:else}
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 14 14"
-                fill="none"
-                aria-hidden="true"
-                ><rect
-                  x="4"
-                  y="1"
-                  width="9"
-                  height="10"
-                  rx="1.2"
-                  stroke="currentColor"
-                  stroke-width="1.4"
-                /><rect
-                  x="1"
-                  y="3"
-                  width="9"
-                  height="10"
-                  rx="1.2"
-                  stroke="currentColor"
-                  stroke-width="1.4"
-                  style="fill: var(--bg-surface)"
-                /></svg
-              >
-              Copy
-            {/if}
-          </button>
+          {#key attr.key}
+            <CopyButton
+              text={attr.value}
+              size={14}
+              showLabel
+              class="fullscreen-action-btn"
+            />
+          {/key}
           <button
             class="fullscreen-close-btn"
             onclick={onclose}
@@ -181,7 +126,7 @@
     flex-shrink: 0;
   }
 
-  .fullscreen-action-btn {
+  .fullscreen-actions :global(.copy-btn) {
     padding: 0.375rem 0.75rem;
     background: var(--bg-surface);
     border: 1px solid var(--border);
@@ -198,13 +143,13 @@
     gap: 0.375rem;
   }
 
-  .fullscreen-action-btn:hover {
+  .fullscreen-actions :global(.copy-btn):hover {
     background: var(--attr-number-bg);
     border-color: var(--accent);
     color: var(--accent);
   }
 
-  .fullscreen-action-btn.copied {
+  .fullscreen-actions :global(.copy-btn.copied) {
     background: var(--ok-bg);
     border-color: var(--ok-border);
     color: var(--ok-text);
