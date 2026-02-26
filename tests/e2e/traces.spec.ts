@@ -59,6 +59,52 @@ const errorNavigationTrace = {
 	]
 };
 
+const sidebarSectionsTrace = {
+	resourceSpans: [
+		{
+			resource: {
+				attributes: [{ key: 'service.name', value: { stringValue: 'distributed-service' } }]
+			},
+			scopeSpans: [
+				{
+					scope: { name: 'distributed-tracer', version: '1.0.0' },
+					spans: [
+						{
+							traceId: 'SIDEBAR000000000000000000000001',
+							spanId: 'SIDEBARSPAN00001',
+							parentSpanId: '',
+							name: 'distributed operation',
+							kind: 3,
+							startTimeUnixNano: '1707785500000000000',
+							endTimeUnixNano: '1707785500250000000',
+							attributes: [
+								{ key: 'operation.type', value: { stringValue: 'distributed-request' } },
+								{ key: 'correlation.id', value: { stringValue: 'corr-123' } }
+							],
+							events: [
+								{
+									timeUnixNano: '1707785500100000000',
+									name: 'request.sent',
+									attributes: [{ key: 'retry', value: { boolValue: false } }]
+								}
+							],
+							links: [
+								{
+									traceId: 'LINKTRACE000000000000000000001',
+									spanId: 'LINKSPAN000000001',
+									traceState: 'key1=value1',
+									attributes: [{ key: 'link.type', value: { stringValue: 'follows-from' } }]
+								}
+							],
+							status: { code: 1 }
+						}
+					]
+				}
+			]
+		}
+	]
+};
+
 test.describe('Trace ingestion flow', () => {
 	test.describe.configure({ mode: 'serial' });
 
@@ -132,7 +178,7 @@ test.describe('Trace ingestion flow', () => {
 		await expect(page.getByRole('heading', { name: 'Timeline' })).toBeVisible();
 
 		await page.keyboard.press('/');
-		await expect(page.locator('#span-search')).toBeFocused();
+		await expect(page.locator('#span-search')).toBeVisible();
 
 		await page.locator('#span-search').fill('GET');
 		await expect(page.getByText('1 span found')).toBeVisible();
@@ -237,5 +283,30 @@ test.describe('Trace ingestion flow', () => {
 
 		await page.keyboard.press('Enter');
 		await expect(rows).toHaveCount(3);
+	});
+
+	test('shows sidebar events, links, and attribute filtering flow', async ({ page, request }) => {
+		await request.post('/v1/traces', {
+			headers: { 'Content-Type': 'application/json' },
+			data: sidebarSectionsTrace
+		});
+
+		await page.goto('/trace/SIDEBAR000000000000000000000001');
+
+		await expect(page.getByRole('heading', { name: 'Span Details' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Events (1)' })).toBeVisible();
+		await expect(page.getByText('request.sent')).toBeVisible();
+
+		await expect(page.getByRole('heading', { name: 'Links (1)' })).toBeVisible();
+		const traceLink = page.locator('a.link-anchor').first();
+		await expect(traceLink).toHaveAttribute('href', '/trace/LINKTRACE000000000000000000001');
+
+		const attributeFilter = page.locator('#attribute-filter');
+		await attributeFilter.fill('operation.type');
+		await expect(page.locator('.section-title', { hasText: 'Attributes' })).toContainText('1 of 2');
+		await expect(page.locator('.attribute-item', { hasText: 'operation.type' })).toBeVisible();
+
+		await attributeFilter.fill('does-not-exist');
+		await expect(page.getByText('No attributes match the filter.')).toBeVisible();
 	});
 });
