@@ -8,6 +8,7 @@ function readFixture<T = unknown>(name: string): T {
 
 const simpleTrace = readFixture('simple-trace.json');
 const errorTrace = readFixture('error-trace.json');
+const multiServiceTrace = readFixture('multi-service-trace.json');
 
 test.describe('Trace ingestion flow', () => {
 	test.describe.configure({ mode: 'serial' });
@@ -89,5 +90,45 @@ test.describe('Trace ingestion flow', () => {
 
 		await page.keyboard.press('Escape');
 		await expect(page.locator('#span-search')).toHaveValue('');
+	});
+
+	test('toggles mini service map from trace detail button', async ({ page, request }) => {
+		await request.post('/v1/traces', {
+			headers: { 'Content-Type': 'application/json' },
+			data: multiServiceTrace
+		});
+
+		await page.goto('/trace/AAAABBBBCCCCDDDD0000111122223333');
+
+		const miniMapToggle = page.getByRole('button', { name: /Service Map/i }).first();
+		await expect(miniMapToggle).toBeVisible();
+		await expect(miniMapToggle).toHaveAttribute('aria-expanded', 'false');
+
+		await miniMapToggle.click();
+		await expect(miniMapToggle).toHaveAttribute('aria-expanded', 'true');
+		await expect(page.locator('.mini-map-wrap')).toBeVisible();
+
+		await miniMapToggle.click();
+		await expect(miniMapToggle).toHaveAttribute('aria-expanded', 'false');
+		await expect(page.locator('.mini-map-wrap')).toHaveCount(0);
+	});
+
+	test('toggles mini service map with m shortcut on trace detail', async ({ page, request }) => {
+		await request.post('/v1/traces', {
+			headers: { 'Content-Type': 'application/json' },
+			data: multiServiceTrace
+		});
+
+		await page.goto('/trace/AAAABBBBCCCCDDDD0000111122223333');
+
+		const miniMapToggle = page.getByRole('button', { name: /Service Map/i }).first();
+		await expect(miniMapToggle).toBeVisible();
+		await expect(miniMapToggle).toHaveAttribute('aria-expanded', 'false');
+
+		await page.keyboard.press('m');
+		await expect(miniMapToggle).toHaveAttribute('aria-expanded', 'true');
+
+		await page.keyboard.press('m');
+		await expect(miniMapToggle).toHaveAttribute('aria-expanded', 'false');
 	});
 });
