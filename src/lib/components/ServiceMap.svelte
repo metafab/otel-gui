@@ -27,7 +27,7 @@
 
   const svgWidth = $derived(Math.max(layout.viewWidth + PAD * 2, 200));
   const svgHeight = $derived(
-    Math.max(layout.viewHeight + PAD * 2, mini ? 180 : 240),
+    Math.max(layout.viewHeight + PAD * 2, mini ? 0 : 240),
   );
 
   // Tooltip state
@@ -269,10 +269,10 @@
             onclick={() => handleNodeClick(node)}
           >
             {#if node.nodeType === "database"}
-              <!-- Cylinder shape for databases -->
+              <!-- Cylinder shape for databases: bottom ellipse first (back), then body, then top ellipse (lid) -->
               <ellipse
                 cx={node.width / 2}
-                cy={10}
+                cy={node.height - 4}
                 rx={node.width / 2 - 2}
                 ry={9}
                 fill={color}
@@ -287,17 +287,9 @@
                 fill={color}
                 stroke="none"
               />
-              <line
-                x1={2}
-                y1={node.height - 4}
-                x2={node.width - 2}
-                y2={node.height - 4}
-                stroke={hasError ? "var(--error-border)" : "var(--border)"}
-                stroke-width={isHovered ? 2.5 : 1.5}
-              />
               <ellipse
                 cx={node.width / 2}
-                cy={node.height - 4}
+                cy={10}
                 rx={node.width / 2 - 2}
                 ry={9}
                 fill={color}

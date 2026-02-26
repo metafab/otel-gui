@@ -191,7 +191,7 @@ export function layoutGraph(
 			};
 		});
 
-	const viewWidth = (maxLayer + 1) * LAYER_GAP_X;
+	const viewWidth = maxLayer * LAYER_GAP_X + NODE_W;
 	const viewHeight = totalHeight;
 
 	return { nodes: layoutNodes, edges: layoutEdges, viewWidth, viewHeight };
