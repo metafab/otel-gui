@@ -26,7 +26,7 @@ function makeSpan(overrides: Partial<StoredSpan> = {}): StoredSpan {
 }
 
 function makeNode(span: StoredSpan): SpanTreeNode {
-	return { span, depth: 0, children: [], collapsed: false };
+	return { span, depth: 0, children: [], collapsed: false, subtreeSize: 1 };
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
