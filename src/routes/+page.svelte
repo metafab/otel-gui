@@ -313,6 +313,7 @@
           </button>
         </div>
       {:else}
+        <div class="table-wrapper">
         <table>
           <thead>
             <tr>
@@ -331,7 +332,7 @@
                 class:error={trace.hasError}
               >
                 <td><ServiceBadge serviceName={trace.serviceName} /></td>
-                <td class="operation">{trace.rootSpanName}</td>
+                <td class="operation" title={trace.rootSpanName}>{trace.rootSpanName}</td>
                 <td class="duration">{trace.durationMs.toFixed(2)}ms</td>
                 <td class="span-count">{trace.spanCount}</td>
                 <td class="timestamp" title={trace.startTime}>
@@ -348,6 +349,7 @@
             {/each}
           </tbody>
         </table>
+        </div>
       {/if}
     {/if}
   {:else}
@@ -391,7 +393,11 @@
   .container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 2rem 2rem 0;
+    height: calc(100vh - 56px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   header {
@@ -667,22 +673,42 @@
     font-size: 0.875rem;
   }
 
+  .table-wrapper {
+    border-radius: 8px;
+    box-shadow: 0 1px 3px var(--shadow);
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    margin-bottom: 1rem;
+    scrollbar-gutter: stable;
+  }
+
   table {
     width: 100%;
     border-collapse: collapse;
     background: var(--bg-surface);
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px var(--shadow);
+    table-layout: fixed;
+    min-width: 700px;
   }
+
+  /* Fixed-width columns; Root Name (col 2) gets the remaining space with a min-width */
+  th:nth-child(1) { width: 130px; }
+  th:nth-child(2) { min-width: 200px; }
+  th:nth-child(3) { width: 130px; }
+  th:nth-child(4) { width: 60px; }
+  th:nth-child(5) { width: 150px; }
+  th:nth-child(6) { width: 80px; }
 
   thead {
     background: var(--bg-muted);
+    position: sticky;
+    top: 0;
+    z-index: 1;
   }
 
   th {
     text-align: left;
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
     font-weight: 600;
     font-size: 0.875rem;
     color: var(--text-secondary);
@@ -709,13 +735,16 @@
   }
 
   td {
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
   }
 
   .operation {
     font-family: monospace;
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .duration {
