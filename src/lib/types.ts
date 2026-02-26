@@ -100,4 +100,6 @@ export interface SpanTreeNode {
 	depth: number;
 	children: SpanTreeNode[];
 	collapsed: boolean;
+	/** Total number of descendant spans (direct + indirect). 0 for leaf nodes. */
+	subtreeSize: number;
 }

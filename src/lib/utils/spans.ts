@@ -69,7 +69,8 @@ export function buildSpanTree(spans: StoredSpan[]): SpanTreeNode[] {
 				span,
 				depth,
 				children: [],
-				collapsed: false
+				collapsed: false,
+				subtreeSize: 0
 			};
 		}
 
@@ -81,11 +82,15 @@ export function buildSpanTree(spans: StoredSpan[]): SpanTreeNode[] {
 		// Sort children by start time
 		children.sort((a, b) => a.startTimeUnixNano.localeCompare(b.startTimeUnixNano));
 
+		const childNodes = children.map((child) => buildNode(child, depth + 1, currentVisited));
+		const subtreeSize = childNodes.reduce((sum, c) => sum + 1 + c.subtreeSize, 0);
+
 		return {
 			span,
 			depth,
-			children: children.map((child) => buildNode(child, depth + 1, currentVisited)),
-			collapsed: false
+			children: childNodes,
+			collapsed: false,
+			subtreeSize
 		};
 	}
 

@@ -5,7 +5,6 @@
   import { themeStore } from "$lib/stores/theme.svelte";
   import { spanKindLabel } from "$lib/utils/spans";
   import ServiceBadge from "$lib/components/ServiceBadge.svelte";
-  import ChevronIcon from "$lib/components/ChevronIcon.svelte";
 
   interface Props {
     span: StoredSpan;
@@ -16,6 +15,8 @@
     isHighlighted?: boolean;
     hasChildren?: boolean;
     isCollapsed?: boolean;
+    childCount?: number;
+    subtreeSize?: number;
     nameColumnWidth?: number;
     onSelect: () => void;
     onToggleCollapse?: () => void;
@@ -31,7 +32,9 @@
     isHighlighted = false,
     hasChildren = false,
     isCollapsed = false,
-    nameColumnWidth = 300,
+    childCount = 0,
+    subtreeSize = 0,
+    nameColumnWidth = 420,
     onSelect,
     onToggleCollapse,
     onEventClick,
@@ -89,6 +92,10 @@
     }
   }
 
+  // Badge: show direct child count when expanded, subtree total when collapsed
+  const badgeValue = $derived(isCollapsed ? subtreeSize : childCount);
+  const badgeText = $derived(badgeValue > 99 ? "99+" : String(badgeValue));
+
   function handleCollapseToggle(e: MouseEvent | KeyboardEvent) {
     e.stopPropagation();
     if (onToggleCollapse) {
@@ -117,10 +124,13 @@
 >
   <!-- Left: Span name with indentation -->
   <div class="span-info" style="padding-left: {depth * 20}px">
-    <div class="span-name" title={span.name}>
-      {#if hasChildren}
+    <div class="span-name">
+      {#if !hasChildren}
+        <span class="child-badge child-badge-leaf" aria-hidden="true"></span>
+      {:else}
         <button
-          class="collapse-toggle"
+          class="child-badge"
+          class:badge-collapsed={isCollapsed}
           onclick={handleCollapseToggle}
           onkeydown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
@@ -130,15 +140,11 @@
           }}
           aria-label={isCollapsed ? "Expand" : "Collapse"}
           aria-expanded={!isCollapsed}
-          title={isCollapsed
-            ? "Expand: → Right • Toggle: Enter"
-            : "Collapse: ← Left • Toggle: Enter"}
-          tabindex="-1"
+          title={`${badgeValue} ${isCollapsed ? "spans hidden" : "direct children"}\n${isCollapsed ? "Expand: → Right • Toggle: Enter" : "Collapse: ← Left • Toggle: Enter"}`}
+          tabindex="-1">{badgeText}</button
         >
-          <ChevronIcon expanded={!isCollapsed} />
-        </button>
       {/if}
-      <span class="span-name-text">{span.name}</span>
+      <span class="span-name-text" title={span.name}>{span.name}</span>
     </div>
     <div class="span-meta">
       <ServiceBadge {serviceName} />
@@ -182,7 +188,7 @@
 <style>
   .waterfall-row {
     display: grid;
-    grid-template-columns: 300px 1fr; /* overridden by inline style */
+    grid-template-columns: 420px 1fr; /* overridden by inline style */
     gap: 1rem;
     padding: 0.5rem;
     border-bottom: 1px solid var(--border-light);
@@ -232,8 +238,9 @@
 
   .span-info {
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
     overflow: hidden;
   }
 
@@ -245,32 +252,72 @@
     white-space: nowrap;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
   }
 
-  .collapse-toggle {
-    background: none;
-    border: none;
-    color: var(--collapse-text);
-    cursor: pointer;
-    padding: 0;
+  /* Child count badge — fixed 20×18px, always reserves space */
+  .child-badge {
     width: 20px;
-    height: 20px;
+    height: 18px;
+    flex-shrink: 0;
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.5px;
+    overflow: hidden;
+    border-radius: 3px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.75rem;
-    flex-shrink: 0;
-    transition: color 0.15s ease;
+    padding: 0;
+    /* outlined style (expanded state) */
+    background: transparent;
+    border: 1.5px solid var(--collapse-text);
+    color: var(--collapse-text);
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      color 0.15s ease;
   }
 
-  .collapse-toggle:hover {
+  .child-badge:hover {
+    border-color: var(--collapse-text-hover);
     color: var(--collapse-text-hover);
   }
 
-  .collapse-toggle:focus {
+  .child-badge:focus {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+
+  /* filled style (collapsed state) */
+  .child-badge.badge-collapsed {
+    background: var(--collapse-text);
+    color: var(--bg-surface);
+    border-color: var(--collapse-text);
+  }
+
+  .child-badge.badge-collapsed:hover {
+    background: var(--collapse-text-hover);
+    border-color: var(--collapse-text-hover);
+  }
+
+  /* Leaf span: empty dashed box — declared after .child-badge so source order wins */
+  .child-badge-leaf {
+    border: 1.5px dashed var(--collapse-text);
+    background: transparent;
+    color: transparent;
+    cursor: default;
+  }
+
+  .child-badge-leaf:hover {
+    border: 1.5px dashed var(--collapse-text);
+    background: transparent;
+    color: transparent;
   }
 
   .span-name-text {
@@ -284,6 +331,7 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.75rem;
+    flex-shrink: 0;
   }
 
   .span-kind {

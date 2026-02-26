@@ -55,7 +55,7 @@
   let sidebarWidth = $state<number>(400);
   let isDraggingSplitter = $state<boolean>(false);
   let contentGridElement = $state<HTMLDivElement | null>(null);
-  let nameColumnWidth = $state<number>(300);
+  let nameColumnWidth = $state<number>(420);
   let isColumnSplitterDragging = $state<boolean>(false);
   let fullscreenAttr = $state<{ key: string; value: string } | null>(null);
   let fullscreenCopied = $state(false);
@@ -1107,6 +1107,8 @@
                   isHighlighted={matchingSpanIds.has(node.span.spanId)}
                   hasChildren={node.children.length > 0}
                   isCollapsed={node.collapsed}
+                  childCount={node.children.length}
+                  subtreeSize={node.subtreeSize}
                   onSelect={() => handleSpanSelect(node.span.spanId)}
                   onToggleCollapse={() => toggleNodeCollapse(node.span.spanId)}
                   onEventClick={(eventIndex) =>
@@ -2131,7 +2133,7 @@
 
   .time-ruler {
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 420px 1fr;
     gap: 1rem;
     padding: 0.75rem 0.5rem;
     background: var(--bg-page);
