@@ -1,10 +1,12 @@
 // Theme store: 'system' | 'light' | 'dark'
 // Persists to localStorage, defaults to 'system' (follows OS preference)
 
+import { browser } from '$app/environment';
+
 type ThemeValue = 'system' | 'light' | 'dark';
 
 function getInitialTheme(): ThemeValue {
-	if (typeof localStorage === 'undefined') return 'system';
+	if (!browser) return 'system';
 	const stored = localStorage.getItem('theme');
 	if (stored === 'light' || stored === 'dark' || stored === 'system') {
 		return stored;
@@ -14,12 +16,14 @@ function getInitialTheme(): ThemeValue {
 
 let theme = $state<ThemeValue>(getInitialTheme());
 
-$effect.root(() => {
-	$effect(() => {
-		document.documentElement.setAttribute('data-theme', theme);
-		localStorage.setItem('theme', theme);
+if (browser) {
+	$effect.root(() => {
+		$effect(() => {
+			document.documentElement.setAttribute('data-theme', theme);
+			localStorage.setItem('theme', theme);
+		});
 	});
-});
+}
 
 const CYCLE: ThemeValue[] = ['system', 'light', 'dark'];
 
