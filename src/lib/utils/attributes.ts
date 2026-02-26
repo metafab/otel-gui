@@ -33,8 +33,9 @@ export function extractAnyValue(anyValue: any): any {
 		return anyValue.boolValue;
 	}
 	if (anyValue.intValue !== undefined) {
-		// intValue is string-encoded in JSON for int64
-		return anyValue.intValue;
+		// intValue is string-encoded in JSON for int64; convert to number for display
+		// Note: values > 2^53-1 will lose precision, but that's acceptable for attribute display
+		return Number(anyValue.intValue);
 	}
 	if (anyValue.doubleValue !== undefined) {
 		return anyValue.doubleValue;
