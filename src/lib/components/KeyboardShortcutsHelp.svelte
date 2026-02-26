@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { autoFocus } from "$lib/actions/autoFocus";
   export interface Shortcut {
     keys: string[];
     description: string;
@@ -12,10 +13,6 @@
       e.stopPropagation();
       onclose();
     }
-  }
-
-  function autoFocus(node: HTMLElement) {
-    node.focus();
   }
 </script>
 

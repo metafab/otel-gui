@@ -314,41 +314,43 @@
         </div>
       {:else}
         <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Root Service</th>
-              <th>Root Name</th>
-              <th>Root Duration</th>
-              <th>Spans</th>
-              <th>Time</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each filteredTraces as trace (trace.traceId)}
-              <tr
-                onclick={() => handleRowClick(trace.traceId)}
-                class:error={trace.hasError}
-              >
-                <td><ServiceBadge serviceName={trace.serviceName} /></td>
-                <td class="operation" title={trace.rootSpanName}>{trace.rootSpanName}</td>
-                <td class="duration">{trace.durationMs.toFixed(2)}ms</td>
-                <td class="span-count">{trace.spanCount}</td>
-                <td class="timestamp" title={trace.startTime}>
-                  {new Date(trace.startTime).toLocaleString()}
-                </td>
-                <td class="status">
-                  {#if trace.hasError}
-                    <span class="error-badge">ERROR</span>
-                  {:else}
-                    <span class="ok-badge">OK</span>
-                  {/if}
-                </td>
+          <table>
+            <thead>
+              <tr>
+                <th>Root Service</th>
+                <th>Root Name</th>
+                <th>Root Duration</th>
+                <th>Spans</th>
+                <th>Time</th>
+                <th>Status</th>
               </tr>
-            {/each}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {#each filteredTraces as trace (trace.traceId)}
+                <tr
+                  onclick={() => handleRowClick(trace.traceId)}
+                  class:error={trace.hasError}
+                >
+                  <td><ServiceBadge serviceName={trace.serviceName} /></td>
+                  <td class="operation" title={trace.rootSpanName}
+                    >{trace.rootSpanName}</td
+                  >
+                  <td class="duration">{trace.durationMs.toFixed(2)}ms</td>
+                  <td class="span-count">{trace.spanCount}</td>
+                  <td class="timestamp" title={trace.startTime}>
+                    {new Date(trace.startTime).toLocaleString()}
+                  </td>
+                  <td class="status">
+                    {#if trace.hasError}
+                      <span class="error-badge">ERROR</span>
+                    {:else}
+                      <span class="ok-badge">OK</span>
+                    {/if}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
         </div>
       {/if}
     {/if}
@@ -492,28 +494,6 @@
   .actions button:not(.shortcut-help-btn):disabled {
     opacity: 0.5;
     cursor: not-allowed;
-  }
-
-  .shortcut-help-btn {
-    padding: 0.5rem 0.75rem;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    line-height: 1;
-    transition:
-      background 0.15s ease,
-      border-color 0.15s ease,
-      color 0.15s ease;
-  }
-
-  .shortcut-help-btn:hover {
-    background: var(--bg-muted);
-    border-color: var(--accent);
-    color: var(--accent);
   }
 
   .error {
@@ -692,12 +672,24 @@
   }
 
   /* Fixed-width columns; Root Name (col 2) gets the remaining space with a min-width */
-  th:nth-child(1) { width: 130px; }
-  th:nth-child(2) { min-width: 200px; }
-  th:nth-child(3) { width: 130px; }
-  th:nth-child(4) { width: 60px; }
-  th:nth-child(5) { width: 150px; }
-  th:nth-child(6) { width: 80px; }
+  th:nth-child(1) {
+    width: 130px;
+  }
+  th:nth-child(2) {
+    min-width: 200px;
+  }
+  th:nth-child(3) {
+    width: 130px;
+  }
+  th:nth-child(4) {
+    width: 60px;
+  }
+  th:nth-child(5) {
+    width: 150px;
+  }
+  th:nth-child(6) {
+    width: 80px;
+  }
 
   thead {
     background: var(--bg-muted);

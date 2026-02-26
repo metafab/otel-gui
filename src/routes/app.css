@@ -319,6 +319,29 @@ a:hover {
 	text-decoration: underline;
 }
 
+/* Shared: keyboard shortcut help button (appears in both pages) */
+.shortcut-help-btn {
+	padding: 0.5rem 0.75rem;
+	background: var(--bg-surface);
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.9375rem;
+	font-weight: 600;
+	color: var(--text-secondary);
+	line-height: 1;
+	transition:
+		background 0.15s ease,
+		border-color 0.15s ease,
+		color 0.15s ease;
+}
+
+.shortcut-help-btn:hover {
+	background: var(--bg-muted);
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
 button {
 	font-family: inherit;
 }

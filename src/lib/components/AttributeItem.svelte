@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { copyToClipboard } from "$lib/utils/clipboard";
   const TRUNCATE_LENGTH = 200;
 
   interface Props {
@@ -36,15 +37,7 @@
   const typeLabel = $derived(valueType(value));
 
   async function copyValue() {
-    try {
-      await navigator.clipboard.writeText(formatted);
-      copied = true;
-      setTimeout(() => {
-        copied = false;
-      }, 1500);
-    } catch {
-      // Fallback for environments without clipboard API
-    }
+    await copyToClipboard(formatted, (v) => (copied = v));
   }
 </script>
 
