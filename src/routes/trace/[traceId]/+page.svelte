@@ -1243,7 +1243,7 @@
     align-content: start;
     border: 1px solid var(--border);
     border-radius: 4px;
-    overflow-x: hidden;
+    overflow-x: auto;
     overflow-y: auto;
     flex: 1;
     min-height: 0;
