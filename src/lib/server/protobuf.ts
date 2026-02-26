@@ -2,6 +2,7 @@
 import protobuf from 'protobufjs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { existsSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -9,6 +10,34 @@ const __dirname = dirname(__filename);
 // Load proto files
 let root: protobuf.Root | null = null;
 let ExportTraceServiceRequest: protobuf.Type | null = null;
+
+const TRACE_SERVICE_PROTO = 'opentelemetry/proto/collector/trace/v1/trace_service.proto';
+
+function resolveProtoRoot(): string {
+	const candidates: string[] = [];
+
+	// Most common in local dev/preview
+	candidates.push(join(process.cwd(), 'proto'));
+
+	// Walk up from current module location to support bundled server output paths
+	let current = __dirname;
+	for (let i = 0; i < 10; i++) {
+		candidates.push(join(current, 'proto'));
+		const parent = dirname(current);
+		if (parent === current) {
+			break;
+		}
+		current = parent;
+	}
+
+	for (const candidate of candidates) {
+		if (existsSync(join(candidate, TRACE_SERVICE_PROTO))) {
+			return candidate;
+		}
+	}
+
+	throw new Error(`Could not locate OTLP proto root. Tried: ${candidates.join(', ')}`);
+}
 
 /**
  * Initialize protobuf types from .proto files
@@ -19,7 +48,7 @@ async function initProtobuf() {
 	}
 
 	// Root directory for proto files - protobufjs will resolve imports from here
-	const protoRoot = join(__dirname, '../../../proto');
+	const protoRoot = resolveProtoRoot();
 	
 	// Load the main proto file (dependencies are automatically loaded)
 	root = new protobuf.Root();
@@ -32,7 +61,7 @@ async function initProtobuf() {
 		return target;
 	};
 	
-	await root.load('opentelemetry/proto/collector/trace/v1/trace_service.proto');
+	await root.load(TRACE_SERVICE_PROTO);
 	ExportTraceServiceRequest = root.lookupType('opentelemetry.proto.collector.trace.v1.ExportTraceServiceRequest');
 }
 
