@@ -275,7 +275,7 @@ jobs:
 
 ## Current Status
 
-**96 tests passing** — run with `pnpm run test`.
+**129 tests passing** — run with `pnpm run test`.
 
 | File | Tests |
 |------|-------|
@@ -284,12 +284,17 @@ jobs:
 | `src/lib/utils/spans.test.ts` | 19 |
 | `src/lib/server/traceStore.test.ts` | 22 |
 | `src/routes/integration.test.ts` | 20 |
+| `src/lib/components/ChevronIcon.test.ts` | 6 |
+| `src/lib/components/ServiceBadge.test.ts` | 5 |
+| `src/lib/components/AttributeItem.test.ts` | 13 |
+| `src/lib/components/KeyboardShortcutsHelp.test.ts` | 9 |
 
 Fixtures live in `tests/fixtures/` (simple-trace, multi-service-trace, error-trace, out-of-order-spans).
 
+**Component test setup**: `@testing-library/svelte` + jsdom. Each component test file includes `// @vitest-environment jsdom`. `vitest.config.ts` sets `resolve.conditions: ['browser']` so Svelte's client bundle (not the SSR bundle) is loaded. The shared setup file (`src/lib/components/setup.ts`) imports `@testing-library/jest-dom/vitest` to extend Vitest's `expect` with DOM matchers.
+
 **Next steps**:
-1. Add component tests when UI stabilises (`@testing-library/svelte`)
-2. Add E2E tests with Playwright
+1. Add E2E tests with Playwright
 
 ## Resources
 

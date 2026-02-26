@@ -66,26 +66,30 @@ $effect(() => {
 
 ## Testing
 
-**Current status**: 96 unit + integration tests, all passing. Run with `pnpm run test`.
+**Current status**: 129 unit + integration tests, all passing. Run with `pnpm run test`.
 
 **Test files**:
 
-| File                                                    | What's covered                                                                                                             |
-| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| [attributes.test.ts](src/lib/utils/attributes.test.ts)  | All 7 AnyValue variants, null/edge cases                                                                                   |
-| [time.test.ts](src/lib/utils/time.test.ts)              | Duration formatting, negative/zero, timestamps, relative time                                                              |
-| [spans.test.ts](src/lib/utils/spans.test.ts)            | Tree building, orphans, circular refs, child sort order                                                                    |
-| [traceStore.test.ts](src/lib/server/traceStore.test.ts) | Ingestion, span merging, FIFO eviction, subscribe/unsubscribe, `resolveRootSpanName`                                       |
-| [integration.test.ts](src/routes/integration.test.ts)   | Full POST→store→GET round-trip for all route handlers (`/v1/traces`, `/api/traces`, `/api/traces/:id`, `/api/service-map`) |
+| File                                                                              | What's covered                                                                                                             |
+| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| [attributes.test.ts](src/lib/utils/attributes.test.ts)                            | All 7 AnyValue variants, null/edge cases                                                                                   |
+| [time.test.ts](src/lib/utils/time.test.ts)                                        | Duration formatting, negative/zero, timestamps, relative time                                                              |
+| [spans.test.ts](src/lib/utils/spans.test.ts)                                      | Tree building, orphans, circular refs, child sort order                                                                    |
+| [traceStore.test.ts](src/lib/server/traceStore.test.ts)                           | Ingestion, span merging, FIFO eviction, subscribe/unsubscribe, `resolveRootSpanName`                                       |
+| [integration.test.ts](src/routes/integration.test.ts)                             | Full POST→store→GET round-trip for all route handlers (`/v1/traces`, `/api/traces`, `/api/traces/:id`, `/api/service-map`) |
+| [ChevronIcon.test.ts](src/lib/components/ChevronIcon.test.ts)                     | SVG render, rotation transform, size prop, aria-hidden                                                                     |
+| [ServiceBadge.test.ts](src/lib/components/ServiceBadge.test.ts)                   | Service name text, element/attribute structure, background color                                                           |
+| [AttributeItem.test.ts](src/lib/components/AttributeItem.test.ts)                 | Key/value rendering, all 8 type labels, copy button, truncation, onFullscreen callback                                     |
+| [KeyboardShortcutsHelp.test.ts](src/lib/components/KeyboardShortcutsHelp.test.ts) | Shortcuts table, dialog role, close via button/backdrop/Escape key                                                         |
 
 **Fixtures** live in `tests/fixtures/` (simple, multi-service, error, out-of-order batches).
 
-**Tool**: Vitest (`vitest.config.ts`) — uses the SvelteKit Vite plugin so `$lib` aliases resolve correctly.
+**Tool**: Vitest (`vitest.config.ts`) — uses the SvelteKit Vite plugin so `$lib` aliases resolve correctly. `resolve.conditions: ['browser']` forces Svelte's client bundle for component tests. Component tests use `// @vitest-environment jsdom` inline declarations.
 
 **CI**: [`.github/workflows/ci.yml`](workflows/ci.yml) — runs `pnpm run check` then `pnpm run test` on every push/PR to `main` (Node 20, pnpm 10, `--frozen-lockfile`).
 
 **What's deferred to v2** (see [docs/testing.md](../docs/testing.md)):
-- UI component tests (`@testing-library/svelte`)
+
 - E2E tests (Playwright)
 
 ## Code Style
