@@ -9,6 +9,55 @@ function readFixture<T = unknown>(name: string): T {
 const simpleTrace = readFixture('simple-trace.json');
 const errorTrace = readFixture('error-trace.json');
 const multiServiceTrace = readFixture('multi-service-trace.json');
+const errorNavigationTrace = {
+	resourceSpans: [
+		{
+			resource: {
+				attributes: [{ key: 'service.name', value: { stringValue: 'checkout-service' } }]
+			},
+			scopeSpans: [
+				{
+					scope: { name: 'checkout-tracer' },
+					spans: [
+						{
+							traceId: 'ERRNAV000000000000000000000001',
+							spanId: 'ROOTERRNAV000001',
+							parentSpanId: '',
+							name: 'POST /checkout',
+							kind: 2,
+							startTimeUnixNano: '1700000000000000000',
+							endTimeUnixNano: '1700000001000000000',
+							attributes: [],
+							status: { code: 1 }
+						},
+						{
+							traceId: 'ERRNAV000000000000000000000001',
+							spanId: 'CHILDERRNAV00001',
+							parentSpanId: 'ROOTERRNAV000001',
+							name: 'validateCart',
+							kind: 1,
+							startTimeUnixNano: '1700000000100000000',
+							endTimeUnixNano: '1700000000400000000',
+							attributes: [],
+							status: { code: 2, message: 'Cart invalid' }
+						},
+						{
+							traceId: 'ERRNAV000000000000000000000001',
+							spanId: 'CHILDERRNAV00002',
+							parentSpanId: 'ROOTERRNAV000001',
+							name: 'reserveInventory',
+							kind: 1,
+							startTimeUnixNano: '1700000000500000000',
+							endTimeUnixNano: '1700000000900000000',
+							attributes: [],
+							status: { code: 2, message: 'Inventory timeout' }
+						}
+					]
+				}
+			]
+		}
+	]
+};
 
 test.describe('Trace ingestion flow', () => {
 	test.describe.configure({ mode: 'serial' });
@@ -130,5 +179,27 @@ test.describe('Trace ingestion flow', () => {
 
 		await page.keyboard.press('m');
 		await expect(miniMapToggle).toHaveAttribute('aria-expanded', 'false');
+	});
+
+	test('navigates error spans with e and Shift+E shortcuts', async ({ page, request }) => {
+		await request.post('/v1/traces', {
+			headers: { 'Content-Type': 'application/json' },
+			data: errorNavigationTrace
+		});
+
+		await page.goto('/trace/ERRNAV000000000000000000000001');
+
+		await expect(page.getByText('Spans with errors: 2')).toBeVisible();
+		const errorPosition = page.locator('.position-indicator').first();
+		await expect(errorPosition).toHaveText('0/2');
+
+		await page.keyboard.press('e');
+		await expect(errorPosition).toHaveText('1/2');
+
+		await page.keyboard.press('e');
+		await expect(errorPosition).toHaveText('2/2');
+
+		await page.keyboard.press('Shift+E');
+		await expect(errorPosition).toHaveText('1/2');
 	});
 });
