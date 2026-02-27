@@ -1,6 +1,6 @@
 # otel-gui
 
-A lightweight, zero-config OpenTelemetry trace viewer for local development. 
+A lightweight, zero-config OpenTelemetry trace viewer for local development.
 
 Drop-in replacement for a collector endpoint — point your OTLP exporter at it and see traces immediately. No database required.
 
@@ -52,6 +52,9 @@ pnpm dev
 
 ```sh
 pnpm run dev        # Start dev server on port 4318
+pnpm run lint       # Lint TypeScript, JavaScript, and Svelte files
+pnpm run format     # Format files with Prettier
+pnpm run format:check # Check formatting without writing changes
 pnpm run check      # TypeScript type-check
 pnpm run test       # Run unit tests (Vitest)
 pnpm run test:watch # Tests in watch mode
@@ -166,16 +169,16 @@ See [SAMPLE_TRACES.md](./SAMPLE_TRACES.md) for a full feature exploration guide.
 
 ## ⌨️ Keyboard Shortcuts
 
-| Key | Where | Action |
-|-----|-------|--------|
-| `/` | Everywhere | Focus search |
-| `Esc` | Everywhere | Clear search / go back |
-| `m` | Everywhere | Toggle Traces / Service Map tab |
-| `Alt+Backspace` | Trace list | Clear all traces |
-| `↑↓←→` / `Enter` | Trace detail | Navigate span tree |
-| `n` / `N` | Trace detail | Next / prev search match |
-| `e` / `E` | Trace detail | Next / prev error span |
-| `?` | Everywhere | Toggle shortcuts overlay |
+| Key              | Where        | Action                          |
+| ---------------- | ------------ | ------------------------------- |
+| `/`              | Everywhere   | Focus search                    |
+| `Esc`            | Everywhere   | Clear search / go back          |
+| `m`              | Everywhere   | Toggle Traces / Service Map tab |
+| `Alt+Backspace`  | Trace list   | Clear all traces                |
+| `↑↓←→` / `Enter` | Trace detail | Navigate span tree              |
+| `n` / `N`        | Trace detail | Next / prev search match        |
+| `e` / `E`        | Trace detail | Next / prev error span          |
+| `?`              | Everywhere   | Toggle shortcuts overlay        |
 
 ## 🏗️ Building
 
@@ -217,7 +220,7 @@ And of course, you can develop an existing or a new idea 😀:
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes and add tests if applicable
-4. Run `pnpm run check && pnpm run test` to validate
+4. Run `pnpm run lint && pnpm run format:check && pnpm run check && pnpm run test` to validate
 5. Commit your changes (`git commit -m 'Add amazing feature'`)
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
