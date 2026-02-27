@@ -1,18 +1,18 @@
 <script lang="ts">
-  import ChevronIcon from "$lib/components/ChevronIcon.svelte";
-  import CopyButton from "$lib/components/CopyButton.svelte";
-  import ServiceMap from "$lib/components/ServiceMap.svelte";
-  import { formatTimestamp, formatTimestampLocal } from "$lib/utils/time";
-  import type { StoredTrace, ServiceMapData } from "$lib/types";
+  import ChevronIcon from '$lib/components/ChevronIcon.svelte'
+  import CopyButton from '$lib/components/CopyButton.svelte'
+  import ServiceMap from '$lib/components/ServiceMap.svelte'
+  import { formatTimestamp, formatTimestampLocal } from '$lib/utils/time'
+  import type { StoredTrace, ServiceMapData } from '$lib/types'
 
   interface Props {
-    trace: StoredTrace;
-    serviceCount: number;
-    maxDepth: number;
-    traceDuration: string;
-    miniMapData: ServiceMapData | null;
-    miniMapLoading: boolean;
-    showMiniMap: boolean;
+    trace: StoredTrace
+    serviceCount: number
+    maxDepth: number
+    traceDuration: string
+    miniMapData: ServiceMapData | null
+    miniMapLoading: boolean
+    showMiniMap: boolean
   }
 
   let {
@@ -23,7 +23,7 @@
     miniMapData,
     miniMapLoading,
     showMiniMap = $bindable(false),
-  }: Props = $props();
+  }: Props = $props()
 </script>
 
 <section class="trace-identification">
@@ -42,11 +42,11 @@
     <span class="root-span">{trace.rootSpanName}</span>
     <span class="separator">•</span>
     <span class="spans"
-      >{trace.spanCount} span{trace.spanCount !== 1 ? "s" : ""}</span
+      >{trace.spanCount} span{trace.spanCount !== 1 ? 's' : ''}</span
     >
     <span class="separator">•</span>
     <span class="services"
-      >{serviceCount} service{serviceCount !== 1 ? "s" : ""}</span
+      >{serviceCount} service{serviceCount !== 1 ? 's' : ''}</span
     >
     <span class="separator">•</span>
     <span class="depth">depth {maxDepth}</span>
@@ -90,11 +90,11 @@
         Service Map
         <span class="mini-map-count"
           >{miniMapData.nodes.length} service{miniMapData.nodes.length !== 1
-            ? "s"
-            : ""} · {miniMapData.edges.length} edge{miniMapData.edges.length !==
+            ? 's'
+            : ''} · {miniMapData.edges.length} edge{miniMapData.edges.length !==
           1
-            ? "s"
-            : ""}</span
+            ? 's'
+            : ''}</span
         >
       </button>
       {#if showMiniMap}

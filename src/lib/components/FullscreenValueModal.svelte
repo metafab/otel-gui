@@ -1,19 +1,19 @@
 <script lang="ts">
-  import { autoFocus } from "$lib/actions/autoFocus";
-  import CopyButton from "$lib/components/CopyButton.svelte";
+  import { autoFocus } from '$lib/actions/autoFocus'
+  import CopyButton from '$lib/components/CopyButton.svelte'
 
   interface Props {
     /** The attribute key/value to display. Pass `null` to hide the modal. */
-    attr: { key: string; value: string } | null;
-    onclose: () => void;
+    attr: { key: string; value: string } | null
+    onclose: () => void
   }
 
-  let { attr, onclose }: Props = $props();
+  let { attr, onclose }: Props = $props()
 
   function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      onclose();
+    if (e.key === 'Escape') {
+      e.stopPropagation()
+      onclose()
     }
   }
 </script>

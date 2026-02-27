@@ -128,7 +128,9 @@
               "attributes": [
                 {
                   "key": "db.statement",
-                  "value": { "stringValue": "INSERT INTO orders (user_id, total, status) VALUES ($1, $2, $3)" }
+                  "value": {
+                    "stringValue": "INSERT INTO orders (user_id, total, status) VALUES ($1, $2, $3)"
+                  }
                 },
                 {
                   "key": "db.name",
@@ -173,7 +175,9 @@
               "attributes": [
                 {
                   "key": "db.statement",
-                  "value": { "stringValue": "UPDATE inventory SET quantity = quantity - $1 WHERE product_id = $2" }
+                  "value": {
+                    "stringValue": "UPDATE inventory SET quantity = quantity - $1 WHERE product_id = $2"
+                  }
                 },
                 {
                   "key": "db.name",
@@ -209,7 +213,9 @@
                     },
                     {
                       "key": "error.message",
-                      "value": { "stringValue": "deadlock detected while updating inventory" }
+                      "value": {
+                        "stringValue": "deadlock detected while updating inventory"
+                      }
                     }
                   ]
                 }
@@ -231,7 +237,9 @@
               "attributes": [
                 {
                   "key": "db.statement",
-                  "value": { "stringValue": "UPDATE inventory SET quantity = quantity - $1 WHERE product_id = $2" }
+                  "value": {
+                    "stringValue": "UPDATE inventory SET quantity = quantity - $1 WHERE product_id = $2"
+                  }
                 },
                 {
                   "key": "db.name",

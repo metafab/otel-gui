@@ -4,11 +4,11 @@
 
 ### Endpoints
 
-| Signal | Path            | Method | Request Body                    |
-|--------|-----------------|--------|---------------------------------|
-| Traces | `/v1/traces`    | POST   | `ExportTraceServiceRequest`     |
-| Metrics| `/v1/metrics`   | POST   | `ExportMetricsServiceRequest`   |
-| Logs   | `/v1/logs`      | POST   | `ExportLogsServiceRequest`      |
+| Signal  | Path          | Method | Request Body                  |
+| ------- | ------------- | ------ | ----------------------------- |
+| Traces  | `/v1/traces`  | POST   | `ExportTraceServiceRequest`   |
+| Metrics | `/v1/metrics` | POST   | `ExportMetricsServiceRequest` |
+| Logs    | `/v1/logs`    | POST   | `ExportLogsServiceRequest`    |
 
 - Default port: **4318** (HTTP), 4317 (gRPC)
 - Content types: `application/json` (JSON protobuf) and `application/x-protobuf` (binary protobuf)
@@ -59,41 +59,41 @@ ExportTraceServiceRequest
 
 ### Span Fields
 
-| Field                  | Type              | Description                                                        |
-|------------------------|-------------------|--------------------------------------------------------------------|
-| `trace_id`             | bytes (16 bytes)  | Unique trace identifier. Hex-encoded in JSON (32 chars).           |
-| `span_id`              | bytes (8 bytes)   | Unique span identifier. Hex-encoded in JSON (16 chars).            |
-| `parent_span_id`       | bytes (8 bytes)   | Parent span's ID. Empty = root span.                               |
-| `trace_state`          | string            | W3C TraceContext tracestate header value.                          |
-| `name`                 | string            | Operation name (e.g., `GET /api/users`).                           |
+| Field                  | Type              | Description                                                           |
+| ---------------------- | ----------------- | --------------------------------------------------------------------- |
+| `trace_id`             | bytes (16 bytes)  | Unique trace identifier. Hex-encoded in JSON (32 chars).              |
+| `span_id`              | bytes (8 bytes)   | Unique span identifier. Hex-encoded in JSON (16 chars).               |
+| `parent_span_id`       | bytes (8 bytes)   | Parent span's ID. Empty = root span.                                  |
+| `trace_state`          | string            | W3C TraceContext tracestate header value.                             |
+| `name`                 | string            | Operation name (e.g., `GET /api/users`).                              |
 | `kind`                 | SpanKind (int)    | 0=UNSPECIFIED, 1=INTERNAL, 2=SERVER, 3=CLIENT, 4=PRODUCER, 5=CONSUMER |
-| `start_time_unix_nano` | fixed64           | Start timestamp in nanoseconds since epoch.                        |
-| `end_time_unix_nano`   | fixed64           | End timestamp in nanoseconds since epoch.                          |
-| `attributes`           | repeated KeyValue | Key-value pairs.                                                   |
-| `events`               | repeated Event    | Timestamped annotations.                                           |
-| `links`                | repeated Link     | References to other spans/traces.                                  |
-| `status`               | Status            | `code` (0=UNSET, 1=OK, 2=ERROR) + `message` string.              |
-| `flags`                | fixed32           | Bit field: bits 0-7 = W3C trace flags, bits 8-9 = is_remote.      |
-| `dropped_*_count`      | uint32            | Counts of dropped attributes/events/links.                         |
+| `start_time_unix_nano` | fixed64           | Start timestamp in nanoseconds since epoch.                           |
+| `end_time_unix_nano`   | fixed64           | End timestamp in nanoseconds since epoch.                             |
+| `attributes`           | repeated KeyValue | Key-value pairs.                                                      |
+| `events`               | repeated Event    | Timestamped annotations.                                              |
+| `links`                | repeated Link     | References to other spans/traces.                                     |
+| `status`               | Status            | `code` (0=UNSET, 1=OK, 2=ERROR) + `message` string.                   |
+| `flags`                | fixed32           | Bit field: bits 0-7 = W3C trace flags, bits 8-9 = is_remote.          |
+| `dropped_*_count`      | uint32            | Counts of dropped attributes/events/links.                            |
 
 ### Event (sub-message of Span)
 
-| Field                    | Type              | Description             |
-|--------------------------|-------------------|-------------------------|
-| `time_unix_nano`         | fixed64           | When the event occurred. |
-| `name`                   | string            | Event name.             |
-| `attributes`             | repeated KeyValue | Event attributes.       |
-| `dropped_attributes_count` | uint32          |                         |
+| Field                      | Type              | Description              |
+| -------------------------- | ----------------- | ------------------------ |
+| `time_unix_nano`           | fixed64           | When the event occurred. |
+| `name`                     | string            | Event name.              |
+| `attributes`               | repeated KeyValue | Event attributes.        |
+| `dropped_attributes_count` | uint32            |                          |
 
 ### Link (sub-message of Span)
 
-| Field         | Type              | Description               |
-|---------------|-------------------|---------------------------|
-| `trace_id`    | bytes             | TraceId of linked span.   |
-| `span_id`     | bytes             | SpanId of linked span.    |
-| `trace_state` | string            |                           |
-| `attributes`  | repeated KeyValue |                           |
-| `flags`       | fixed32           |                           |
+| Field         | Type              | Description             |
+| ------------- | ----------------- | ----------------------- |
+| `trace_id`    | bytes             | TraceId of linked span. |
+| `span_id`     | bytes             | SpanId of linked span.  |
+| `trace_state` | string            |                         |
+| `attributes`  | repeated KeyValue |                         |
+| `flags`       | fixed32           |                         |
 
 ### KeyValue / AnyValue
 
@@ -118,28 +118,37 @@ A **trace** is not an explicit object — it's the collection of all spans shari
 
 ```json
 {
-  "resourceSpans": [{
-    "resource": {
-      "attributes": [
-        { "key": "service.name", "value": { "stringValue": "my.service" } }
-      ]
-    },
-    "scopeSpans": [{
-      "scope": { "name": "my.library", "version": "1.0.0" },
-      "spans": [{
-        "traceId": "5B8EFFF798038103D269B633813FC60C",
-        "spanId": "EEE19B7EC3C1B174",
-        "parentSpanId": "EEE19B7EC3C1B173",
-        "name": "I'm a server span",
-        "startTimeUnixNano": "1544712660000000000",
-        "endTimeUnixNano": "1544712661000000000",
-        "kind": 2,
+  "resourceSpans": [
+    {
+      "resource": {
         "attributes": [
-          { "key": "my.span.attr", "value": { "stringValue": "some value" } }
+          { "key": "service.name", "value": { "stringValue": "my.service" } }
         ]
-      }]
-    }]
-  }]
+      },
+      "scopeSpans": [
+        {
+          "scope": { "name": "my.library", "version": "1.0.0" },
+          "spans": [
+            {
+              "traceId": "5B8EFFF798038103D269B633813FC60C",
+              "spanId": "EEE19B7EC3C1B174",
+              "parentSpanId": "EEE19B7EC3C1B173",
+              "name": "I'm a server span",
+              "startTimeUnixNano": "1544712660000000000",
+              "endTimeUnixNano": "1544712661000000000",
+              "kind": 2,
+              "attributes": [
+                {
+                  "key": "my.span.attr",
+                  "value": { "stringValue": "some value" }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -152,12 +161,14 @@ A **trace** is not an explicit object — it's the collection of all spans shari
 Honeycomb's trace detail view (see [Interact with Traces](https://docs.honeycomb.io/investigate/analyze/explore-traces/#interact-with-traces)) is organized into four areas:
 
 #### Section 1: Trace Identification (top bar)
+
 - Trace ID displayed prominently
 - Back arrow to return to the query/list
 - "Reload Trace" button to re-fetch late-arriving spans
 - Warning banner if missing spans detected
 
 #### Section 2: Trace Summary (collapsible minimap)
+
 - Condensed horizontal bar chart showing span depth levels (up to 6 rows)
 - Each row = one tree depth level. First row = root span, second row = root's children, etc.
 - Bar widths proportional to span duration relative to total trace duration
@@ -168,6 +179,7 @@ Honeycomb's trace detail view (see [Interact with Traces](https://docs.honeycomb
 - Collapsible via directional caret
 
 #### Section 3: Waterfall Representation (main area)
+
 - Reconstructed parent-child relationships displayed as a waterfall/gantt diagram
 - Each row shows: child-count box, span name, duration bar
 - Child-count box: shows number of dependent spans; click to collapse/expand subtree
@@ -185,6 +197,7 @@ Honeycomb's trace detail view (see [Interact with Traces](https://docs.honeycomb
 - **Keyboard navigation** supported
 
 #### Section 4: Trace Sidebar (right panel)
+
 - Appears when a span is selected
 - Three tabs:
   - **Fields**: key-value table of all span attributes. Filter input at top. Error field highlighted at top of list. Three-dot menu per field with GROUP BY / WHERE actions (for Honeycomb query builder integration).
@@ -199,10 +212,10 @@ Honeycomb's trace detail view (see [Interact with Traces](https://docs.honeycomb
 
 ### OTLP Protobuf Parsing
 
-| Package                                   | Weekly Downloads | Notes |
-|-------------------------------------------|-----------------|-------|
-| `protobufjs` (v8)                         | 32M             | Decode binary protobuf from `.proto` files. Pure JS. `Message.decode(buffer)` + `Message.toObject()`. 7x faster than google-protobuf. |
-| `@opentelemetry/otlp-transformer` (v0.212) | 14M            | Serialize/deserialize OTLP payloads. Marked "internal use only". Deserializers are response-focused. |
+| Package                                    | Weekly Downloads | Notes                                                                                                                                 |
+| ------------------------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `protobufjs` (v8)                          | 32M              | Decode binary protobuf from `.proto` files. Pure JS. `Message.decode(buffer)` + `Message.toObject()`. 7x faster than google-protobuf. |
+| `@opentelemetry/otlp-transformer` (v0.212) | 14M              | Serialize/deserialize OTLP payloads. Marked "internal use only". Deserializers are response-focused.                                  |
 
 **Recommendation**: For binary protobuf, use `protobufjs` directly with `.proto` files from the [opentelemetry-proto](https://github.com/open-telemetry/opentelemetry-proto) repo. For JSON-only (our v1 approach), no protobuf library is needed — just `request.json()`.
 
@@ -212,21 +225,21 @@ No Svelte-specific trace/gantt library exists. All serious trace viewers (Jaeger
 
 ### Core Packages
 
-| Package                  | Purpose                        |
-|--------------------------|--------------------------------|
-| `svelte` + `@sveltejs/kit` | Framework                    |
-| `@sveltejs/adapter-node` | Persistent Node.js server      |
-| `protobufjs`             | Binary protobuf decoding (v2)  |
+| Package                    | Purpose                       |
+| -------------------------- | ----------------------------- |
+| `svelte` + `@sveltejs/kit` | Framework                     |
+| `@sveltejs/adapter-node`   | Persistent Node.js server     |
+| `protobufjs`               | Binary protobuf decoding (v2) |
 
 ---
 
 ## 5. Existing Lightweight OTLP Viewers
 
-| Project | Stack | Notes |
-|---------|-------|-------|
-| [otel-desktop-viewer](https://github.com/CtrlSpice/otel-desktop-viewer) (752★) | Go + React | CLI tool built on OTel Collector. DuckDB storage, JSON-RPC for frontend. React frontend embedded in Go binary. gRPC + HTTP on ports 4317/4318. |
-| [otel-tui](https://github.com/ymtdzzz/otel-tui) (809★) | Go (terminal UI) | Terminal-based viewer. Traces, metrics, logs. In-memory with 1000-span buffer. |
-| Jaeger UI | React | Full-featured but heavyweight. Requires backend (Badger/Cassandra/ES). Gold standard waterfall reference. |
+| Project                                                                        | Stack            | Notes                                                                                                                                          |
+| ------------------------------------------------------------------------------ | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| [otel-desktop-viewer](https://github.com/CtrlSpice/otel-desktop-viewer) (752★) | Go + React       | CLI tool built on OTel Collector. DuckDB storage, JSON-RPC for frontend. React frontend embedded in Go binary. gRPC + HTTP on ports 4317/4318. |
+| [otel-tui](https://github.com/ymtdzzz/otel-tui) (809★)                         | Go (terminal UI) | Terminal-based viewer. Traces, metrics, logs. In-memory with 1000-span buffer.                                                                 |
+| Jaeger UI                                                                      | React            | Full-featured but heavyweight. Requires backend (Badger/Cassandra/ES). Gold standard waterfall reference.                                      |
 
 **No existing JavaScript/TypeScript lightweight OTLP trace viewer was found.** This is a clear gap.
 
@@ -235,6 +248,7 @@ No Svelte-specific trace/gantt library exists. All serious trace viewers (Jaeger
 ## 6. Gotchas & Edge Cases
 
 ### Protocol
+
 1. **Hex vs Base64 for IDs**: OTLP JSON uses hex-encoded traceId/spanId, NOT base64. If using `protobufjs` with `bytes: String`, it produces base64 — conversion needed.
 2. **Timestamps are nanoseconds**: `fixed64` fields are nanoseconds since epoch. In JSON they're string-encoded. JS `Number` only safe up to 2^53, so use `BigInt` or keep as strings and divide by 1e6 for ms precision.
 3. **Enum values are integers**: `kind: 2` not `kind: "SPAN_KIND_SERVER"`. Must map to labels in UI.
@@ -244,12 +258,14 @@ No Svelte-specific trace/gantt library exists. All serious trace viewers (Jaeger
 7. **`partial_success` response**: Return `{}` or `{ "partialSuccess": {} }` to avoid SDK warnings.
 
 ### SvelteKit
+
 8. **`adapter-node` required**: For in-memory state persistence and SSE. Serverless adapters won't work.
 9. **Server-only imports**: Keep trace store in `$lib/server/` to prevent client-side bundling.
 10. **`$state.raw()` for large data**: Avoids deep proxying on large span arrays.
 11. **SvelteKit's own OTel**: Disable `tracing.server` to prevent self-tracing infinite loops.
 
 ### Data Processing
+
 12. **Flatten `KeyValue[]`**: Wire format is `[{key, value: {stringValue|intValue|...}}]`. Must flatten to `{ "http.method": "GET" }`.
 13. **`AnyValue` type switching**: 7 variants (`stringValue`, `boolValue`, `intValue`, `doubleValue`, `arrayValue`, `kvlistValue`, `bytesValue`). All must be handled.
 14. **gzip decompression**: SvelteKit/Node.js does NOT auto-decompress request bodies. Check `Content-Encoding` header and decompress manually.
@@ -263,22 +279,22 @@ No Svelte-specific trace/gantt library exists. All serious trace viewers (Jaeger
 
 ### Real-Time Updates: SSE vs WebSocket vs Polling
 
-| Approach    | Pros | Cons | Verdict |
-|-------------|------|------|---------|
-| **Polling**          | Simplest implementation | Higher latency, unnecessary requests | Replaced by SSE |
-| **SSE**              | Simple, built-in `EventSource` API, uni-directional, auto-reconnect | No binary support | **Implemented** — `GET /api/traces/stream` |
-| **Streaming HTTP**   | Same transport as SSE, works with `fetch` + `ReadableStream` | No built-in reconnect, no event framing — must implement both manually | Inferior to SSE for this use case |
-| **WebSocket**        | Bi-directional, binary | Complex setup, SvelteKit lacks native WS support | Overkill |
+| Approach           | Pros                                                                | Cons                                                                   | Verdict                                    |
+| ------------------ | ------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------ |
+| **Polling**        | Simplest implementation                                             | Higher latency, unnecessary requests                                   | Replaced by SSE                            |
+| **SSE**            | Simple, built-in `EventSource` API, uni-directional, auto-reconnect | No binary support                                                      | **Implemented** — `GET /api/traces/stream` |
+| **Streaming HTTP** | Same transport as SSE, works with `fetch` + `ReadableStream`        | No built-in reconnect, no event framing — must implement both manually | Inferior to SSE for this use case          |
+| **WebSocket**      | Bi-directional, binary                                              | Complex setup, SvelteKit lacks native WS support                       | Overkill                                   |
 
 ### Swappable Storage Interface
 
 ```typescript
 interface TraceStore {
-  ingest(resourceSpans: any[]): void;
-  getTraceList(limit?: number): TraceListItem[];
-  getTrace(traceId: string): FullTrace | undefined;
-  clear(): void;
-  subscribe(fn: () => void): () => void;
+  ingest(resourceSpans: any[]): void
+  getTraceList(limit?: number): TraceListItem[]
+  getTrace(traceId: string): FullTrace | undefined
+  clear(): void
+  subscribe(fn: () => void): () => void
 }
 ```
 

@@ -6,9 +6,9 @@
  * @returns The p-th percentile value, or 0 if the array is empty.
  */
 export function percentile(sorted: number[], p: number): number {
-	if (sorted.length === 0) return 0;
-	const idx = Math.ceil((p / 100) * sorted.length) - 1;
-	return sorted[Math.max(0, idx)];
+  if (sorted.length === 0) return 0
+  const idx = Math.ceil((p / 100) * sorted.length) - 1
+  return sorted[Math.max(0, idx)]
 }
 
 /**
@@ -18,5 +18,5 @@ export function percentile(sorted: number[], p: number): number {
  * @param p        - Percentile to compute (0–100).
  */
 export function percentileNsToMs(sortedNs: number[], p: number): number {
-	return percentile(sortedNs, p) / 1_000_000;
+  return percentile(sortedNs, p) / 1_000_000
 }

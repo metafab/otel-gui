@@ -1,23 +1,23 @@
 <script lang="ts">
-  import type { StoredSpan } from "$lib/types";
-  import AttributeItem from "$lib/components/AttributeItem.svelte";
-  import ChevronIcon from "$lib/components/ChevronIcon.svelte";
+  import type { StoredSpan } from '$lib/types'
+  import AttributeItem from '$lib/components/AttributeItem.svelte'
+  import ChevronIcon from '$lib/components/ChevronIcon.svelte'
   import {
     formatDuration,
     formatTimestamp,
     formatTimestampLocal,
     formatRelativeTime,
-  } from "$lib/utils/time";
-  import { spanKindLabel, statusLabel } from "$lib/utils/spans";
+  } from '$lib/utils/time'
+  import { spanKindLabel, statusLabel } from '$lib/utils/spans'
 
   interface Props {
-    span: StoredSpan;
+    span: StoredSpan
     /** Called to jump to a different span by ID (e.g. clicking parent span). */
-    onSelectSpan?: (spanId: string) => void;
+    onSelectSpan?: (spanId: string) => void
     /** Called when the user opens the fullscreen value viewer. */
-    onFullscreen?: (key: string, formatted: string) => void;
+    onFullscreen?: (key: string, formatted: string) => void
     /** Index of the highlighted event (from clicking a WaterfallRow event dot). */
-    highlightedEventIndex?: number | null;
+    highlightedEventIndex?: number | null
   }
 
   let {
@@ -25,72 +25,72 @@
     onSelectSpan,
     onFullscreen,
     highlightedEventIndex = null,
-  }: Props = $props();
+  }: Props = $props()
 
   // Per-section filter state (local, resets when span changes)
-  let attributeFilter = $state("");
-  let resourceFilter = $state("");
-  let scopeFilter = $state("");
-  let eventsCollapsed = $state(false);
-  let attributesCollapsed = $state(false);
-  let resourceCollapsed = $state(true);
-  let scopeCollapsed = $state(true);
+  let attributeFilter = $state('')
+  let resourceFilter = $state('')
+  let scopeFilter = $state('')
+  let eventsCollapsed = $state(false)
+  let attributesCollapsed = $state(false)
+  let resourceCollapsed = $state(true)
+  let scopeCollapsed = $state(true)
 
   // Reset filters and collapsed state when the displayed span changes
   $effect(() => {
-    span; // reactive dependency
-    attributeFilter = "";
-    resourceFilter = "";
-    scopeFilter = "";
-    resourceCollapsed = true;
-    scopeCollapsed = true;
-  });
+    span // reactive dependency
+    attributeFilter = ''
+    resourceFilter = ''
+    scopeFilter = ''
+    resourceCollapsed = true
+    scopeCollapsed = true
+  })
 
   // Filtered attribute entries
   const allAttributes = $derived(
     Object.entries(span.attributes).sort(([a], [b]) => a.localeCompare(b)),
-  );
+  )
   const filteredAttributes = $derived(
     attributeFilter.trim()
       ? allAttributes.filter(([key, value]) => {
-          const q = attributeFilter.toLowerCase();
+          const q = attributeFilter.toLowerCase()
           return (
             key.toLowerCase().includes(q) ||
             JSON.stringify(value).toLowerCase().includes(q)
-          );
+          )
         })
       : allAttributes,
-  );
+  )
 
   const allResourceEntries = $derived(
     Object.entries(span.resource).sort(([a], [b]) => a.localeCompare(b)),
-  );
+  )
   const filteredResource = $derived(
     resourceFilter.trim()
       ? allResourceEntries.filter(([key, value]) => {
-          const q = resourceFilter.toLowerCase();
+          const q = resourceFilter.toLowerCase()
           return (
             key.toLowerCase().includes(q) ||
             JSON.stringify(value).toLowerCase().includes(q)
-          );
+          )
         })
       : allResourceEntries,
-  );
+  )
 
   const allScopeEntries = $derived(
     Object.entries(span.scopeAttributes).sort(([a], [b]) => a.localeCompare(b)),
-  );
+  )
   const filteredScope = $derived(
     scopeFilter.trim()
       ? allScopeEntries.filter(([key, value]) => {
-          const q = scopeFilter.toLowerCase();
+          const q = scopeFilter.toLowerCase()
           return (
             key.toLowerCase().includes(q) ||
             JSON.stringify(value).toLowerCase().includes(q)
-          );
+          )
         })
       : allScopeEntries,
-  );
+  )
 
   const hasScope = $derived(
     !!(
@@ -98,7 +98,7 @@
       span.scopeVersion ||
       Object.keys(span.scopeAttributes).length > 0
     ),
-  );
+  )
 </script>
 
 <div class="span-details">
@@ -160,7 +160,7 @@
   {/if}
   <div class="detail-row">
     <span class="label">Service:</span>
-    <span class="value">{span.resource["service.name"] || "unknown"}</span>
+    <span class="value">{span.resource['service.name'] || 'unknown'}</span>
   </div>
 
   <!-- Events -->
@@ -171,7 +171,7 @@
         class="section-toggle"
         onclick={() => (eventsCollapsed = !eventsCollapsed)}
         aria-expanded={!eventsCollapsed}
-        title={eventsCollapsed ? "Expand events" : "Collapse events"}
+        title={eventsCollapsed ? 'Expand events' : 'Collapse events'}
       >
         <ChevronIcon expanded={!eventsCollapsed} />
         <h4 class="section-title">Events ({span.events.length})</h4>
@@ -259,8 +259,8 @@
         onclick={() => (attributesCollapsed = !attributesCollapsed)}
         aria-expanded={!attributesCollapsed}
         title={attributesCollapsed
-          ? "Expand attributes"
-          : "Collapse attributes"}
+          ? 'Expand attributes'
+          : 'Collapse attributes'}
       >
         <ChevronIcon expanded={!attributesCollapsed} />
         <h4 class="section-title">
@@ -303,7 +303,7 @@
         class="section-toggle"
         onclick={() => (resourceCollapsed = !resourceCollapsed)}
         aria-expanded={!resourceCollapsed}
-        title={resourceCollapsed ? "Expand resource" : "Collapse resource"}
+        title={resourceCollapsed ? 'Expand resource' : 'Collapse resource'}
       >
         <ChevronIcon expanded={!resourceCollapsed} />
         <h4 class="section-title">
@@ -347,7 +347,7 @@
         class="section-toggle"
         onclick={() => (scopeCollapsed = !scopeCollapsed)}
         aria-expanded={!scopeCollapsed}
-        title={scopeCollapsed ? "Expand scope" : "Collapse scope"}
+        title={scopeCollapsed ? 'Expand scope' : 'Collapse scope'}
       >
         <ChevronIcon expanded={!scopeCollapsed} />
         <h4 class="section-title">

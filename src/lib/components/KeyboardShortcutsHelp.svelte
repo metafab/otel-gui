@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { autoFocus } from "$lib/actions/autoFocus";
+  import { autoFocus } from '$lib/actions/autoFocus'
   export interface Shortcut {
-    keys: string[];
-    description: string;
+    keys: string[]
+    description: string
   }
 
   let { shortcuts, onclose }: { shortcuts: Shortcut[]; onclose: () => void } =
-    $props();
+    $props()
 
   function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      onclose();
+    if (e.key === 'Escape') {
+      e.stopPropagation()
+      onclose()
     }
   }
 </script>

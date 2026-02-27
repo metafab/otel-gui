@@ -1,39 +1,39 @@
 <script lang="ts">
-  import CopyButton from "$lib/components/CopyButton.svelte";
-  const TRUNCATE_LENGTH = 200;
+  import CopyButton from '$lib/components/CopyButton.svelte'
+  const TRUNCATE_LENGTH = 200
 
   interface Props {
-    attrKey: string;
-    value: unknown;
-    onFullscreen?: (key: string, formatted: string) => void;
+    attrKey: string
+    value: unknown
+    onFullscreen?: (key: string, formatted: string) => void
   }
 
-  let { attrKey, value, onFullscreen }: Props = $props();
+  let { attrKey, value, onFullscreen }: Props = $props()
 
-  let isExpanded = $state(false);
+  let isExpanded = $state(false)
 
   function formatValue(v: unknown): string {
-    if (typeof v === "string") return v;
-    if (typeof v === "number" || typeof v === "boolean") return String(v);
-    return JSON.stringify(v, null, 2);
+    if (typeof v === 'string') return v
+    if (typeof v === 'number' || typeof v === 'boolean') return String(v)
+    return JSON.stringify(v, null, 2)
   }
 
-  const formatted = $derived(formatValue(value));
-  const needsTruncation = $derived(formatted.length > TRUNCATE_LENGTH);
-  const isMultiline = $derived(formatted.includes("\n"));
+  const formatted = $derived(formatValue(value))
+  const needsTruncation = $derived(formatted.length > TRUNCATE_LENGTH)
+  const isMultiline = $derived(formatted.includes('\n'))
   const displayValue = $derived(
     needsTruncation && !isExpanded
-      ? formatted.slice(0, TRUNCATE_LENGTH) + "…"
+      ? formatted.slice(0, TRUNCATE_LENGTH) + '…'
       : formatted,
-  );
+  )
 
   function valueType(v: unknown): string {
-    if (v === null || v === undefined) return "null";
-    if (Array.isArray(v)) return "array";
-    return typeof v;
+    if (v === null || v === undefined) return 'null'
+    if (Array.isArray(v)) return 'array'
+    return typeof v
   }
 
-  const typeLabel = $derived(valueType(value));
+  const typeLabel = $derived(valueType(value))
 </script>
 
 <div class="attribute-item">
@@ -101,7 +101,7 @@
   <pre class="attr-value" class:multiline={isMultiline}>{displayValue}</pre>
   {#if needsTruncation}
     <button class="expand-btn" onclick={() => (isExpanded = !isExpanded)}>
-      {isExpanded ? "Show less" : "Show more"}
+      {isExpanded ? 'Show less' : 'Show more'}
     </button>
   {/if}
 </div>

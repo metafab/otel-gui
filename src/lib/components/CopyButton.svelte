@@ -1,31 +1,31 @@
 <script lang="ts">
-  import { copyToClipboard } from "$lib/utils/clipboard";
+  import { copyToClipboard } from '$lib/utils/clipboard'
 
   interface Props {
     /** Text to write to the clipboard. */
-    text: string;
+    text: string
     /** Pixel size for the SVG icons. Defaults to 12. */
-    size?: number;
+    size?: number
     /** Optional accessible label suffix (e.g. "for http.method"). */
-    label?: string;
+    label?: string
     /** Extra CSS classes forwarded to the button element. */
-    class?: string;
+    class?: string
     /** When true, renders "Copy" / "Copied" text next to the icon. */
-    showLabel?: boolean;
+    showLabel?: boolean
   }
 
   let {
     text,
     size = 12,
-    label = "",
-    class: extraClass = "",
+    label = '',
+    class: extraClass = '',
     showLabel = false,
-  }: Props = $props();
+  }: Props = $props()
 
-  let copied = $state(false);
+  let copied = $state(false)
 
   async function handleClick() {
-    await copyToClipboard(text, (v) => (copied = v));
+    await copyToClipboard(text, (v) => (copied = v))
   }
 </script>
 
@@ -34,7 +34,7 @@
   class:copied
   onclick={handleClick}
   title="Copy value"
-  aria-label={label ? `Copy value for ${label}` : "Copy value"}
+  aria-label={label ? `Copy value for ${label}` : 'Copy value'}
 >
   {#if copied}
     <span class="icon-copied">

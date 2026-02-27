@@ -19,12 +19,15 @@ This sends a realistic multi-service trace in two parts (simulating incremental 
 ### Basic Examples
 
 #### `sample-trace.json`
+
 Simple trace with a single frontend service showing basic span hierarchy.
+
 - 1 service (frontend)
 - 3 spans with parent-child relationships
 - Database query and cache lookup
 
 **Usage:**
+
 ```bash
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
@@ -34,7 +37,9 @@ curl -X POST http://localhost:4318/v1/traces \
 ### Advanced Examples
 
 #### `sample-trace-ecommerce-part1.json` & `sample-trace-ecommerce-part2.json`
+
 **Realistic distributed system scenario** demonstrating:
+
 - ✅ **4 services**: frontend, backend-api, auth-service, database
 - ✅ **Incremental ingestion**: Part 2 arrives after Part 1 (realistic behavior)
 - ✅ **11 total spans** with hierarchical relationships
@@ -45,6 +50,7 @@ curl -X POST http://localhost:4318/v1/traces \
 **Trace ID:** `7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c`
 
 **Span Hierarchy:**
+
 ```
 POST /checkout (frontend) - 1.25s total
 ├── validate cart (frontend) - 80ms
@@ -60,6 +66,7 @@ POST /checkout (frontend) - 1.25s total
 ```
 
 **Manual Usage:**
+
 ```bash
 # Send part 1 (initial spans from frontend and backend-api)
 curl -X POST http://localhost:4318/v1/traces \
@@ -77,17 +84,20 @@ curl -X POST http://localhost:4318/v1/traces \
 Once traces are loaded, visit http://localhost:5173 to explore:
 
 ### 1. Multi-Service Visualization
+
 - Each service is color-coded
 - Service badges show which service owns each span
 - Waterfall view shows timing across all services
 
 ### 2. Error Navigation
+
 - Red "Spans with errors" badge appears when errors exist
 - Use ↑↓ buttons to navigate between error spans
 - Position indicator shows current error (e.g., "1/2")
 - Click on error spans to see error details and stack traces
 
 ### 3. Span Hierarchy & Collapse/Expand
+
 - **Click the ▼/▶ triangle** to collapse/expand spans with children
 - **Keyboard navigation:**
   - `↑↓` - Navigate up/down through visible spans
@@ -96,22 +106,26 @@ Once traces are loaded, visit http://localhost:5173 to explore:
   - `Enter` - Toggle collapse/expand
 
 ### 4. Search & Filtering
+
 - **Search spans** by name, service, attributes, or events
 - Navigate search results with ↑↓ buttons
 - Match counter shows how many spans match
 
 ### 5. Span Details
+
 - Click any span to see full details in the sidebar
 - Attributes, events, status, and timing information
 - Filter attributes by typing in the search box
 - Click event diamonds on the timeline to jump to events
 
 ### 6. View Controls
+
 - **Hide/Show Trace Details** - Focus on the waterfall view
 - **Hide/Show Span Details** - Maximize waterfall space
 - Toggle panels independently based on your workflow
 
 ### 7. Events on Timeline
+
 - Orange diamonds (◆) mark events on the timeline
 - Position shows when events occurred within the span
 - Click diamonds to view event details in sidebar
@@ -124,25 +138,28 @@ Once traces are loaded, visit http://localhost:5173 to explore:
 Configure your application to send traces to `http://localhost:4318/v1/traces`:
 
 **OpenTelemetry SDK Example (Node.js):**
+
 ```javascript
-const { Resource } = require('@opentelemetry/resources');
-const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
-const { NodeTracerProvider } = require('@opentelemetry/sdk-trace-node');
-const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http');
-const { BatchSpanProcessor } = require('@opentelemetry/sdk-trace-base');
+const { Resource } = require('@opentelemetry/resources')
+const {
+  SemanticResourceAttributes,
+} = require('@opentelemetry/semantic-conventions')
+const { NodeTracerProvider } = require('@opentelemetry/sdk-trace-node')
+const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http')
+const { BatchSpanProcessor } = require('@opentelemetry/sdk-trace-base')
 
 const provider = new NodeTracerProvider({
   resource: new Resource({
     [SemanticResourceAttributes.SERVICE_NAME]: 'my-service',
   }),
-});
+})
 
 const exporter = new OTLPTraceExporter({
   url: 'http://localhost:4318/v1/traces',
-});
+})
 
-provider.addSpanProcessor(new BatchSpanProcessor(exporter));
-provider.register();
+provider.addSpanProcessor(new BatchSpanProcessor(exporter))
+provider.register()
 ```
 
 ### Custom JSON Format
@@ -150,6 +167,7 @@ provider.register();
 Follow the OTLP JSON format shown in the sample files:
 
 **Required Fields:**
+
 - `traceId` - Unique trace identifier (32 hex chars)
 - `spanId` - Unique span identifier (16 hex chars)
 - `parentSpanId` - Parent span ID (empty string for root spans)
@@ -160,6 +178,7 @@ Follow the OTLP JSON format shown in the sample files:
 - `status.code` - Status: 0=UNSET, 1=OK, 2=ERROR
 
 **Best Practices:**
+
 - Use consistent `traceId` across all spans in a trace
 - Set `parentSpanId` to create hierarchy
 - Include `service.name` in resource attributes
@@ -180,17 +199,20 @@ The viewer handles incremental span arrival automatically:
 ## Troubleshooting
 
 **Traces not appearing?**
+
 - Check that the server is running: `pnpm dev`
 - Verify the endpoint: `http://localhost:4318/v1/traces`
 - Check browser console for errors
 - Ensure JSON is valid OTLP format
 
 **Spans missing from trace?**
+
 - Verify `traceId` matches across all spans
 - Check that `parentSpanId` references exist
 - Wait a moment - spans may still be arriving
 
 **Can't find a trace?**
+
 - Use the trace list search: `http://localhost:5173`
 - Filter by service, status, or operation name
 - Traces are stored in memory (max 1000)

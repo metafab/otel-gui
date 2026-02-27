@@ -1,7 +1,7 @@
 {
-	"useTabs": false,
-	"singleQuote": true,
-    "semi": false,
-    "trailingComma" : "all",
-	"plugins": ["prettier-plugin-svelte"]
+  "useTabs": false,
+  "singleQuote": true,
+  "semi": false,
+  "trailingComma": "all",
+  "plugins": ["prettier-plugin-svelte"]
 }

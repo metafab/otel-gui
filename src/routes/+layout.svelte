@@ -1,21 +1,21 @@
 <script lang="ts">
-  import "./app.css";
-  import favicon from "$lib/assets/favicon.svg";
-  import logo from "$lib/assets/logo.svg";
-  import { themeStore } from "$lib/stores/theme.svelte";
+  import './app.css'
+  import favicon from '$lib/assets/favicon.svg'
+  import logo from '$lib/assets/logo.svg'
+  import { themeStore } from '$lib/stores/theme.svelte'
 
-  let { children } = $props();
+  let { children } = $props()
 
   const THEME_ICONS: Record<string, string> = {
-    system: "⊡",
-    light: "☀",
-    dark: "☾",
-  };
+    system: '⊡',
+    light: '☀',
+    dark: '☾',
+  }
   const THEME_LABELS: Record<string, string> = {
-    system: "System",
-    light: "Light",
-    dark: "Dark",
-  };
+    system: 'System',
+    light: 'Light',
+    dark: 'Dark',
+  }
 </script>
 
 <svelte:head>

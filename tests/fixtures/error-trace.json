@@ -1,23 +1,32 @@
 {
-  "resourceSpans": [{
-    "resource": {
-      "attributes": [
-        { "key": "service.name", "value": { "stringValue": "payment-service" } }
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "payment-service" }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": { "name": "payment-tracer" },
+          "spans": [
+            {
+              "traceId": "ERRORTRACE00000000000000000000FF",
+              "spanId": "ERRSPAN00000001",
+              "parentSpanId": "",
+              "name": "POST /payment",
+              "kind": 2,
+              "startTimeUnixNano": "1700000000000000000",
+              "endTimeUnixNano": "1700000000500000000",
+              "attributes": [],
+              "status": { "code": 2, "message": "Payment gateway timeout" }
+            }
+          ]
+        }
       ]
-    },
-    "scopeSpans": [{
-      "scope": { "name": "payment-tracer" },
-      "spans": [{
-        "traceId": "ERRORTRACE00000000000000000000FF",
-        "spanId": "ERRSPAN00000001",
-        "parentSpanId": "",
-        "name": "POST /payment",
-        "kind": 2,
-        "startTimeUnixNano": "1700000000000000000",
-        "endTimeUnixNano": "1700000000500000000",
-        "attributes": [],
-        "status": { "code": 2, "message": "Payment gateway timeout" }
-      }]
-    }]
-  }]
+    }
+  ]
 }

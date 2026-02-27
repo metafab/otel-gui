@@ -1,140 +1,140 @@
 <script lang="ts">
-  import type { ServiceMapData } from "$lib/types";
-  import { getServiceColor } from "$lib/utils/colors";
+  import type { ServiceMapData } from '$lib/types'
+  import { getServiceColor } from '$lib/utils/colors'
   import {
     layoutGraph,
     type LayoutNode,
     type LayoutEdge,
-  } from "$lib/utils/graph";
-  import { themeStore } from "$lib/stores/theme.svelte";
+  } from '$lib/utils/graph'
+  import { themeStore } from '$lib/stores/theme.svelte'
 
   interface Props {
-    data: ServiceMapData;
+    data: ServiceMapData
     /** When true, renders a compact read-only version */
-    mini?: boolean;
+    mini?: boolean
     /** Called with the service name when a node is clicked (global map only) */
-    onSelectService?: (name: string) => void;
+    onSelectService?: (name: string) => void
   }
 
-  const { data, mini = false, onSelectService }: Props = $props();
+  const { data, mini = false, onSelectService }: Props = $props()
 
-  const theme = $derived(themeStore.current);
+  const theme = $derived(themeStore.current)
 
-  const layout = $derived(layoutGraph(data.nodes, data.edges));
+  const layout = $derived(layoutGraph(data.nodes, data.edges))
 
   // Padding around the graph content
-  const PAD = $derived(mini ? 16 : 32);
+  const PAD = $derived(mini ? 16 : 32)
 
-  const svgWidth = $derived(Math.max(layout.viewWidth + PAD * 2, 200));
+  const svgWidth = $derived(Math.max(layout.viewWidth + PAD * 2, 200))
   const svgHeight = $derived(
     Math.max(layout.viewHeight + PAD * 2, mini ? 0 : 240),
-  );
+  )
 
   // Tooltip state
   let tooltip = $state<{
-    visible: boolean;
-    x: number;
-    y: number;
-    content: string;
-  }>({ visible: false, x: 0, y: 0, content: "" });
+    visible: boolean
+    x: number
+    y: number
+    content: string
+  }>({ visible: false, x: 0, y: 0, content: '' })
 
-  let hoveredNode = $state<string | null>(null);
-  let hoveredEdgeKey = $state<string | null>(null);
+  let hoveredNode = $state<string | null>(null)
+  let hoveredEdgeKey = $state<string | null>(null)
 
   function edgeKey(e: LayoutEdge): string {
-    return `${e.source}||${e.target}`;
+    return `${e.source}||${e.target}`
   }
 
   function formatMs(ms: number): string {
-    if (ms < 1) return "<1ms";
-    if (ms < 1000) return `${ms.toFixed(1)}ms`;
-    return `${(ms / 1000).toFixed(2)}s`;
+    if (ms < 1) return '<1ms'
+    if (ms < 1000) return `${ms.toFixed(1)}ms`
+    return `${(ms / 1000).toFixed(2)}s`
   }
 
   function errorRate(edge: LayoutEdge): string {
-    if (edge.callCount === 0) return "0%";
-    return `${((edge.errorCount / edge.callCount) * 100).toFixed(1)}%`;
+    if (edge.callCount === 0) return '0%'
+    return `${((edge.errorCount / edge.callCount) * 100).toFixed(1)}%`
   }
 
   function nodeLabel(n: LayoutNode): string {
     const label =
       n.serviceName.length > 18
-        ? n.serviceName.slice(0, 16) + "…"
-        : n.serviceName;
-    return label;
+        ? n.serviceName.slice(0, 16) + '…'
+        : n.serviceName
+    return label
   }
 
   function nodeIcon(n: LayoutNode): string {
     switch (n.nodeType) {
-      case "database":
-        return "⬡";
-      case "messaging":
-        return "⬟";
-      case "rpc":
-        return "⬢";
+      case 'database':
+        return '⬡'
+      case 'messaging':
+        return '⬟'
+      case 'rpc':
+        return '⬢'
       default:
-        return "";
+        return ''
     }
   }
 
   function showNodeTooltip(e: MouseEvent, n: LayoutNode) {
-    if (mini) return;
+    if (mini) return
     const lines = [
       n.serviceName,
       `Spans: ${n.spanCount}`,
       `Errors: ${n.errorCount}`,
-      n.system ? `System: ${n.system}` : "",
+      n.system ? `System: ${n.system}` : '',
     ]
       .filter(Boolean)
-      .join("\n");
+      .join('\n')
     tooltip = {
       visible: true,
       x: e.clientX + 12,
       y: e.clientY - 8,
       content: lines,
-    };
+    }
   }
 
   function showEdgeTooltip(e: MouseEvent, edge: LayoutEdge) {
-    if (mini) return;
-    const errPct = errorRate(edge);
+    if (mini) return
+    const errPct = errorRate(edge)
     const lines = [
       `${edge.source} → ${edge.target}`,
       `Calls: ${edge.callCount}`,
       `Errors: ${edge.errorCount} (${errPct})`,
       `p50: ${formatMs(edge.p50Ms)}`,
       `p99: ${formatMs(edge.p99Ms)}`,
-    ].join("\n");
+    ].join('\n')
     tooltip = {
       visible: true,
       x: e.clientX + 12,
       y: e.clientY - 8,
       content: lines,
-    };
+    }
   }
 
   function hideTooltip() {
-    tooltip = { ...tooltip, visible: false };
+    tooltip = { ...tooltip, visible: false }
   }
 
   function handleNodeClick(n: LayoutNode) {
-    if (!mini && n.nodeType === "service" && onSelectService) {
-      onSelectService(n.serviceName);
+    if (!mini && n.nodeType === 'service' && onSelectService) {
+      onSelectService(n.serviceName)
     }
   }
 
   // Stroke width for edges: thicker = more calls, clamped 1.5–4
   function edgeStrokeWidth(edge: LayoutEdge, total: number): number {
-    if (total === 0) return 1.5;
-    const ratio = edge.callCount / total;
-    return Math.max(1.5, Math.min(4, 1.5 + ratio * 10));
+    if (total === 0) return 1.5
+    const ratio = edge.callCount / total
+    return Math.max(1.5, Math.min(4, 1.5 + ratio * 10))
   }
 
   const maxCalls = $derived(
     layout.edges.length > 0
       ? Math.max(...layout.edges.map((e) => e.callCount))
       : 1,
-  );
+  )
 </script>
 
 {#if data.nodes.length === 0}
@@ -153,7 +153,7 @@
       onmouseleave={hideTooltip}
       onmousemove={(e) => {
         if (tooltip.visible) {
-          tooltip = { ...tooltip, x: e.clientX + 12, y: e.clientY - 8 };
+          tooltip = { ...tooltip, x: e.clientX + 12, y: e.clientY - 8 }
         }
       }}
     >
@@ -194,21 +194,21 @@
           <g
             class="edge-group"
             onmouseenter={(e) => {
-              hoveredEdgeKey = edgeKey(edge);
-              showEdgeTooltip(e, edge);
+              hoveredEdgeKey = edgeKey(edge)
+              showEdgeTooltip(e, edge)
             }}
             onmouseleave={() => {
-              hoveredEdgeKey = null;
-              hideTooltip();
+              hoveredEdgeKey = null
+              hideTooltip()
             }}
           >
             <path
               d={edge.path}
               fill="none"
-              stroke={isError ? "var(--error-border)" : "var(--border)"}
+              stroke={isError ? 'var(--error-border)' : 'var(--border)'}
               stroke-width={isHovered ? sw + 1.5 : sw}
-              stroke-dasharray={isError ? "5,3" : undefined}
-              marker-end={isError ? "url(#arrow-error)" : "url(#arrow)"}
+              stroke-dasharray={isError ? '5,3' : undefined}
+              marker-end={isError ? 'url(#arrow-error)' : 'url(#arrow)'}
               opacity={hoveredNode !== null &&
               hoveredNode !== edge.source &&
               hoveredNode !== edge.target
@@ -246,29 +246,29 @@
           {@const color = getServiceColor(node.serviceName, theme)}
           {@const hasError = node.errorCount > 0}
           {@const isHovered = hoveredNode === node.serviceName}
-          {@const isService = node.nodeType === "service"}
+          {@const isService = node.nodeType === 'service'}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
           <g
             class="node-group"
             class:clickable={isService && !mini}
             transform="translate({node.x},{node.y})"
-            role={isService && !mini ? "button" : undefined}
+            role={isService && !mini ? 'button' : undefined}
             tabindex={isService && !mini ? 0 : undefined}
             onkeydown={(e) => {
-              if (e.key === "Enter" || e.key === " ") handleNodeClick(node);
+              if (e.key === 'Enter' || e.key === ' ') handleNodeClick(node)
             }}
             onmouseenter={(e) => {
-              hoveredNode = node.serviceName;
-              showNodeTooltip(e, node);
+              hoveredNode = node.serviceName
+              showNodeTooltip(e, node)
             }}
             onmouseleave={() => {
-              hoveredNode = null;
-              hideTooltip();
+              hoveredNode = null
+              hideTooltip()
             }}
             onclick={() => handleNodeClick(node)}
           >
-            {#if node.nodeType === "database"}
+            {#if node.nodeType === 'database'}
               <!-- Cylinder shape for databases: bottom ellipse first (back), then body, then top ellipse (lid) -->
               <ellipse
                 cx={node.width / 2}
@@ -276,7 +276,7 @@
                 rx={node.width / 2 - 2}
                 ry={9}
                 fill={color}
-                stroke={hasError ? "var(--error-border)" : "var(--border)"}
+                stroke={hasError ? 'var(--error-border)' : 'var(--border)'}
                 stroke-width={isHovered ? 2.5 : 1.5}
               />
               <rect
@@ -293,10 +293,10 @@
                 rx={node.width / 2 - 2}
                 ry={9}
                 fill={color}
-                stroke={hasError ? "var(--error-border)" : "var(--border)"}
+                stroke={hasError ? 'var(--error-border)' : 'var(--border)'}
                 stroke-width={isHovered ? 2.5 : 1.5}
               />
-            {:else if node.nodeType === "messaging"}
+            {:else if node.nodeType === 'messaging'}
               <!-- Hexagon shape for message queues -->
               {@const w = node.width - 4}
               {@const h = node.height}
@@ -309,7 +309,7 @@
                   rx * 0.5},{cy - ry} {cx + rx},{cy} {cx + rx * 0.5},{cy +
                   ry} {cx - rx * 0.5},{cy + ry}"
                 fill={color}
-                stroke={hasError ? "var(--error-border)" : "var(--border)"}
+                stroke={hasError ? 'var(--error-border)' : 'var(--border)'}
                 stroke-width={isHovered ? 2.5 : 1.5}
               />
             {:else}
@@ -320,7 +320,7 @@
                 rx={8}
                 ry={8}
                 fill={color}
-                stroke={hasError ? "var(--error-border)" : "var(--border)"}
+                stroke={hasError ? 'var(--error-border)' : 'var(--border)'}
                 stroke-width={isHovered ? 2.5 : 1.5}
               />
             {/if}
@@ -344,7 +344,7 @@
                 y={node.height / 2 + 8}
                 class="node-counts"
               >
-                {node.spanCount} span{node.spanCount !== 1 ? "s" : ""}
+                {node.spanCount} span{node.spanCount !== 1 ? 's' : ''}
                 {#if hasError}
                   · <tspan class="error-count">{node.errorCount} err</tspan>
                 {/if}
@@ -358,7 +358,7 @@
     <!-- Tooltip (rendered outside SVG for reliable positioning) -->
     {#if tooltip.visible}
       <div class="tooltip" style="left:{tooltip.x}px;top:{tooltip.y}px">
-        {#each tooltip.content.split("\n") as line, i}
+        {#each tooltip.content.split('\n') as line, i}
           <span class:tooltip-title={i === 0}>{line}</span>
         {/each}
       </div>

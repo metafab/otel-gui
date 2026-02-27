@@ -1,64 +1,63 @@
 <script lang="ts">
-  import { page } from "$app/stores";
-  import { replaceState } from "$app/navigation";
-  import { onMount } from "svelte";
-  import { traceStore } from "$lib/stores/traces.svelte";
-  import { buildSpanTree, flattenSpanTree } from "$lib/utils/spans";
-  import { formatDuration } from "$lib/utils/time";
-  import WaterfallRow from "$lib/components/WaterfallRow.svelte";
-  import ServiceMap from "$lib/components/ServiceMap.svelte";
-  import { isInputFocused, isMac } from "$lib/utils/keyboard";
-  import KeyboardShortcutsHelp from "$lib/components/KeyboardShortcutsHelp.svelte";
-  import FullscreenValueModal from "$lib/components/FullscreenValueModal.svelte";
-  import TraceHeader from "$lib/components/TraceHeader.svelte";
-  import SpanDetailsSidebar from "$lib/components/SpanDetailsSidebar.svelte";
-  import { findMatchingSpanIds } from "$lib/utils/spanSearch";
+  import { replaceState } from '$app/navigation'
+  import { page } from '$app/stores'
+  import FullscreenValueModal from '$lib/components/FullscreenValueModal.svelte'
+  import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
+  import SpanDetailsSidebar from '$lib/components/SpanDetailsSidebar.svelte'
+  import TraceHeader from '$lib/components/TraceHeader.svelte'
+  import WaterfallRow from '$lib/components/WaterfallRow.svelte'
+  import { traceStore } from '$lib/stores/traces.svelte'
+  import { isInputFocused } from '$lib/utils/keyboard'
+  import { buildSpanTree, flattenSpanTree } from '$lib/utils/spans'
+  import { findMatchingSpanIds } from '$lib/utils/spanSearch'
+  import { formatDuration } from '$lib/utils/time'
+  import { onMount } from 'svelte'
 
-  import type { StoredTrace, SpanTreeNode, ServiceMapData } from "$lib/types";
+  import type { ServiceMapData, SpanTreeNode, StoredTrace } from '$lib/types'
 
   // Get trace ID from URL
-  const traceId = $derived($page.params.traceId);
-  const spanIdFromUrl = $derived($page.url.searchParams.get("spanId"));
+  const traceId = $derived($page.params.traceId)
+  const spanIdFromUrl = $derived($page.url.searchParams.get('spanId'))
 
   // Page title with shortened trace ID
   const pageTitle = $derived(
-    traceId ? `otel-gui – Trace ${traceId.slice(0, 8)}` : "otel-gui – Trace",
-  );
+    traceId ? `otel-gui – Trace ${traceId.slice(0, 8)}` : 'otel-gui – Trace',
+  )
 
   // Local state
-  let trace = $state<StoredTrace | null>(null);
-  let spanTreeRoot = $state<SpanTreeNode[]>([]); // Tree structure with collapse state
-  let spanTree = $state<SpanTreeNode[]>([]); // Flattened view for rendering
-  let selectedSpanId = $state<string | null>(null);
-  let selectedEventIndex = $state<number | null>(null);
-  let spanSearchQuery = $state<string>("");
-  let currentMatchIndex = $state<number>(0);
-  let currentErrorIndex = $state<number>(-1);
-  let isLoading = $state<boolean>(true);
-  let error = $state<string | null>(null);
-  let showTraceDetails = $state<boolean>(true);
-  let showSpanDetails = $state<boolean>(true);
-  let isMaximized = $derived(!showTraceDetails && !showSpanDetails);
-  let waterfallContainer = $state<HTMLDivElement | null>(null);
-  let sidebarWidth = $state<number>(425);
-  let isDraggingSplitter = $state<boolean>(false);
-  let contentGridElement = $state<HTMLDivElement | null>(null);
-  let nameColumnWidth = $state<number>(420);
-  let isColumnSplitterDragging = $state<boolean>(false);
-  let fullscreenAttr = $state<{ key: string; value: string } | null>(null);
+  let trace = $state<StoredTrace | null>(null)
+  let spanTreeRoot = $state<SpanTreeNode[]>([]) // Tree structure with collapse state
+  let spanTree = $state<SpanTreeNode[]>([]) // Flattened view for rendering
+  let selectedSpanId = $state<string | null>(null)
+  let selectedEventIndex = $state<number | null>(null)
+  let spanSearchQuery = $state<string>('')
+  let currentMatchIndex = $state<number>(0)
+  let currentErrorIndex = $state<number>(-1)
+  let isLoading = $state<boolean>(true)
+  let error = $state<string | null>(null)
+  let showTraceDetails = $state<boolean>(true)
+  let showSpanDetails = $state<boolean>(true)
+  let isMaximized = $derived(!showTraceDetails && !showSpanDetails)
+  let waterfallContainer = $state<HTMLDivElement | null>(null)
+  let sidebarWidth = $state<number>(425)
+  let isDraggingSplitter = $state<boolean>(false)
+  let contentGridElement = $state<HTMLDivElement | null>(null)
+  let nameColumnWidth = $state<number>(420)
+  let isColumnSplitterDragging = $state<boolean>(false)
+  let fullscreenAttr = $state<{ key: string; value: string } | null>(null)
   // Mini service map
-  let showMiniMap = $state(false);
-  let miniMapData = $state<ServiceMapData | null>(null);
-  let miniMapLoading = $state(false);
-  let spanSearchInputEl = $state<HTMLInputElement | null>(null);
-  let showShortcuts = $state(false);
+  let showMiniMap = $state(false)
+  let miniMapData = $state<ServiceMapData | null>(null)
+  let miniMapLoading = $state(false)
+  let spanSearchInputEl = $state<HTMLInputElement | null>(null)
+  let showShortcuts = $state(false)
 
   function openFullscreen(key: string, formatted: string) {
-    fullscreenAttr = { key, value: formatted };
+    fullscreenAttr = { key, value: formatted }
   }
 
   function closeFullscreen() {
-    fullscreenAttr = null;
+    fullscreenAttr = null
   }
 
   // Derived: trace duration for waterfall calculation
@@ -66,155 +65,155 @@
     trace
       ? BigInt(trace.endTimeUnixNano) - BigInt(trace.startTimeUnixNano)
       : 0n,
-  );
+  )
   const traceDuration = $derived(
-    trace ? formatDuration(trace.startTimeUnixNano, trace.endTimeUnixNano) : "",
-  );
+    trace ? formatDuration(trace.startTimeUnixNano, trace.endTimeUnixNano) : '',
+  )
 
   // Derived: unique service count and max tree depth
   const serviceCount = $derived(
     trace
       ? new Set(
           Array.from(trace.spans.values()).map(
-            (s) => (s.resource["service.name"] as string) || "unknown",
+            (s) => (s.resource['service.name'] as string) || 'unknown',
           ),
         ).size
       : 0,
-  );
+  )
 
   const maxDepth = $derived(
     spanTree.length > 0 ? Math.max(...spanTree.map((n) => n.depth)) + 1 : 0,
-  );
+  )
 
   // Span search matching
   const matchingSpanIds = $derived(
     findMatchingSpanIds(spanTree, spanSearchQuery),
-  );
+  )
 
   const matchingSpans = $derived(
     spanTree.filter((node) => matchingSpanIds.has(node.span.spanId)),
-  );
+  )
 
-  const matchCount = $derived(matchingSpanIds.size);
+  const matchCount = $derived(matchingSpanIds.size)
 
   // Error span tracking
   // errorSpans: visible error spans only (used for navigation)
   const errorSpans = $derived(
     spanTree.filter((node) => node.span.status.code === 2),
-  );
+  )
 
-  const errorCount = $derived(errorSpans.length);
+  const errorCount = $derived(errorSpans.length)
 
   // Helper function to count all error spans recursively (including collapsed)
   function countAllErrorSpans(nodes: SpanTreeNode[]): number {
-    let count = 0;
+    let count = 0
     for (const node of nodes) {
       if (node.span.status.code === 2) {
-        count++;
+        count++
       }
       if (node.children.length > 0) {
-        count += countAllErrorSpans(node.children);
+        count += countAllErrorSpans(node.children)
       }
     }
-    return count;
+    return count
   }
 
   // totalErrorCount: all error spans in the trace (regardless of collapse state)
-  const totalErrorCount = $derived(countAllErrorSpans(spanTreeRoot));
+  const totalErrorCount = $derived(countAllErrorSpans(spanTreeRoot))
 
   // Reset current match index when search changes
   $effect(() => {
     if (spanSearchQuery) {
-      currentMatchIndex = 0;
+      currentMatchIndex = 0
     }
-  });
+  })
 
   // Reset current error index when trace changes
   $effect(() => {
     if (errorCount > 0) {
-      currentErrorIndex = -1;
+      currentErrorIndex = -1
     }
-  });
+  })
 
   // Update currentErrorIndex when selectedSpanId changes
   $effect(() => {
     if (!selectedSpanId) {
-      currentErrorIndex = -1;
-      return;
+      currentErrorIndex = -1
+      return
     }
 
     // Find the index of the selected span in errorSpans
     const errorIndex = errorSpans.findIndex(
       (node) => node.span.spanId === selectedSpanId,
-    );
+    )
 
     // If selected span is an error span, update currentErrorIndex
     // Otherwise, set it to -1
-    currentErrorIndex = errorIndex;
-  });
+    currentErrorIndex = errorIndex
+  })
 
   // Load trace data on mount
   onMount(async () => {
-    await loadTrace();
-  });
+    await loadTrace()
+  })
 
   // Reload trace when URL changes (for hyperlink navigation)
   $effect(() => {
     // Watch for changes in traceId or spanIdFromUrl
     if (traceId) {
-      loadTrace();
+      loadTrace()
     }
-  });
+  })
 
   // Add mouse event listeners for splitter dragging
   $effect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === 'undefined') return
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
 
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  });
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  })
 
   // Handle Escape in capture phase so it fires before browser-native input
   // handling (Chrome resets/blurs inputs on Esc before bubbling; Firefox
   // consumes Esc at the accessibility layer for certain roles) and before
   // any element-level keydown handlers.
   $effect(() => {
-    if (typeof document === "undefined") return;
+    if (typeof document === 'undefined') return
 
     function handleEscCapture(e: KeyboardEvent) {
-      if (e.key !== "Escape") return;
-      if (fullscreenAttr) return; // fullscreen modal handles its own Esc
+      if (e.key !== 'Escape') return
+      if (fullscreenAttr) return // fullscreen modal handles its own Esc
 
       if (showShortcuts) {
-        e.preventDefault();
-        showShortcuts = false;
-        return;
+        e.preventDefault()
+        showShortcuts = false
+        return
       }
 
       // If the span search is focused: clear it and move focus to waterfall.
       // Any other focused element (including filter inputs, buttons, waterfall): go back.
       if (spanSearchInputEl && document.activeElement === spanSearchInputEl) {
-        e.preventDefault();
-        spanSearchQuery = "";
-        spanSearchInputEl.blur();
-        waterfallContainer?.focus();
+        e.preventDefault()
+        spanSearchQuery = ''
+        spanSearchInputEl.blur()
+        waterfallContainer?.focus()
       } else {
-        e.preventDefault();
-        handleBack();
+        e.preventDefault()
+        handleBack()
       }
     }
 
-    document.addEventListener("keydown", handleEscCapture, { capture: true });
+    document.addEventListener('keydown', handleEscCapture, { capture: true })
     return () =>
-      document.removeEventListener("keydown", handleEscCapture, {
+      document.removeEventListener('keydown', handleEscCapture, {
         capture: true,
-      });
-  });
+      })
+  })
 
   // Auto-restore span details panel when a span is selected.
   // NOTE: must NOT read showSpanDetails here — doing so would make it a
@@ -222,221 +221,220 @@
   // undo) whenever the user clicks "Hide Span Details".
   $effect(() => {
     if (selectedSpanId) {
-      showSpanDetails = true;
+      showSpanDetails = true
     }
-  });
+  })
 
   // Auto-focus waterfall container when trace loads
   $effect(() => {
     if (waterfallContainer && trace && selectedSpanId && !isLoading) {
       // Use setTimeout to ensure DOM is ready
       setTimeout(() => {
-        waterfallContainer?.focus();
-      }, 0);
+        waterfallContainer?.focus()
+      }, 0)
     }
-  });
+  })
 
   // Auto-scroll selected span row into view
   $effect(() => {
-    if (!selectedSpanId || !waterfallContainer) return;
+    if (!selectedSpanId || !waterfallContainer) return
     // Run after the DOM has re-rendered with the new selection
     requestAnimationFrame(() => {
       const row = waterfallContainer?.querySelector(
         `[data-span-id="${selectedSpanId}"]`,
-      );
-      row?.scrollIntoView({ block: "nearest" });
-    });
-  });
+      )
+      row?.scrollIntoView({ block: 'nearest' })
+    })
+  })
 
   async function loadTrace() {
     if (!traceId) {
-      error = "No trace ID provided";
-      isLoading = false;
-      return;
+      error = 'No trace ID provided'
+      isLoading = false
+      return
     }
-    isLoading = true;
-    error = null;
+    isLoading = true
+    error = null
     try {
-      const data = await traceStore.fetchTrace(traceId);
+      const data = await traceStore.fetchTrace(traceId)
       if (data) {
         // API returns spans as Record, convert to Map for type compatibility
-        const spansMap = new Map<string, any>();
-        const spansArray = [];
+        const spansMap = new Map<string, any>()
+        const spansArray = []
         for (const [id, span] of Object.entries(data.spans)) {
-          spansMap.set(id, span);
-          spansArray.push(span);
+          spansMap.set(id, span)
+          spansArray.push(span)
         }
-        trace = { ...data, spans: spansMap };
+        trace = { ...data, spans: spansMap }
         // Build tree and flatten for rendering
-        spanTreeRoot = buildSpanTree(spansArray);
-        spanTree = flattenSpanTree(spanTreeRoot);
+        spanTreeRoot = buildSpanTree(spansArray)
+        spanTree = flattenSpanTree(spanTreeRoot)
 
         // Auto-select span from URL query parameter if present, otherwise select root span
         if (spanIdFromUrl && spansMap.has(spanIdFromUrl)) {
-          selectedSpanId = spanIdFromUrl;
+          selectedSpanId = spanIdFromUrl
         } else if (spanTreeRoot.length > 0) {
           // Preselect the root span (first node in tree)
-          selectedSpanId = spanTreeRoot[0].span.spanId;
+          selectedSpanId = spanTreeRoot[0].span.spanId
         } else {
-          selectedSpanId = null;
+          selectedSpanId = null
         }
       } else {
-        error = "Trace not found";
+        error = 'Trace not found'
       }
       // Load mini service map for this trace
-      miniMapLoading = true;
+      miniMapLoading = true
       try {
-        const mapRes = await fetch(`/api/service-map?traceId=${traceId}`);
+        const mapRes = await fetch(`/api/service-map?traceId=${traceId}`)
         if (mapRes.ok) {
-          miniMapData = await mapRes.json();
+          miniMapData = await mapRes.json()
         }
       } catch {
         // silently ignore map errors
       } finally {
-        miniMapLoading = false;
+        miniMapLoading = false
       }
     } catch (err) {
-      error =
-        err instanceof Error ? err.message : "Unknown error loading trace";
+      error = err instanceof Error ? err.message : 'Unknown error loading trace'
     } finally {
-      isLoading = false;
+      isLoading = false
     }
   }
 
   // Splitter drag handlers - sidebar (right panel)
   function handleSplitterMouseDown(e: MouseEvent) {
-    isDraggingSplitter = true;
-    document.body.classList.add("dragging-splitter");
-    e.preventDefault();
+    isDraggingSplitter = true
+    document.body.classList.add('dragging-splitter')
+    e.preventDefault()
   }
 
   // Column splitter drag handler - name column vs timeline
   function handleColumnSplitterMouseDown(e: MouseEvent) {
-    isColumnSplitterDragging = true;
-    document.body.classList.add("dragging-splitter");
-    e.preventDefault();
+    isColumnSplitterDragging = true
+    document.body.classList.add('dragging-splitter')
+    e.preventDefault()
   }
 
   function handleMouseMove(e: MouseEvent) {
     if (isDraggingSplitter && contentGridElement) {
-      const gridRect = contentGridElement.getBoundingClientRect();
-      const newWidth = gridRect.right - e.clientX;
+      const gridRect = contentGridElement.getBoundingClientRect()
+      const newWidth = gridRect.right - e.clientX
       // Constrain: sidebar min 200px, timeline (left side) min 200px
-      const maxSidebar = gridRect.width - 8 - 200;
-      sidebarWidth = Math.max(200, Math.min(maxSidebar, newWidth));
+      const maxSidebar = gridRect.width - 8 - 200
+      sidebarWidth = Math.max(200, Math.min(maxSidebar, newWidth))
     }
 
     if (isColumnSplitterDragging && waterfallContainer) {
-      const rect = waterfallContainer.getBoundingClientRect();
+      const rect = waterfallContainer.getBoundingClientRect()
       // 20px indicator column + 8px left padding of the row
-      const newWidth = e.clientX - rect.left - 20 - 8;
+      const newWidth = e.clientX - rect.left - 20 - 8
       // Min 120px, max: leave at least 200px for the timeline
-      const maxNameCol = rect.width - 20 - 16 - 200;
-      nameColumnWidth = Math.max(120, Math.min(maxNameCol, newWidth));
+      const maxNameCol = rect.width - 20 - 16 - 200
+      nameColumnWidth = Math.max(120, Math.min(maxNameCol, newWidth))
     }
   }
 
   function handleMouseUp() {
-    isDraggingSplitter = false;
-    isColumnSplitterDragging = false;
-    document.body.classList.remove("dragging-splitter");
+    isDraggingSplitter = false
+    isColumnSplitterDragging = false
+    document.body.classList.remove('dragging-splitter')
   }
 
   // Focus restoration for header buttons
-  let previousFocus: Element | null = null;
+  let previousFocus: Element | null = null
 
   function captureWaterfallFocus() {
-    previousFocus = document.activeElement;
+    previousFocus = document.activeElement
   }
 
   function restoreWaterfallFocus() {
-    const target = previousFocus;
+    const target = previousFocus
     if (target && target !== document.body) {
-      requestAnimationFrame(() => (target as HTMLElement).focus?.());
+      requestAnimationFrame(() => (target as HTMLElement).focus?.())
     }
   }
 
   function handleSpanSelect(spanId: string) {
-    selectedSpanId = spanId;
-    showSpanDetails = true;
-    selectedEventIndex = null; // Clear event selection when selecting a different span
+    selectedSpanId = spanId
+    showSpanDetails = true
+    selectedEventIndex = null // Clear event selection when selecting a different span
     // Update URL to include selected span (for bookmarking/sharing)
-    const url = new URL(window.location.href);
-    url.searchParams.set("spanId", spanId);
-    replaceState(url, {});
+    const url = new URL(window.location.href)
+    url.searchParams.set('spanId', spanId)
+    replaceState(url, {})
   }
 
   function handleEventClick(spanId: string, eventIndex: number) {
     // Select the span if not already selected
     if (selectedSpanId !== spanId) {
-      selectedSpanId = spanId;
+      selectedSpanId = spanId
     }
-    selectedEventIndex = eventIndex;
+    selectedEventIndex = eventIndex
 
     // Scroll to the event in the sidebar
     setTimeout(() => {
-      const eventElement = document.getElementById(`event-${eventIndex}`);
+      const eventElement = document.getElementById(`event-${eventIndex}`)
       if (eventElement) {
-        eventElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        eventElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
-    }, 100);
+    }, 100)
   }
 
   function handleBack() {
-    window.location.href = "/";
+    window.location.href = '/'
   }
 
   function handleNextMatch() {
-    if (matchCount === 0) return;
-    currentMatchIndex = (currentMatchIndex + 1) % matchCount;
-    const matchedSpan = matchingSpans[currentMatchIndex];
+    if (matchCount === 0) return
+    currentMatchIndex = (currentMatchIndex + 1) % matchCount
+    const matchedSpan = matchingSpans[currentMatchIndex]
     if (matchedSpan) {
-      handleSpanSelect(matchedSpan.span.spanId);
+      handleSpanSelect(matchedSpan.span.spanId)
     }
   }
 
   function handlePreviousMatch() {
-    if (matchCount === 0) return;
-    currentMatchIndex = (currentMatchIndex - 1 + matchCount) % matchCount;
-    const matchedSpan = matchingSpans[currentMatchIndex];
+    if (matchCount === 0) return
+    currentMatchIndex = (currentMatchIndex - 1 + matchCount) % matchCount
+    const matchedSpan = matchingSpans[currentMatchIndex]
     if (matchedSpan) {
-      handleSpanSelect(matchedSpan.span.spanId);
+      handleSpanSelect(matchedSpan.span.spanId)
     }
   }
 
   function handleNextError() {
-    if (errorCount === 0) return;
+    if (errorCount === 0) return
     if (currentErrorIndex === -1) {
-      currentErrorIndex = 0;
+      currentErrorIndex = 0
     } else {
-      currentErrorIndex = (currentErrorIndex + 1) % errorCount;
+      currentErrorIndex = (currentErrorIndex + 1) % errorCount
     }
-    const errorSpan = errorSpans[currentErrorIndex];
+    const errorSpan = errorSpans[currentErrorIndex]
     if (errorSpan) {
-      handleSpanSelect(errorSpan.span.spanId);
+      handleSpanSelect(errorSpan.span.spanId)
     }
   }
 
   function handlePreviousError() {
-    if (errorCount === 0) return;
+    if (errorCount === 0) return
     if (currentErrorIndex === -1) {
-      currentErrorIndex = errorCount - 1;
+      currentErrorIndex = errorCount - 1
     } else {
-      currentErrorIndex = (currentErrorIndex - 1 + errorCount) % errorCount;
+      currentErrorIndex = (currentErrorIndex - 1 + errorCount) % errorCount
     }
-    const errorSpan = errorSpans[currentErrorIndex];
+    const errorSpan = errorSpans[currentErrorIndex]
     if (errorSpan) {
-      handleSpanSelect(errorSpan.span.spanId);
+      handleSpanSelect(errorSpan.span.spanId)
     }
   }
 
   // Toggle collapse/expand for a span node
   function toggleNodeCollapse(spanId: string) {
-    const node = findNode(spanId);
-    if (!node) return;
+    const node = findNode(spanId)
+    if (!node) return
 
-    const wasCollapsed = node.collapsed;
-    node.collapsed = !node.collapsed;
+    const wasCollapsed = node.collapsed
+    node.collapsed = !node.collapsed
 
     // If collapsing and selected span is a descendant, select this node
     if (
@@ -444,24 +442,24 @@
       selectedSpanId &&
       isDescendantOf(selectedSpanId, node)
     ) {
-      selectedSpanId = spanId;
+      selectedSpanId = spanId
     }
 
-    spanTree = flattenSpanTree(spanTreeRoot);
+    spanTree = flattenSpanTree(spanTreeRoot)
 
     // Refocus container after toggle to maintain keyboard navigation
     if (waterfallContainer) {
-      waterfallContainer.focus();
+      waterfallContainer.focus()
     }
   }
 
   // Set collapse state for a span node
   function setNodeCollapse(spanId: string, collapsed: boolean) {
-    const node = findNode(spanId);
-    if (!node) return;
+    const node = findNode(spanId)
+    if (!node) return
 
-    const wasCollapsed = node.collapsed;
-    node.collapsed = collapsed;
+    const wasCollapsed = node.collapsed
+    node.collapsed = collapsed
 
     // If collapsing and selected span is a descendant, select this node
     if (
@@ -470,14 +468,14 @@
       selectedSpanId &&
       isDescendantOf(selectedSpanId, node)
     ) {
-      selectedSpanId = spanId;
+      selectedSpanId = spanId
     }
 
-    spanTree = flattenSpanTree(spanTreeRoot);
+    spanTree = flattenSpanTree(spanTreeRoot)
 
     // Refocus container after collapse state change to maintain keyboard navigation
     if (waterfallContainer) {
-      waterfallContainer.focus();
+      waterfallContainer.focus()
     }
   }
 
@@ -488,14 +486,14 @@
   ): SpanTreeNode | null {
     for (const node of nodes) {
       if (node.span.spanId === spanId) {
-        return node;
+        return node
       }
-      const found = findNode(spanId, node.children);
+      const found = findNode(spanId, node.children)
       if (found) {
-        return found;
+        return found
       }
     }
-    return null;
+    return null
   }
 
   // Check if a span is a descendant of another span
@@ -505,120 +503,120 @@
   ): boolean {
     for (const child of ancestorNode.children) {
       if (child.span.spanId === descendantId) {
-        return true;
+        return true
       }
       if (isDescendantOf(descendantId, child)) {
-        return true;
+        return true
       }
     }
-    return false;
+    return false
   }
 
   // Keyboard navigation handler
   function handleWaterfallKeydown(e: KeyboardEvent) {
     // Esc is handled by the capture-phase listener above; skip it here to
     // avoid double-firing.
-    if (e.key === "Escape") return;
+    if (e.key === 'Escape') return
 
-    if (!selectedSpanId || spanTree.length === 0) return;
+    if (!selectedSpanId || spanTree.length === 0) return
 
     const currentIndex = spanTree.findIndex(
       (node) => node.span.spanId === selectedSpanId,
-    );
-    if (currentIndex === -1) return;
+    )
+    if (currentIndex === -1) return
 
-    const currentNode = findNode(selectedSpanId);
-    if (!currentNode) return;
+    const currentNode = findNode(selectedSpanId)
+    if (!currentNode) return
 
     switch (e.key) {
-      case "ArrowUp":
-        e.preventDefault();
+      case 'ArrowUp':
+        e.preventDefault()
         if (currentIndex > 0) {
-          handleSpanSelect(spanTree[currentIndex - 1].span.spanId);
+          handleSpanSelect(spanTree[currentIndex - 1].span.spanId)
         }
-        break;
+        break
 
-      case "ArrowDown":
-        e.preventDefault();
+      case 'ArrowDown':
+        e.preventDefault()
         if (currentIndex < spanTree.length - 1) {
-          handleSpanSelect(spanTree[currentIndex + 1].span.spanId);
+          handleSpanSelect(spanTree[currentIndex + 1].span.spanId)
         }
-        break;
+        break
 
-      case "ArrowLeft":
-        e.preventDefault();
+      case 'ArrowLeft':
+        e.preventDefault()
         if (currentNode.children.length > 0 && !currentNode.collapsed) {
-          setNodeCollapse(selectedSpanId, true);
+          setNodeCollapse(selectedSpanId, true)
         }
-        break;
+        break
 
-      case "ArrowRight":
-        e.preventDefault();
+      case 'ArrowRight':
+        e.preventDefault()
         if (currentNode.children.length > 0 && currentNode.collapsed) {
-          setNodeCollapse(selectedSpanId, false);
+          setNodeCollapse(selectedSpanId, false)
         }
-        break;
+        break
 
-      case "Enter":
-        e.preventDefault();
+      case 'Enter':
+        e.preventDefault()
         if (currentNode.children.length > 0) {
-          toggleNodeCollapse(selectedSpanId);
+          toggleNodeCollapse(selectedSpanId)
         }
-        break;
+        break
     }
   }
 
   function handleGlobalKeydown(e: KeyboardEvent) {
     // Belt-and-suspenders: fullscreen modal handles Escape itself via stopPropagation
-    if (fullscreenAttr) return;
+    if (fullscreenAttr) return
 
     // '/' focuses span search (only when not in an input)
-    if (e.key === "/" && !isInputFocused()) {
-      e.preventDefault();
-      spanSearchInputEl?.focus();
-      return;
+    if (e.key === '/' && !isInputFocused()) {
+      e.preventDefault()
+      spanSearchInputEl?.focus()
+      return
     }
 
     // Escape is handled by the capture-phase $effect listener; skip here.
 
     // n: next search match
-    if (e.key === "n" && !e.shiftKey && !isInputFocused() && matchCount > 0) {
-      e.preventDefault();
-      handleNextMatch();
-      return;
+    if (e.key === 'n' && !e.shiftKey && !isInputFocused() && matchCount > 0) {
+      e.preventDefault()
+      handleNextMatch()
+      return
     }
 
     // Shift+N: previous search match
-    if (e.key === "N" && e.shiftKey && !isInputFocused() && matchCount > 0) {
-      e.preventDefault();
-      handlePreviousMatch();
-      return;
+    if (e.key === 'N' && e.shiftKey && !isInputFocused() && matchCount > 0) {
+      e.preventDefault()
+      handlePreviousMatch()
+      return
     }
 
     // e: next error span
-    if (e.key === "e" && !e.shiftKey && !isInputFocused() && errorCount > 0) {
-      e.preventDefault();
-      handleNextError();
-      return;
+    if (e.key === 'e' && !e.shiftKey && !isInputFocused() && errorCount > 0) {
+      e.preventDefault()
+      handleNextError()
+      return
     }
 
     // Shift+E: previous error span
-    if (e.key === "E" && e.shiftKey && !isInputFocused() && errorCount > 0) {
-      e.preventDefault();
-      handlePreviousError();
-      return;
+    if (e.key === 'E' && e.shiftKey && !isInputFocused() && errorCount > 0) {
+      e.preventDefault()
+      handlePreviousError()
+      return
     }
 
     // 'm': toggle mini service map
-    if (e.key === "m" && !isInputFocused()) {
-      e.preventDefault();
-      showMiniMap = !showMiniMap;
-      return;
+    if (e.key === 'm' && !isInputFocused()) {
+      e.preventDefault()
+      showMiniMap = !showMiniMap
+      return
     }
     // '?': toggle shortcuts help
-    if (e.key === "?" && !isInputFocused()) {
-      e.preventDefault();
-      showShortcuts = !showShortcuts;
+    if (e.key === '?' && !isInputFocused()) {
+      e.preventDefault()
+      showShortcuts = !showShortcuts
     }
   }
 </script>
@@ -638,32 +636,32 @@
           class="toggle-button"
           onpointerdown={captureWaterfallFocus}
           onclick={() => {
-            showTraceDetails = !showTraceDetails;
-            restoreWaterfallFocus();
+            showTraceDetails = !showTraceDetails
+            restoreWaterfallFocus()
           }}
-          title={showTraceDetails ? "Hide trace details" : "Show trace details"}
+          title={showTraceDetails ? 'Hide trace details' : 'Show trace details'}
         >
-          {showTraceDetails ? "Hide" : "Show"} Trace Details
+          {showTraceDetails ? 'Hide' : 'Show'} Trace Details
         </button>
         <button
           class="toggle-button"
           onpointerdown={captureWaterfallFocus}
           onclick={() => {
-            showSpanDetails = !showSpanDetails;
-            restoreWaterfallFocus();
+            showSpanDetails = !showSpanDetails
+            restoreWaterfallFocus()
           }}
-          title={showSpanDetails ? "Hide span details" : "Show span details"}
+          title={showSpanDetails ? 'Hide span details' : 'Show span details'}
         >
-          {showSpanDetails ? "Hide" : "Show"} Span Details
+          {showSpanDetails ? 'Hide' : 'Show'} Span Details
         </button>
         {#if !isMaximized}
           <button
             class="toggle-button maximize-button"
             onpointerdown={captureWaterfallFocus}
             onclick={() => {
-              showTraceDetails = false;
-              showSpanDetails = false;
-              restoreWaterfallFocus();
+              showTraceDetails = false
+              showSpanDetails = false
+              restoreWaterfallFocus()
             }}
             title="Maximize timeline"
           >
@@ -740,7 +738,7 @@
         bind:this={contentGridElement}
         style:grid-template-columns={showSpanDetails
           ? `1fr 8px ${sidebarWidth}px`
-          : "1fr"}
+          : '1fr'}
       >
         <!-- Waterfall Section (Left) -->
         <section class="waterfall-section">
@@ -784,9 +782,9 @@
                   placeholder="Search spans..."
                   class="span-search-input"
                   onkeydown={(e) => {
-                    if (e.key === "Enter" && matchCount > 0) {
-                      e.preventDefault();
-                      e.shiftKey ? handlePreviousMatch() : handleNextMatch();
+                    if (e.key === 'Enter' && matchCount > 0) {
+                      e.preventDefault()
+                      e.shiftKey ? handlePreviousMatch() : handleNextMatch()
                     }
                   }}
                 />
@@ -807,7 +805,7 @@
                       ↓
                     </button>
                     <span class="match-count"
-                      >{matchCount} span{matchCount !== 1 ? "s" : ""} found</span
+                      >{matchCount} span{matchCount !== 1 ? 's' : ''} found</span
                     >
                   </div>
                 {/if}
@@ -927,29 +925,29 @@
 {#if showShortcuts}
   <KeyboardShortcutsHelp
     shortcuts={[
-      { keys: ["/"], description: "Focus span search" },
+      { keys: ['/'], description: 'Focus span search' },
       {
-        keys: ["Esc"],
+        keys: ['Esc'],
         description:
-          "Dismiss search (when search focused) / Go back to trace list",
+          'Dismiss search (when search focused) / Go back to trace list',
       },
       {
-        keys: ["Enter"],
-        description: "Next search match (when search focused)",
+        keys: ['Enter'],
+        description: 'Next search match (when search focused)',
       },
       {
-        keys: ["Shift+Enter"],
-        description: "Previous search match (when search focused)",
+        keys: ['Shift+Enter'],
+        description: 'Previous search match (when search focused)',
       },
-      { keys: ["n"], description: "Next search match" },
-      { keys: ["Shift+N"], description: "Previous search match" },
-      { keys: ["e"], description: "Next error span" },
-      { keys: ["Shift+E"], description: "Previous error span" },
-      { keys: ["↑ / ↓"], description: "Navigate spans up / down" },
-      { keys: ["← / →"], description: "Collapse / expand selected span" },
-      { keys: ["Enter"], description: "Toggle collapse on selected span" },
-      { keys: ["m"], description: "Toggle mini service map" },
-      { keys: ["?"], description: "Toggle keyboard shortcuts help" },
+      { keys: ['n'], description: 'Next search match' },
+      { keys: ['Shift+N'], description: 'Previous search match' },
+      { keys: ['e'], description: 'Next error span' },
+      { keys: ['Shift+E'], description: 'Previous error span' },
+      { keys: ['↑ / ↓'], description: 'Navigate spans up / down' },
+      { keys: ['← / →'], description: 'Collapse / expand selected span' },
+      { keys: ['Enter'], description: 'Toggle collapse on selected span' },
+      { keys: ['m'], description: 'Toggle mini service map' },
+      { keys: ['?'], description: 'Toggle keyboard shortcuts help' },
     ]}
     onclose={() => (showShortcuts = false)}
   />
@@ -1098,7 +1096,7 @@
   }
 
   .splitter::before {
-    content: "";
+    content: '';
     position: absolute;
     left: 50%;
     top: 50%;
@@ -1312,7 +1310,7 @@
   }
 
   .col-resizer::after {
-    content: "";
+    content: '';
     display: block;
     width: 3px;
     height: 60%;

@@ -1,51 +1,51 @@
 <script lang="ts">
   interface Props {
     /** Available service names for the dropdown. */
-    services: string[];
+    services: string[]
     /** Bound: text search query. */
-    searchQuery: string;
+    searchQuery: string
     /** Bound: selected service name, or "all". */
-    selectedService: string;
+    selectedService: string
     /** Bound: show only traces with errors. */
-    showErrorsOnly: boolean;
+    showErrorsOnly: boolean
     /** Bound: minimum duration filter in ms. */
-    minDuration: number | null;
+    minDuration: number | null
     /** Bound: maximum duration filter in ms. */
-    maxDuration: number | null;
+    maxDuration: number | null
     /** Number of traces passing all filters. */
-    filteredCount: number;
+    filteredCount: number
     /** Total number of traces. */
-    totalCount: number;
+    totalCount: number
     /** Ref to the search input for programmatic focus. */
-    searchInputEl?: HTMLInputElement | null;
+    searchInputEl?: HTMLInputElement | null
   }
 
   let {
     services,
-    searchQuery = $bindable(""),
-    selectedService = $bindable("all"),
+    searchQuery = $bindable(''),
+    selectedService = $bindable('all'),
     showErrorsOnly = $bindable(false),
     minDuration = $bindable(null),
     maxDuration = $bindable(null),
     filteredCount,
     totalCount,
     searchInputEl = $bindable(null),
-  }: Props = $props();
+  }: Props = $props()
 
   const hasActiveFilters = $derived(
-    searchQuery.trim() !== "" ||
-      selectedService !== "all" ||
+    searchQuery.trim() !== '' ||
+      selectedService !== 'all' ||
       showErrorsOnly ||
       minDuration !== null ||
       maxDuration !== null,
-  );
+  )
 
   function handleClear() {
-    searchQuery = "";
-    selectedService = "all";
-    showErrorsOnly = false;
-    minDuration = null;
-    maxDuration = null;
+    searchQuery = ''
+    selectedService = 'all'
+    showErrorsOnly = false
+    minDuration = null
+    maxDuration = null
   }
 </script>
 
@@ -200,7 +200,7 @@
     padding: 0.5rem 0;
   }
 
-  .checkbox-label input[type="checkbox"] {
+  .checkbox-label input[type='checkbox'] {
     cursor: pointer;
     width: 16px;
     height: 16px;

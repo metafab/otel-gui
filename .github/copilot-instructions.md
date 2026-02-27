@@ -28,8 +28,8 @@ pnpm run test:watch # Tests in watch mode
 
 ```typescript
 // Use BigInt for arithmetic, convert only after scaling
-const durationNs = BigInt(endNano) - BigInt(startNano);
-const durationMs = Number(durationNs / 1_000_000n);
+const durationNs = BigInt(endNano) - BigInt(startNano)
+const durationMs = Number(durationNs / 1_000_000n)
 ```
 
 See [time.ts](src/lib/utils/time.ts) for all time formatting.
@@ -53,13 +53,13 @@ Use `flattenAttributes()` from [attributes.ts](src/lib/utils/attributes.ts) — 
 
 ```typescript
 // Client stores (.svelte.ts files)
-let traces = $state.raw<TraceListItem[]>([]); // .raw = no deep proxying for large arrays
-let selectedId = $state<string | null>(null);
-let selected = $derived(traces.find((t) => t.id === selectedId));
+let traces = $state.raw<TraceListItem[]>([]) // .raw = no deep proxying for large arrays
+let selectedId = $state<string | null>(null)
+let selected = $derived(traces.find((t) => t.id === selectedId))
 
 $effect(() => {
   // Polling, subscriptions
-});
+})
 ```
 
 **Why `$state.raw`**: Trace lists are large arrays replaced wholesale — avoid deep reactive proxy overhead.
@@ -104,9 +104,9 @@ $effect(() => {
 Global shortcuts use `<svelte:window onkeydown={handleGlobalKeydown} />` in each page. Always guard with `isInputFocused()` from `$lib/utils/keyboard` before acting:
 
 ```typescript
-if (e.key === "/" && !isInputFocused()) {
-  e.preventDefault();
-  searchInputEl?.focus();
+if (e.key === '/' && !isInputFocused()) {
+  e.preventDefault()
+  searchInputEl?.focus()
 }
 ```
 

@@ -1,26 +1,26 @@
 <script lang="ts">
-  import type { StoredSpan } from "$lib/types";
-  import { formatDuration } from "$lib/utils/time";
-  import { getServiceColor } from "$lib/utils/colors";
-  import { themeStore } from "$lib/stores/theme.svelte";
-  import { spanKindLabel } from "$lib/utils/spans";
-  import ServiceBadge from "$lib/components/ServiceBadge.svelte";
+  import type { StoredSpan } from '$lib/types'
+  import { formatDuration } from '$lib/utils/time'
+  import { getServiceColor } from '$lib/utils/colors'
+  import { themeStore } from '$lib/stores/theme.svelte'
+  import { spanKindLabel } from '$lib/utils/spans'
+  import ServiceBadge from '$lib/components/ServiceBadge.svelte'
 
   interface Props {
-    span: StoredSpan;
-    depth: number;
-    traceStartNano: string;
-    traceDurationNs: bigint;
-    isSelected: boolean;
-    isHighlighted?: boolean;
-    hasChildren?: boolean;
-    isCollapsed?: boolean;
-    childCount?: number;
-    subtreeSize?: number;
-    nameColumnWidth?: number;
-    onSelect: () => void;
-    onToggleCollapse?: () => void;
-    onEventClick?: (eventIndex: number) => void;
+    span: StoredSpan
+    depth: number
+    traceStartNano: string
+    traceDurationNs: bigint
+    isSelected: boolean
+    isHighlighted?: boolean
+    hasChildren?: boolean
+    isCollapsed?: boolean
+    childCount?: number
+    subtreeSize?: number
+    nameColumnWidth?: number
+    onSelect: () => void
+    onToggleCollapse?: () => void
+    onEventClick?: (eventIndex: number) => void
   }
 
   let {
@@ -38,72 +38,72 @@
     onSelect,
     onToggleCollapse,
     onEventClick,
-  }: Props = $props();
+  }: Props = $props()
 
   // Calculate span position and width as percentages (reactive)
   const spanStartNs = $derived(
     BigInt(span.startTimeUnixNano) - BigInt(traceStartNano),
-  );
+  )
   const spanDurationNs = $derived(
     BigInt(span.endTimeUnixNano) - BigInt(span.startTimeUnixNano),
-  );
+  )
 
   const leftPercent = $derived(
     Number((spanStartNs * 10000n) / traceDurationNs) / 100,
-  );
+  )
   const widthPercent = $derived(
     Number((spanDurationNs * 10000n) / traceDurationNs) / 100,
-  );
+  )
 
   const serviceName = $derived(
-    (span.resource["service.name"] as string) || "unknown",
-  );
+    (span.resource['service.name'] as string) || 'unknown',
+  )
   // themeStore.current is a reactive dependency — color updates on theme toggle
   const serviceColor = $derived(
     getServiceColor(serviceName, themeStore.current),
-  );
-  const hasError = $derived(span.status.code === 2);
+  )
+  const hasError = $derived(span.status.code === 2)
 
   const spanKind = $derived(
     (() => {
-      const label = spanKindLabel(span.kind);
-      return label === "UNKNOWN" || label === "UNSPECIFIED" ? null : label;
+      const label = spanKindLabel(span.kind)
+      return label === 'UNKNOWN' || label === 'UNSPECIFIED' ? null : label
     })(),
-  );
+  )
 
   // Calculate event positions on timeline
   const eventPositions = $derived(
     span.events.map((event) => {
       const eventOffsetNs =
-        BigInt(event.timeUnixNano) - BigInt(span.startTimeUnixNano);
+        BigInt(event.timeUnixNano) - BigInt(span.startTimeUnixNano)
       const positionPercent =
-        Number((eventOffsetNs * 10000n) / spanDurationNs) / 100;
+        Number((eventOffsetNs * 10000n) / spanDurationNs) / 100
       return {
         name: event.name,
         position: Math.max(0, Math.min(100, positionPercent)),
-      };
+      }
     }),
-  );
+  )
 
   function handleEventClick(eventIndex: number, e: MouseEvent | KeyboardEvent) {
-    e.stopPropagation();
+    e.stopPropagation()
     if (onEventClick) {
-      onEventClick(eventIndex);
+      onEventClick(eventIndex)
     }
   }
 
   // Badge: show direct child count when expanded, subtree total when collapsed
-  const badgeValue = $derived(isCollapsed ? subtreeSize : childCount);
-  const badgeText = $derived(badgeValue > 99 ? "99+" : String(badgeValue));
+  const badgeValue = $derived(isCollapsed ? subtreeSize : childCount)
+  const badgeText = $derived(badgeValue > 99 ? '99+' : String(badgeValue))
 
   function handleCollapseToggle(e: MouseEvent | KeyboardEvent) {
-    e.stopPropagation();
+    e.stopPropagation()
     if (onToggleCollapse) {
-      onToggleCollapse();
+      onToggleCollapse()
     }
     // Blur the button to prevent it from capturing keyboard events
     if (e.target instanceof HTMLElement) {
-      e.target.blur();
+      e.target.blur()
     }
   }
 </script>
@@ -133,14 +133,14 @@
           class:badge-collapsed={isCollapsed}
           onclick={handleCollapseToggle}
           onkeydown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              handleCollapseToggle(e);
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              handleCollapseToggle(e)
             }
           }}
-          aria-label={isCollapsed ? "Expand" : "Collapse"}
+          aria-label={isCollapsed ? 'Expand' : 'Collapse'}
           aria-expanded={!isCollapsed}
-          title={`${badgeValue} ${isCollapsed ? "spans hidden" : "direct children"}\n${isCollapsed ? "Expand: → Right • Toggle: Enter" : "Collapse: ← Left • Toggle: Enter"}`}
+          title={`${badgeValue} ${isCollapsed ? 'spans hidden' : 'direct children'}\n${isCollapsed ? 'Expand: → Right • Toggle: Enter' : 'Collapse: ← Left • Toggle: Enter'}`}
           tabindex="-1">{badgeText}</button
         >
       {/if}
@@ -176,7 +176,7 @@
           style="left: {event.position}%"
           title={event.name}
           onclick={(e) => handleEventClick(index, e)}
-          onkeydown={(e) => e.key === "Enter" && handleEventClick(index, e)}
+          onkeydown={(e) => e.key === 'Enter' && handleEventClick(index, e)}
           role="button"
           tabindex="0"
         ></div>
@@ -379,8 +379,8 @@
   }
 
   /* Hide duration label if bar is too small */
-  .timeline-bar[style*="width: 0.5%"] .duration-label,
-  .timeline-bar[style*="width: 1%"] .duration-label {
+  .timeline-bar[style*='width: 0.5%'] .duration-label,
+  .timeline-bar[style*='width: 1%'] .duration-label {
     display: none;
   }
 

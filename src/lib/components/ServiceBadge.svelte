@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { getServiceColor } from "$lib/utils/colors";
-  import { themeStore } from "$lib/stores/theme.svelte";
+  import { getServiceColor } from '$lib/utils/colors'
+  import { themeStore } from '$lib/stores/theme.svelte'
 
   interface Props {
-    serviceName: string;
+    serviceName: string
   }
 
-  let { serviceName }: Props = $props();
+  let { serviceName }: Props = $props()
 
   // themeStore.current is a reactive dependency — color updates on theme toggle
-  const color = $derived(getServiceColor(serviceName, themeStore.current));
+  const color = $derived(getServiceColor(serviceName, themeStore.current))
 </script>
 
 <span class="service-badge" style="background: {color}" title="Service"

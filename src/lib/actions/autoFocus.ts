@@ -3,5 +3,5 @@
  * Use: <div use:autoFocus>
  */
 export function autoFocus(node: HTMLElement): void {
-	node.focus();
+  node.focus()
 }

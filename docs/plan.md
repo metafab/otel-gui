@@ -4,16 +4,16 @@ A lightweight, local OpenTelemetry trace viewer inspired by Honeycomb's trace de
 
 ## Tech Stack
 
-| Layer       | Choice                          | Rationale                                                     |
-|-------------|----------------------------------|---------------------------------------------------------------|
-| Framework   | SvelteKit 5 (Svelte 5 runes)    | User preference. Full-stack TypeScript. Fast, lightweight.    |
-| Adapter     | `@sveltejs/adapter-node`         | Required for persistent in-memory state and SSE support.      |
-| Language    | TypeScript                       | Full-stack type safety.                                       |
-| Storage     | In-memory (`Map`) behind interface | Simplest for v1. Swappable to SQLite via same interface.     |
-| OTLP format | JSON and Protobuf                | Both `application/json` and `application/x-protobuf` supported. |
-| Real-time   | SSE (`EventSource`)              | Single persistent connection, instant push on ingest.         |
-| Port        | 4318                             | Standard OTLP/HTTP port — zero config on exporter side.       |
-| Visualization | Custom HTML/CSS waterfall      | Industry standard approach (Honeycomb, Jaeger all do this).   |
+| Layer         | Choice                             | Rationale                                                       |
+| ------------- | ---------------------------------- | --------------------------------------------------------------- |
+| Framework     | SvelteKit 5 (Svelte 5 runes)       | User preference. Full-stack TypeScript. Fast, lightweight.      |
+| Adapter       | `@sveltejs/adapter-node`           | Required for persistent in-memory state and SSE support.        |
+| Language      | TypeScript                         | Full-stack type safety.                                         |
+| Storage       | In-memory (`Map`) behind interface | Simplest for v1. Swappable to SQLite via same interface.        |
+| OTLP format   | JSON and Protobuf                  | Both `application/json` and `application/x-protobuf` supported. |
+| Real-time     | SSE (`EventSource`)                | Single persistent connection, instant push on ingest.           |
+| Port          | 4318                               | Standard OTLP/HTTP port — zero config on exporter side.         |
+| Visualization | Custom HTML/CSS waterfall          | Industry standard approach (Honeycomb, Jaeger all do this).     |
 
 ## Architecture
 
@@ -22,24 +22,24 @@ flowchart TB
     subgraph Client["Instrumented Application"]
         App["OTel SDK"]
     end
-    
+
     subgraph Server["SvelteKit Server :4318"]
         OTLP["API Route<br/>/v1/traces<br/>(POST)"]
         Store[("In-Memory<br/>TraceStore")]
         API["API Routes<br/>/api/*<br/>(GET)"]
-        
+
         OTLP -->|Ingest| Store
         Store -->|Read| API
     end
-    
+
     subgraph Frontend["Svelte 5 Frontend"]
         List["Trace List"]
         Detail["Trace Detail<br/>(4 sections)"]
     end
-    
+
     App -->|"OTLP/HTTP<br/>POST /v1/traces"| OTLP
     API -->|JSON| Frontend
-    
+
     style Client fill:#e1f5ff
     style Server fill:#fff4e1
     style Frontend fill:#e8f5e9
@@ -93,76 +93,79 @@ src/
 ### Phase 1: Project Setup
 
 #### Step 1 — Scaffold SvelteKit project
+
 - `npx sv create` with Svelte 5, TypeScript
 - Install `@sveltejs/adapter-node`
 - Configure `vite.config.ts` to run dev server on port 4318
 - Disable SvelteKit's built-in OTel tracing to prevent self-tracing loops
 
 #### Step 2 — Define TypeScript types (`$lib/types.ts`)
+
 ```typescript
 interface StoredSpan {
-  traceId: string;
-  spanId: string;
-  parentSpanId: string;
-  name: string;
-  kind: number;                        // 0-5 (SpanKind enum)
-  startTimeUnixNano: string;           // string to preserve precision
-  endTimeUnixNano: string;
-  attributes: Record<string, any>;     // flattened from KeyValue[]
-  events: SpanEvent[];
-  links: SpanLink[];
-  status: { code: number; message: string };
-  resource: Record<string, any>;       // flattened resource attributes
-  scopeName: string;
-  scopeVersion: string;
-  scopeAttributes: Record<string, any>; // flattened scope attributes
+  traceId: string
+  spanId: string
+  parentSpanId: string
+  name: string
+  kind: number // 0-5 (SpanKind enum)
+  startTimeUnixNano: string // string to preserve precision
+  endTimeUnixNano: string
+  attributes: Record<string, any> // flattened from KeyValue[]
+  events: SpanEvent[]
+  links: SpanLink[]
+  status: { code: number; message: string }
+  resource: Record<string, any> // flattened resource attributes
+  scopeName: string
+  scopeVersion: string
+  scopeAttributes: Record<string, any> // flattened scope attributes
 }
 
 interface StoredTrace {
-  traceId: string;
-  rootSpanName: string;
-  serviceName: string;                 // from resource service.name
-  startTimeUnixNano: string;           // earliest span start
-  endTimeUnixNano: string;             // latest span end
-  spanCount: number;
-  hasError: boolean;                   // any span with status.code === 2
-  spans: Map<string, StoredSpan>;
+  traceId: string
+  rootSpanName: string
+  serviceName: string // from resource service.name
+  startTimeUnixNano: string // earliest span start
+  endTimeUnixNano: string // latest span end
+  spanCount: number
+  hasError: boolean // any span with status.code === 2
+  spans: Map<string, StoredSpan>
 }
 
 interface TraceListItem {
-  traceId: string;
-  rootSpanName: string;
-  serviceName: string;
-  durationMs: number;
-  spanCount: number;
-  hasError: boolean;
-  startTime: string;                   // ISO timestamp for display
+  traceId: string
+  rootSpanName: string
+  serviceName: string
+  durationMs: number
+  spanCount: number
+  hasError: boolean
+  startTime: string // ISO timestamp for display
 }
 
 interface SpanEvent {
-  timeUnixNano: string;
-  name: string;
-  attributes: Record<string, any>;
+  timeUnixNano: string
+  name: string
+  attributes: Record<string, any>
 }
 
 interface SpanLink {
-  traceId: string;
-  spanId: string;
-  traceState: string;
-  attributes: Record<string, any>;
+  traceId: string
+  spanId: string
+  traceState: string
+  attributes: Record<string, any>
 }
 
 // Swappable storage interface
 interface TraceStore {
-  ingest(resourceSpans: any[]): void;
-  getTraceList(limit?: number): TraceListItem[];
-  getTrace(traceId: string): StoredTrace | undefined;
-  clear(): void;
-  subscribe(fn: () => void): () => void;
+  ingest(resourceSpans: any[]): void
+  getTraceList(limit?: number): TraceListItem[]
+  getTrace(traceId: string): StoredTrace | undefined
+  clear(): void
+  subscribe(fn: () => void): () => void
 }
 ```
 
 #### Step 3 — Implement TraceStore (`$lib/server/traceStore.ts`)
+
 - In-memory `Map<string, StoredTrace>` behind `TraceStore` interface
 - `ingest()`: flatten `ResourceSpans → ScopeSpans → Spans` hierarchy, extract `service.name` from `Resource.attributes`, merge spans into existing traces, handle out-of-order root spans
 - `getTraceList()`: return sorted summaries (newest first), with configurable limit
@@ -172,6 +175,7 @@ interface TraceStore {
 - Max traces eviction: keep at most 1000 traces, evict oldest when exceeded
 
 #### Step 4 — Utility helpers (`$lib/utils/`)
+
 - `attributes.ts`: `flattenAttributes(keyValues)` handles all 7 `AnyValue` variants (`stringValue`, `boolValue`, `intValue`, `doubleValue`, `arrayValue`, `kvlistValue`, `bytesValue`)
 - `time.ts`: `formatDuration(startNano, endNano)` → human-readable string (e.g., "42.3ms"), `formatTimestamp(nanoString)` → ISO string
 - `spans.ts`: `spanKindLabel(kind)` → "SERVER"/"CLIENT"/etc., `statusLabel(code)` → "OK"/"ERROR"/"UNSET", `buildSpanTree(spans)` → nested tree structure for waterfall rendering
@@ -180,6 +184,7 @@ interface TraceStore {
 ### Phase 2: OTLP Receiver + API
 
 #### Step 5 — OTLP endpoint (`src/routes/v1/traces/+server.ts`)
+
 - `POST` handler
 - Check `Content-Type: application/json` → `request.json()`
 - Check `Content-Type: application/x-protobuf` or `application/protobuf` → decode via `decodeProtobuf()` from `$lib/server/protobuf`
@@ -189,6 +194,7 @@ interface TraceStore {
 - Return `400` for malformed requests
 
 #### Step 6 — Frontend API routes
+
 - `GET /api/traces` → returns `TraceListItem[]` JSON, sorted by start time descending, limit 100
 - `GET /api/traces/[traceId]` → returns full trace JSON with all spans as array (serialize `Map` to array)
 - Both call into `traceStore`
@@ -196,12 +202,14 @@ interface TraceStore {
 ### Phase 3: Frontend — Trace List
 
 #### Step 7 — Client-side reactive store (`$lib/stores/traces.svelte.ts`)
+
 - `$state.raw<TraceListItem[]>([])` for trace list (avoids deep proxying overhead)
 - `$state<string | null>(null)` for `selectedTraceId`
 - `$effect()` opens `EventSource('/api/traces/stream')`, updates state on `traces` event, closes on cleanup
 - Export as module-level runes (`.svelte.ts` file)
 
 #### Step 8 — Trace list page (`src/routes/+page.svelte`)
+
 - Table/list showing: service name, root span name, duration (ms), span count, error indicator (red badge), timestamp
 - Click row → `goto('/traces/' + traceId)`
 - Header with app title and "Clear traces" button
@@ -211,16 +219,19 @@ interface TraceStore {
 ### Phase 4: Frontend — Trace Detail (Honeycomb-Inspired)
 
 #### Step 9 — Trace detail page (`src/routes/traces/[traceId]/+page.svelte`)
+
 - Load function in `+page.ts` fetches `/api/traces/[traceId]`
 - Layout: vertical stack of 4 sections, with waterfall and sidebar side-by-side
 
 #### Step 10 — Section 1: Trace Identification (`TraceIdentification.svelte`)
+
 - Back arrow → link to trace list
 - Trace ID displayed (truncated, with copy-to-clipboard button)
 - Metadata: span count, total duration, root span timestamp
 - Refresh button to re-fetch trace (picks up late-arriving spans)
 
 #### Step 11 — Section 2: Trace Summary (`TraceSummary.svelte`)
+
 - Collapsible via caret toggle
 - Condensed horizontal bar chart: up to 6 rows (one per tree depth level)
 - Each row: bars sized proportionally to span duration relative to total trace duration
@@ -232,6 +243,7 @@ interface TraceStore {
 #### Step 12 — Section 3: Waterfall (`TraceWaterfall.svelte` + `WaterfallRow.svelte`)
 
 **Header area**:
+
 - Search box: text search across span name + attribute keys/values
   - Highlights matching spans, shows count (e.g., "3 of 12 spans")
   - Prev/next navigation arrows
@@ -239,6 +251,7 @@ interface TraceStore {
 - Service color legend
 
 **Waterfall rows** (one per visible span):
+
 - **Column 1 — Span info** (left side, ~40% width):
   - Indentation by tree depth (connected with vertical/horizontal guide lines)
   - Child count box: outlined box with direct child count; click to collapse/expand subtree
@@ -257,17 +270,20 @@ interface TraceStore {
   - Collapsed: hidden (parent shows filled child-count box)
 
 **Tree rendering logic** (`buildSpanTree()`):
+
 - Build parent→children map from `parentSpanId` → `spanId`
 - Handle orphan spans (parentSpanId references a span not in this trace) — attach as top-level
 - Sort children by `startTimeUnixNano`
 - Flatten tree to ordered list with depth info for rendering
 
 #### Step 13 — Section 4: Span Sidebar (`SpanSidebar.svelte`)
+
 - Slides in from right when a span is selected (click a waterfall row)
 - Close button (×) to dismiss
 - **Three tabs**:
 
 **Fields tab** (default):
+
 - Filter input at top (search within field names/values)
 - Standard fields first: name, kind (label), status (label + message), duration, start time, end time, spanId, traceId, parentSpanId
 - Then span attributes (sorted alphabetically, filterable)
@@ -276,12 +292,14 @@ interface TraceStore {
 - Each field: key on left, value on right, in a compact table
 
 **Span Events tab**:
+
 - List of events, each showing:
   - Timestamp (relative to span start, e.g., "+2.1ms")
   - Event name
   - Expandable attributes section
 
 **Links tab**:
+
 - List of span links, each showing:
   - Linked traceId (truncated, copyable)
   - Linked spanId (truncated, copyable)
@@ -291,17 +309,20 @@ interface TraceStore {
 ### Phase 5: Polish & Test
 
 #### Step 14 — Styling
+
 - Clean, minimal design (light theme)
 - CSS custom properties for the service color palette
 - Responsive: sidebar can overlay on narrow screens
 - Monospace font for IDs, timestamps, attribute values
 
 #### Step 15 — Test with sample data
+
 - Create a test script that sends sample OTLP JSON to `POST /v1/traces` via `curl`
 - Include multi-service traces, error spans, span events, links
 - Verify waterfall renders correctly
 
 #### Step 16 — Test with real instrumented app
+
 - Point a real app's exporter: `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318`
 - Verify traces flow in and display correctly
 
@@ -309,18 +330,18 @@ interface TraceStore {
 
 ## Deferred to v2
 
-| Feature | Description |
-|---------|-------------|
-| ~~SSE real-time push~~ | ~~Replace polling with Server-Sent Events~~ — **Done** |
-| Subtree zoom | Magnifying glass per parent span, re-scales timeline |
-| Customizable columns | "Fields" button to add attribute columns to waterfall |
-| Resizable columns | Drag column borders |
-| Change color-by field | Click column header → "Color rows based on this field" |
-| Batch collapse/expand | Context menu: "Collapse spans at this depth", "Collapse spans with this ServiceName and Name" |
+| Feature                 | Description                                                                                                                                                                                                                                                                |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ~~SSE real-time push~~  | ~~Replace polling with Server-Sent Events~~ — **Done**                                                                                                                                                                                                                     |
+| Subtree zoom            | Magnifying glass per parent span, re-scales timeline                                                                                                                                                                                                                       |
+| Customizable columns    | "Fields" button to add attribute columns to waterfall                                                                                                                                                                                                                      |
+| Resizable columns       | Drag column borders                                                                                                                                                                                                                                                        |
+| Change color-by field   | Click column header → "Color rows based on this field"                                                                                                                                                                                                                     |
+| Batch collapse/expand   | Context menu: "Collapse spans at this depth", "Collapse spans with this ServiceName and Name"                                                                                                                                                                              |
 | ~~Keyboard navigation~~ | ~~Arrow keys to navigate waterfall~~ — **Done**: full shortcut set implemented (`/` focus search, `n`/`Shift+N` next/prev match, `e`/`Shift+E` next/prev error, `Esc` dismiss search / go back, `Alt/⌥+Delete` clear all, `?` help overlay, arrow keys for waterfall tree) |
-| SQLite persistence | Swap `TraceStore` implementation for on-disk storage |
-| Span search in sidebar | Sidebar filter that persists across span selections |
-| Minigraph | Heatmap view of selected span relative to others (Honeycomb feature) |
+| SQLite persistence      | Swap `TraceStore` implementation for on-disk storage                                                                                                                                                                                                                       |
+| Span search in sidebar  | Sidebar filter that persists across span selections                                                                                                                                                                                                                        |
+| Minigraph               | Heatmap view of selected span relative to others (Honeycomb feature)                                                                                                                                                                                                       |
 
 ---
 

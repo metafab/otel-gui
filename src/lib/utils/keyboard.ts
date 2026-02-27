@@ -4,14 +4,14 @@
  * user is typing in a search box, textarea, or contenteditable element.
  */
 export function isInputFocused(): boolean {
-  const el = document.activeElement;
-  if (!el) return false;
-  const tag = el.tagName;
+  const el = document.activeElement
+  if (!el) return false
+  const tag = el.tagName
   return (
-    tag === "INPUT" ||
-    tag === "TEXTAREA" ||
+    tag === 'INPUT' ||
+    tag === 'TEXTAREA' ||
     (el as HTMLElement).isContentEditable
-  );
+  )
 }
 
 /**
@@ -20,5 +20,5 @@ export function isInputFocused(): boolean {
  * Guarded for SSR environments where navigator is unavailable.
  */
 export const isMac: boolean =
-  typeof navigator !== "undefined" &&
-  /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+  typeof navigator !== 'undefined' &&
+  /Mac|iPhone|iPad|iPod/.test(navigator.platform)
