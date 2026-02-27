@@ -1,0 +1,8 @@
+services:
+  otel-gui:
+    build: .
+    environment:
+      HOST: 0.0.0.0
+      PORT: ${PORT:-4318}
+    ports:
+      - "${PORT:-4318}:${PORT:-4318}"

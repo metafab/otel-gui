@@ -183,7 +183,7 @@ interface TraceStore {
 - `POST` handler
 - Check `Content-Type: application/json` → `request.json()`
 - Check `Content-Type: application/x-protobuf` or `application/protobuf` → decode via `decodeProtobuf()` from `$lib/server/protobuf`
-- Check `Content-Encoding: gzip` → decompress via `DecompressionStream` before parsing (deferred to v2)
+- Check `Content-Encoding: gzip` → decompress before parsing
 - Call `traceStore.ingest(body.resourceSpans)`
 - Return `200` with `{}` body
 - Return `400` for malformed requests

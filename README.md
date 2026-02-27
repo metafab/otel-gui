@@ -60,6 +60,57 @@ pnpm run build      # Production build
 
 Open [http://localhost:4318](http://localhost:4318) — the OTLP endpoint is live at the same address.
 
+## 🐳 Docker
+
+Build and run with Docker:
+
+```sh
+docker build -t otel-gui .
+docker run --rm -p 4318:4318 otel-gui
+```
+
+Then use the standard OTLP endpoint:
+
+```sh
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+```
+
+### Docker port configuration
+
+The container reads `PORT` (default `4318`). You can override it at runtime:
+
+```sh
+docker run --rm -e PORT=55681 -p 55681:55681 otel-gui
+```
+
+Using port `4318` is recommended for zero-config OTLP exporters.
+
+### Docker Compose
+
+Run with Docker Compose:
+
+```sh
+docker compose up --build
+```
+
+Run in background:
+
+```sh
+docker compose up -d --build
+```
+
+Stop:
+
+```sh
+docker compose down
+```
+
+To use a different port:
+
+```sh
+PORT=55681 docker compose up --build
+```
+
 ### Sending Traces
 
 Point any OpenTelemetry SDK exporter at the viewer:
@@ -69,6 +120,8 @@ export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 ```
 
 No other configuration needed. The viewer accepts the standard `POST /v1/traces` endpoint.
+
+Requests with `Content-Encoding: gzip` are also supported.
 
 ### Try the demo
 
@@ -132,6 +185,8 @@ PORT=4318 node build
 ```
 
 The production build uses `@sveltejs/adapter-node`. In-memory state is kept alive by the Node.js process — no external store required for local use.
+
+In Docker, traces are still in-memory only and are lost when the container stops.
 
 ## 📐 Architecture
 
