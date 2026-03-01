@@ -6,7 +6,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 
 ![Trace list view](docs/screenshots/trace-detail.png)
 
-## Features
+## ✨ Features
 
 - **Zero config** — listens on port 4318, the standard OTLP/HTTP port. Most exporters work without changing a single setting
 - **OTLP JSON & Protobuf** — accepts both `application/json` and `application/x-protobuf` payloads
@@ -23,7 +23,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Incremental ingestion** — spans from the same trace can arrive in separate requests and out of order; the store merges them correctly
 - **In-memory, no persistence** — stores up to 1 000 traces in memory (FIFO eviction), nothing written to disk
 
-## Screenshots
+## 📸 Screenshots
 
 ### Trace list & filters
 
@@ -63,7 +63,7 @@ pnpm run build      # Production build
 
 Open [http://localhost:4318](http://localhost:4318) — the OTLP endpoint is live at the same address.
 
-## 🐳 Docker
+### Docker 🐳
 
 Build and run with Docker:
 
@@ -78,7 +78,7 @@ Then use the standard OTLP endpoint:
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 ```
 
-### Docker port configuration
+#### Docker port configuration
 
 The container reads `PORT` (default `4318`). You can override it at runtime:
 
@@ -88,7 +88,7 @@ docker run --rm -e PORT=55681 -p 55681:55681 otel-gui
 
 Using port `4318` is recommended for zero-config OTLP exporters.
 
-### Docker Compose
+#### Docker Compose
 
 Run with Docker Compose:
 
@@ -167,6 +167,17 @@ curl -X POST http://localhost:4318/v1/traces \
 
 See [SAMPLE_TRACES.md](./SAMPLE_TRACES.md) for a full feature exploration guide.
 
+## 🏗️ Building
+
+```sh
+pnpm build
+PORT=4318 node build
+```
+
+The production build uses `@sveltejs/adapter-node`. In-memory state is kept alive by the Node.js process — no external store required for local use.
+
+In Docker, traces are still in-memory only and are lost when the container stops.
+
 ## ⌨️ Keyboard Shortcuts
 
 | Key              | Where        | Action                          |
@@ -179,17 +190,6 @@ See [SAMPLE_TRACES.md](./SAMPLE_TRACES.md) for a full feature exploration guide.
 | `n` / `N`        | Trace detail | Next / prev search match        |
 | `e` / `E`        | Trace detail | Next / prev error span          |
 | `?`              | Everywhere   | Toggle shortcuts overlay        |
-
-## 🏗️ Building
-
-```sh
-pnpm build
-PORT=4318 node build
-```
-
-The production build uses `@sveltejs/adapter-node`. In-memory state is kept alive by the Node.js process — no external store required for local use.
-
-In Docker, traces are still in-memory only and are lost when the container stops.
 
 ## 📐 Architecture
 
