@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -6,6 +7,17 @@ function readFixture<T = unknown>(name: string): T {
   return JSON.parse(
     readFileSync(resolve(process.cwd(), `tests/fixtures/${name}`), 'utf-8'),
   ) as T
+}
+
+async function resolveCssVarColor(page: Page, variableName: string) {
+  return page.evaluate((cssVar) => {
+    const probe = document.createElement('span')
+    probe.style.color = `var(${cssVar})`
+    document.body.appendChild(probe)
+    const color = window.getComputedStyle(probe).color
+    probe.remove()
+    return color
+  }, variableName)
 }
 
 const simpleTrace = readFixture('simple-trace.json')
@@ -381,36 +393,146 @@ test.describe('Trace ingestion flow', () => {
     ).toBeVisible()
   })
 
-  test('supports child-badge collapse and expand controls', async ({
-    page,
-    request,
-  }) => {
-    await request.post('/v1/traces', {
-      headers: { 'Content-Type': 'application/json' },
-      data: multiServiceTrace,
+  test.describe('waterfall indicators', () => {
+    test('supports child-badge collapse and expand controls', async ({
+      page,
+      request,
+    }) => {
+      await request.post('/v1/traces', {
+        headers: { 'Content-Type': 'application/json' },
+        data: multiServiceTrace,
+      })
+
+      await page.goto('/trace/AAAABBBBCCCCDDDD0000111122223333')
+
+      const rows = page.locator('.waterfall-row')
+      await expect(rows).toHaveCount(3)
+
+      const rootRow = page
+        .locator('.waterfall-row', { hasText: 'GET /checkout' })
+        .first()
+      const rootBadge = rootRow.locator('button.child-badge')
+
+      await expect(rootBadge).toHaveAttribute('aria-label', 'Collapse')
+      await expect(rootBadge).toHaveAttribute('aria-expanded', 'true')
+
+      await rootBadge.click()
+      await expect(rows).toHaveCount(1)
+      await expect(rootBadge).toHaveAttribute('aria-label', 'Expand')
+      await expect(rootBadge).toHaveAttribute('aria-expanded', 'false')
+
+      await rootBadge.click()
+      await expect(rows).toHaveCount(3)
+      await expect(rootBadge).toHaveAttribute('aria-label', 'Collapse')
+      await expect(rootBadge).toHaveAttribute('aria-expanded', 'true')
+
+      await expect(page.locator('.indicator-cell')).toHaveCount(0)
+
+      const leafRow = page
+        .locator('.waterfall-row', { hasText: 'SELECT * FROM orders' })
+        .first()
+      await expect(leafRow.locator('button.child-badge')).toHaveCount(0)
+      await expect(leafRow.locator('.child-badge-spacer')).toHaveCount(1)
     })
 
-    await page.goto('/trace/AAAABBBBCCCCDDDD0000111122223333')
+    test('shows left indicator rail for selected span', async ({
+      page,
+      request,
+    }) => {
+      await request.post('/v1/traces', {
+        headers: { 'Content-Type': 'application/json' },
+        data: multiServiceTrace,
+      })
 
-    const rows = page.locator('.waterfall-row')
-    await expect(rows).toHaveCount(3)
+      await page.goto('/trace/AAAABBBBCCCCDDDD0000111122223333')
 
-    const rootRow = page
-      .locator('.waterfall-row', { hasText: 'GET /checkout' })
-      .first()
-    const rootBadge = rootRow.locator('button.child-badge')
+      const selectedRow = page.locator('.waterfall-row.selected').first()
+      await expect(selectedRow).toHaveCount(1)
 
-    await expect(rootBadge).toHaveAttribute('aria-label', 'Collapse')
-    await expect(rootBadge).toHaveAttribute('aria-expanded', 'true')
+      const expectedSelectedBorder = await resolveCssVarColor(
+        page,
+        '--selected-border',
+      )
+      const selectedIndicator = await selectedRow.evaluate((el) => {
+        const styles = window.getComputedStyle(el)
+        return {
+          borderLeftWidth: styles.borderLeftWidth,
+          borderLeftColor: styles.borderLeftColor,
+        }
+      })
 
-    await rootBadge.click()
-    await expect(rows).toHaveCount(1)
-    await expect(rootBadge).toHaveAttribute('aria-label', 'Expand')
-    await expect(rootBadge).toHaveAttribute('aria-expanded', 'false')
+      expect(selectedIndicator.borderLeftWidth).toBe('3px')
+      expect(selectedIndicator.borderLeftColor).toBe(expectedSelectedBorder)
+    })
 
-    await rootBadge.click()
-    await expect(rows).toHaveCount(3)
-    await expect(rootBadge).toHaveAttribute('aria-label', 'Collapse')
-    await expect(rootBadge).toHaveAttribute('aria-expanded', 'true')
+    test('shows left indicator rail for search-matching spans', async ({
+      page,
+      request,
+    }) => {
+      await request.post('/v1/traces', {
+        headers: { 'Content-Type': 'application/json' },
+        data: multiServiceTrace,
+      })
+
+      await page.goto('/trace/AAAABBBBCCCCDDDD0000111122223333')
+
+      const spanSearch = page.locator('#span-search')
+      await spanSearch.fill('processCheckout')
+      await expect(page.getByText('1 span found')).toBeVisible()
+
+      const highlightedRow = page
+        .locator('.waterfall-row', { hasText: 'processCheckout' })
+        .first()
+      await expect(highlightedRow).toHaveClass(/highlighted/)
+
+      const expectedHighlightBorder = await resolveCssVarColor(
+        page,
+        '--highlight-border',
+      )
+      const highlightIndicator = await highlightedRow.evaluate((el) => {
+        const styles = window.getComputedStyle(el)
+        return {
+          borderLeftWidth: styles.borderLeftWidth,
+          borderLeftColor: styles.borderLeftColor,
+        }
+      })
+
+      expect(highlightIndicator.borderLeftWidth).toBe('3px')
+      expect(highlightIndicator.borderLeftColor).toBe(expectedHighlightBorder)
+    })
+
+    test('shows a persistent right rail for error spans', async ({
+      page,
+      request,
+    }) => {
+      await request.post('/v1/traces', {
+        headers: { 'Content-Type': 'application/json' },
+        data: errorNavigationTrace,
+      })
+
+      await page.goto('/trace/ERRNAV000000000000000000000001')
+
+      const errorRow = page
+        .locator('.waterfall-row', { hasText: 'validateCart' })
+        .first()
+      await expect(errorRow).toHaveClass(/error/)
+      const expectedErrorBorder = await resolveCssVarColor(
+        page,
+        '--error-border',
+      )
+
+      const rail = await errorRow.evaluate((el) => {
+        const pseudo = window.getComputedStyle(el, '::after')
+        return {
+          content: pseudo.content,
+          width: pseudo.width,
+          backgroundColor: pseudo.backgroundColor,
+        }
+      })
+
+      expect(rail.content).not.toBe('none')
+      expect(rail.width).toBe('3px')
+      expect(rail.backgroundColor).toBe(expectedErrorBorder)
+    })
   })
 })
