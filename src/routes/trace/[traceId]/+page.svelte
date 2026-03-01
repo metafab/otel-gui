@@ -824,7 +824,6 @@
             aria-label="Span tree"
           >
             <!-- Time ruler header row -->
-            <div class="indicator-cell ruler-spacer"></div>
             <div class="waterfall-cell ruler-cell">
               <div
                 class="time-ruler"
@@ -853,14 +852,9 @@
               </div>
             </div>
 
-            <!-- Waterfall rows with indicators -->
+            <!-- Waterfall rows -->
             {#each spanTree as node (node.span.spanId)}
-              <div class="indicator-cell" data-span-id={node.span.spanId}>
-                {#if node.span.spanId === selectedSpanId}
-                  <span class="selection-indicator-outer">▶</span>
-                {/if}
-              </div>
-              <div class="waterfall-cell">
+              <div class="waterfall-cell" data-span-id={node.span.spanId}>
                 <WaterfallRow
                   span={node.span}
                   depth={node.depth}
@@ -1237,7 +1231,7 @@
 
   .waterfall-container {
     display: grid;
-    grid-template-columns: 20px 1fr;
+    grid-template-columns: 1fr;
     align-content: start;
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -1252,30 +1246,10 @@
     outline-offset: 2px;
   }
 
-  .indicator-cell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-right: 1px solid var(--border);
-  }
-
-  .indicator-cell.ruler-spacer {
-    background: var(--bg-page);
-    position: sticky;
-    top: 0;
-    z-index: 11;
-  }
-
   .waterfall-cell.ruler-cell {
     position: sticky;
     top: 0;
     z-index: 11;
-  }
-
-  .selection-indicator-outer {
-    color: var(--accent);
-    font-size: 0.875rem;
-    line-height: 1;
   }
 
   .time-ruler {
