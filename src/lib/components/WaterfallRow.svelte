@@ -210,7 +210,19 @@
   }
 
   .waterfall-row.error {
+    position: relative;
     background: var(--error-bg-row);
+  }
+
+  .waterfall-row.error::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--error-border);
+    pointer-events: none;
   }
 
   .waterfall-row.error:hover {
