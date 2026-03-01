@@ -142,30 +142,30 @@ This sends a realistic multi-service trace (frontend → backend-api → auth-se
 # Simple 3-span trace
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
-  -d @sample-trace.json
+  -d @samples/sample-trace.json
 
 # E-commerce trace — part 1 (frontend + backend-api)
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
-  -d @sample-trace-ecommerce-part1.json
+  -d @samples/sample-trace-ecommerce-part1.json
 
 # E-commerce trace — part 2 (auth-service + database with errors)
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
-  -d @sample-trace-ecommerce-part2.json
+  -d @samples/sample-trace-ecommerce-part2.json
 
 # Trace with error spans (status.code = 2)
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
-  -d @sample-trace-error.json
+  -d @samples/sample-trace-error.json
 
 # Trace with span links
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
-  -d @sample-trace-links.json
+  -d @samples/sample-trace-links.json
 ```
 
-See [SAMPLE_TRACES.md](./SAMPLE_TRACES.md) for a full feature exploration guide.
+See [SAMPLE_TRACES.md](./samples/SAMPLE_TRACES.md) for a full feature exploration guide.
 
 ## 🏗️ Building
 

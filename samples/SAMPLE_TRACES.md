@@ -31,7 +31,7 @@ Simple trace with a single frontend service showing basic span hierarchy.
 ```bash
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
-  -d @sample-trace.json
+  -d @samples/sample-trace.json
 ```
 
 ### Advanced Examples
@@ -71,12 +71,12 @@ POST /checkout (frontend) - 1.25s total
 # Send part 1 (initial spans from frontend and backend-api)
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
-  -d @sample-trace-ecommerce-part1.json
+  -d @samples/sample-trace-ecommerce-part1.json
 
 # Wait a few seconds, then send part 2 (auth-service and database spans)
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
-  -d @sample-trace-ecommerce-part2.json
+  -d @samples/sample-trace-ecommerce-part2.json
 ```
 
 ## Features to Explore

@@ -22,7 +22,7 @@ echo ""
 echo "📤 Sending initial trace data (frontend + backend-api)..."
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
-  -d @sample-trace-ecommerce-part1.json \
+  -d @samples/sample-trace-ecommerce-part1.json \
   -s -o /dev/null
 
 if [ $? -eq 0 ]; then
@@ -43,7 +43,7 @@ echo ""
 echo "📤 Sending delayed trace data (auth-service + database)..."
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
-  -d @sample-trace-ecommerce-part2.json \
+  -d @samples/sample-trace-ecommerce-part2.json \
   -s -o /dev/null
 
 if [ $? -eq 0 ]; then
