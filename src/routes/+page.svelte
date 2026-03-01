@@ -463,27 +463,27 @@
     border-spacing: 0;
     background: var(--bg-surface);
     table-layout: fixed;
-    min-width: 700px;
+    min-width: 875px;
   }
 
   /* Fixed-width columns; Root Name (col 2) gets the remaining space with a min-width */
   th:nth-child(1) {
-    width: 130px;
+    width: 150px;
   }
   th:nth-child(2) {
     min-width: 200px;
   }
   th:nth-child(3) {
-    width: 130px;
+    width: 165px;
   }
   th:nth-child(4) {
-    width: 60px;
+    width: 90px;
   }
   th:nth-child(5) {
-    width: 150px;
+    width: 175px;
   }
   th:nth-child(6) {
-    width: 80px;
+    width: 95px;
   }
 
   thead {
@@ -495,12 +495,13 @@
 
   th {
     text-align: left;
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 1.25rem;
     font-weight: 600;
     font-size: 0.875rem;
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    white-space: nowrap;
   }
 
   tbody tr {
@@ -513,7 +514,7 @@
   }
 
   td {
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 1.25rem;
     font-size: 0.875rem;
     border-top: 1px solid var(--border);
   }
