@@ -126,7 +126,8 @@
   <div class="span-info" style="padding-left: {depth * 20}px">
     <div class="span-name">
       {#if !hasChildren}
-        <span class="child-badge child-badge-leaf" aria-hidden="true"></span>
+        <span class="child-badge-spacer" aria-hidden="true" role="presentation"
+        ></span>
       {:else}
         <button
           class="child-badge"
@@ -306,18 +307,12 @@
     border-color: var(--collapse-text-hover);
   }
 
-  /* Leaf span: empty dashed box — declared after .child-badge so source order wins */
-  .child-badge-leaf {
-    border: 1.5px dashed var(--collapse-text);
-    background: transparent;
-    color: transparent;
-    cursor: default;
-  }
-
-  .child-badge-leaf:hover {
-    border: 1.5px dashed var(--collapse-text);
-    background: transparent;
-    color: transparent;
+  /* Leaf span: reserve badge slot without showing a badge */
+  .child-badge-spacer {
+    width: 20px;
+    height: 18px;
+    flex-shrink: 0;
+    display: inline-block;
   }
 
   .span-name-text {
