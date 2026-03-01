@@ -454,7 +454,6 @@
     flex: 1;
     min-height: 0;
     margin-bottom: 1rem;
-    scrollbar-gutter: stable;
   }
 
   table {
