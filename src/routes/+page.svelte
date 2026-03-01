@@ -302,8 +302,7 @@
       { keys: ['/'], description: 'Focus search' },
       {
         keys: ['Esc'],
-        description:
-          'Dismiss search (when search focused) / Go back to trace list',
+        description: 'Dismiss search (when search focused)',
       },
       {
         keys: [isMac ? 'Option+⌫' : 'Alt+Delete'],
