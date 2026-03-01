@@ -459,7 +459,8 @@
 
   table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     background: var(--bg-surface);
     table-layout: fixed;
     min-width: 700px;
@@ -503,7 +504,6 @@
   }
 
   tbody tr {
-    border-top: 1px solid var(--border);
     cursor: pointer;
     transition: background 0.15s ease;
   }
@@ -512,17 +512,37 @@
     background: var(--bg-surface-hover);
   }
 
+  td {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Error rows: coloured border on all four sides via per-cell borders */
   tbody tr.error {
     background: var(--error-bg-row);
   }
 
-  tbody tr.error:hover {
-    background: var(--error-bg-row-hover);
+  tbody tr.error td {
+    border-top: 1px solid var(--error-border);
+    border-bottom: 1px solid var(--error-border);
   }
 
-  td {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
+  tbody tr.error td:first-child {
+    border-left: 1px solid var(--error-border);
+  }
+
+  tbody tr.error td:last-child {
+    border-right: 1px solid var(--error-border);
+  }
+
+  /* Avoid doubled horizontal border between consecutive error rows */
+  tbody tr.error + tr.error td {
+    border-top: none;
+  }
+
+  tbody tr.error:hover {
+    background: var(--error-bg-row-hover);
   }
 
   .operation {
