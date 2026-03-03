@@ -6,6 +6,9 @@ import {
 } from './api/traces/+server'
 import { GET as getTrace } from './api/traces/[traceId]/+server'
 import { GET as getServiceMap } from './api/service-map/+server'
+import { GET as getMetrics } from './metrics/+server'
+import { POST as postOtlpMetrics } from './v1/metrics/+server'
+import { POST as postOtlpLogs } from './v1/logs/+server'
 import { traceStore } from '$lib/server/traceStore'
 import simpleTrace from '../../tests/fixtures/simple-trace.json'
 import multiServiceTrace from '../../tests/fixtures/multi-service-trace.json'
@@ -359,5 +362,35 @@ describe('GET /api/service-map', () => {
 
     expect(nodes).toHaveLength(1)
     expect(nodes[0].serviceName).toBe('frontend')
+  })
+})
+
+// ─── Unimplemented but known endpoints ───────────────────────────────────────
+
+describe('Unimplemented endpoints', () => {
+  it('returns 501 for GET /metrics', async () => {
+    const response = await getMetrics({} as any)
+    expect(response.status).toBe(501)
+
+    const body = await response.json()
+    expect(body.error).toMatch(/not implemented/i)
+  })
+
+  it('returns 501 for POST /v1/metrics', async () => {
+    const request = makePostRequest({ resourceMetrics: [] })
+    const response = await postOtlpMetrics({ request } as any)
+    expect(response.status).toBe(501)
+
+    const body = await response.json()
+    expect(body.error).toMatch(/not implemented/i)
+  })
+
+  it('returns 501 for POST /v1/logs', async () => {
+    const request = makePostRequest({ resourceLogs: [] })
+    const response = await postOtlpLogs({ request } as any)
+    expect(response.status).toBe(501)
+
+    const body = await response.json()
+    expect(body.error).toMatch(/not implemented/i)
   })
 })
