@@ -18,6 +18,8 @@
     onFullscreen?: (key: string, formatted: string) => void
     /** Index of the highlighted event (from clicking a WaterfallRow event dot). */
     highlightedEventIndex?: number | null
+    /** Global span search query from trace page. */
+    searchQuery?: string
   }
 
   let {
@@ -25,7 +27,61 @@
     onSelectSpan,
     onFullscreen,
     highlightedEventIndex = null,
+    searchQuery = '',
   }: Props = $props()
+
+  const normalizedSearchQuery = $derived(searchQuery.trim().toLowerCase())
+
+  function valueMatchesSearch(value: unknown): boolean {
+    if (!normalizedSearchQuery) return false
+    if (value == null) return false
+    if (typeof value === 'string') {
+      return value.toLowerCase().includes(normalizedSearchQuery)
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value).toLowerCase().includes(normalizedSearchQuery)
+    }
+
+    try {
+      const serialized = JSON.stringify(value)
+      return (
+        typeof serialized === 'string' &&
+        serialized.toLowerCase().includes(normalizedSearchQuery)
+      )
+    } catch {
+      return false
+    }
+  }
+
+  function keyValueMatchesSearch(key: string, value: unknown): boolean {
+    if (!normalizedSearchQuery) return false
+    return (
+      key.toLowerCase().includes(normalizedSearchQuery) ||
+      valueMatchesSearch(value)
+    )
+  }
+
+  function keyMatchesSearch(key: string): boolean {
+    return (
+      !!normalizedSearchQuery &&
+      key.toLowerCase().includes(normalizedSearchQuery)
+    )
+  }
+
+  function textMatchesSearch(text: string): boolean {
+    return (
+      !!normalizedSearchQuery &&
+      text.toLowerCase().includes(normalizedSearchQuery)
+    )
+  }
+
+  function eventMatchesSearch(event: StoredSpan['events'][number]): boolean {
+    if (textMatchesSearch(event.name)) return true
+    for (const [key, value] of Object.entries(event.attributes)) {
+      if (keyValueMatchesSearch(key, value)) return true
+    }
+    return false
+  }
 
   // Per-section filter state (local, resets when span changes)
   let attributeFilter = $state('')
@@ -105,7 +161,9 @@
   <!-- Basic fields -->
   <div class="detail-row">
     <span class="label">Name:</span>
-    <span class="value">{span.name}</span>
+    <span class="value" class:search-match={textMatchesSearch(span.name)}
+      >{span.name}</span
+    >
   </div>
   <div class="detail-row">
     <span class="label">Started:</span>
@@ -127,7 +185,11 @@
   </div>
   <div class="detail-row">
     <span class="label">Kind:</span>
-    <span class="value">{spanKindLabel(span.kind)}</span>
+    <span
+      class="value"
+      class:search-match={textMatchesSearch(spanKindLabel(span.kind))}
+      >{spanKindLabel(span.kind)}</span
+    >
   </div>
   <div class="detail-row">
     <span class="label">Status:</span>
@@ -144,13 +206,16 @@
   </div>
   <div class="detail-row">
     <span class="label">Span ID:</span>
-    <span class="value mono">{span.spanId}</span>
+    <span class="value mono" class:search-match={textMatchesSearch(span.spanId)}
+      >{span.spanId}</span
+    >
   </div>
   {#if span.parentSpanId}
     <div class="detail-row">
       <span class="label">Parent ID:</span>
       <button
         class="value mono parent-link"
+        class:search-match={textMatchesSearch(span.parentSpanId)}
         onclick={() => onSelectSpan?.(span.parentSpanId)}
         title="Jump to parent span"
       >
@@ -160,7 +225,13 @@
   {/if}
   <div class="detail-row">
     <span class="label">Service:</span>
-    <span class="value">{span.resource['service.name'] || 'unknown'}</span>
+    <span
+      class="value"
+      class:search-match={keyValueMatchesSearch(
+        'service.name',
+        span.resource['service.name'] || 'unknown',
+      )}>{span.resource['service.name'] || 'unknown'}</span
+    >
   </div>
 
   <!-- Events -->
@@ -183,9 +254,15 @@
           class="event-item"
           id="event-{index}"
           class:highlighted={highlightedEventIndex === index}
+          class:search-match={eventMatchesSearch(event)}
         >
           <div class="event-header">
-            <div class="event-name">{event.name}</div>
+            <div
+              class="event-name"
+              class:search-match={textMatchesSearch(event.name)}
+            >
+              {event.name}
+            </div>
             <div
               class="event-timestamp"
               title={formatTimestamp(event.timeUnixNano)}
@@ -196,7 +273,13 @@
           {#if Object.keys(event.attributes).length > 0}
             <div class="event-attributes">
               {#each Object.entries(event.attributes).sort( ([a], [b]) => a.localeCompare(b), ) as [key, value]}
-                <AttributeItem attrKey={key} {value} {onFullscreen} />
+                <AttributeItem
+                  attrKey={key}
+                  {value}
+                  {onFullscreen}
+                  highlightKey={keyMatchesSearch(key)}
+                  highlightValue={valueMatchesSearch(value)}
+                />
               {/each}
             </div>
           {/if}
@@ -286,7 +369,13 @@
       {#if filteredAttributes.length > 0}
         <div class="attributes">
           {#each filteredAttributes as [key, value]}
-            <AttributeItem attrKey={key} {value} {onFullscreen} />
+            <AttributeItem
+              attrKey={key}
+              {value}
+              {onFullscreen}
+              highlightKey={keyMatchesSearch(key)}
+              highlightValue={valueMatchesSearch(value)}
+            />
           {/each}
         </div>
       {:else}
@@ -328,7 +417,13 @@
       {#if filteredResource.length > 0}
         <div class="attributes">
           {#each filteredResource as [key, value]}
-            <AttributeItem attrKey={key} {value} {onFullscreen} />
+            <AttributeItem
+              attrKey={key}
+              {value}
+              {onFullscreen}
+              highlightKey={keyMatchesSearch(key)}
+              highlightValue={valueMatchesSearch(value)}
+            />
           {/each}
         </div>
       {:else}
@@ -374,20 +469,34 @@
       {#if span.scopeName}
         <div class="detail-row">
           <span class="label">Name:</span>
-          <span class="value">{span.scopeName}</span>
+          <span
+            class="value"
+            class:search-match={textMatchesSearch(span.scopeName)}
+            >{span.scopeName}</span
+          >
         </div>
       {/if}
       {#if span.scopeVersion}
         <div class="detail-row">
           <span class="label">Version:</span>
-          <span class="value">{span.scopeVersion}</span>
+          <span
+            class="value"
+            class:search-match={textMatchesSearch(span.scopeVersion)}
+            >{span.scopeVersion}</span
+          >
         </div>
       {/if}
       {#if allScopeEntries.length > 0}
         {#if filteredScope.length > 0}
           <div class="attributes">
             {#each filteredScope as [key, value]}
-              <AttributeItem attrKey={key} {value} {onFullscreen} />
+              <AttributeItem
+                attrKey={key}
+                {value}
+                {onFullscreen}
+                highlightKey={keyMatchesSearch(key)}
+                highlightValue={valueMatchesSearch(value)}
+              />
             {/each}
           </div>
         {:else}
@@ -536,6 +645,19 @@
     background: var(--highlight-bg);
     border-left-color: var(--event-color);
     box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+  }
+
+  .event-item.search-match {
+    border-left-color: var(--highlight-border);
+    box-shadow: inset 2px 0 0 var(--highlight-border);
+  }
+
+  .value.search-match,
+  .event-name.search-match,
+  .parent-link.search-match {
+    background: var(--highlight-bg);
+    border-radius: 3px;
+    padding: 0.05rem 0.2rem;
   }
 
   .event-header {

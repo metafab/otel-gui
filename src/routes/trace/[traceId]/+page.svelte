@@ -900,6 +900,7 @@
                 onSelectSpan={handleSpanSelect}
                 onFullscreen={openFullscreen}
                 highlightedEventIndex={selectedEventIndex}
+                searchQuery={spanSearchQuery}
               />
             {:else}
               <div class="no-selection">

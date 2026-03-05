@@ -90,6 +90,16 @@ describe('SpanDetailsSidebar', () => {
     expect(screen.getByText('users-service')).toBeInTheDocument()
   })
 
+  it('highlights span ID when search query matches it', () => {
+    const { container } = render(SpanDetailsSidebar, {
+      props: { span: makeSpan({ spanId: 'abc123def' }), searchQuery: '123d' },
+    })
+
+    const matched = container.querySelector('.value.mono.search-match')
+    expect(matched).toBeTruthy()
+    expect(matched?.textContent).toContain('abc123def')
+  })
+
   // ── Parent span link ──────────────────────────────────────────────────────
 
   it('does not show Parent ID row when parentSpanId is empty', () => {
@@ -196,6 +206,58 @@ describe('SpanDetailsSidebar', () => {
       },
     })
     expect(screen.getByText('exception.stacktrace')).toBeInTheDocument()
+  })
+
+  it('highlights event section when search query matches event name', () => {
+    const { container } = render(SpanDetailsSidebar, {
+      props: {
+        span: makeSpan({
+          events: [
+            {
+              name: 'db.query',
+              timeUnixNano: '1700000000010000000',
+              attributes: {},
+            },
+          ],
+        }),
+        searchQuery: 'db.query',
+      },
+    })
+
+    expect(container.querySelector('.event-item.search-match')).toBeTruthy()
+  })
+
+  it('highlights only attribute value when search query matches value', () => {
+    const { container } = render(SpanDetailsSidebar, {
+      props: {
+        span: makeSpan({
+          attributes: {
+            'http.method': 'GET',
+            'db.statement': 'SELECT * FROM users',
+          },
+        }),
+        searchQuery: 'select * from users',
+      },
+    })
+
+    expect(container.querySelector('.attr-value.search-match')).toBeTruthy()
+    expect(container.querySelector('.attr-key.search-match')).toBeNull()
+  })
+
+  it('highlights only attribute key when search query matches key', () => {
+    const { container } = render(SpanDetailsSidebar, {
+      props: {
+        span: makeSpan({
+          attributes: {
+            'http.method': 'GET',
+          },
+        }),
+        searchQuery: 'http.method',
+      },
+    })
+
+    expect(container.querySelector('.attr-key.search-match')).toBeTruthy()
+    expect(container.querySelector('.attr-value.search-match')).toBeNull()
   })
 
   // ── Links section ─────────────────────────────────────────────────────────

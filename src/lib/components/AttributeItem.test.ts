@@ -50,6 +50,32 @@ describe('AttributeItem', () => {
     expect(typeLabel?.textContent?.trim()).toBe('null')
   })
 
+  it('highlights only attribute key when highlightKey is true', () => {
+    const { container } = render(AttributeItem, {
+      props: {
+        attrKey: 'http.method',
+        value: 'GET',
+        highlightKey: true,
+        highlightValue: false,
+      },
+    })
+    expect(container.querySelector('.attr-key.search-match')).toBeTruthy()
+    expect(container.querySelector('.attr-value.search-match')).toBeNull()
+  })
+
+  it('highlights only attribute value when highlightValue is true', () => {
+    const { container } = render(AttributeItem, {
+      props: {
+        attrKey: 'http.method',
+        value: 'GET',
+        highlightKey: false,
+        highlightValue: true,
+      },
+    })
+    expect(container.querySelector('.attr-key.search-match')).toBeNull()
+    expect(container.querySelector('.attr-value.search-match')).toBeTruthy()
+  })
+
   // ── Copy button ──────────────────────────────────────────────────────────
 
   it('renders a copy button with accessible aria-label', () => {

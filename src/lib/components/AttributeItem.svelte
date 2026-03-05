@@ -6,9 +6,17 @@
     attrKey: string
     value: unknown
     onFullscreen?: (key: string, formatted: string) => void
+    highlightKey?: boolean
+    highlightValue?: boolean
   }
 
-  let { attrKey, value, onFullscreen }: Props = $props()
+  let {
+    attrKey,
+    value,
+    onFullscreen,
+    highlightKey = false,
+    highlightValue = false,
+  }: Props = $props()
 
   let isExpanded = $state(false)
 
@@ -39,7 +47,7 @@
 <div class="attribute-item">
   <div class="attr-header">
     <div class="attr-key-group">
-      <span class="attr-key">{attrKey}</span>
+      <span class="attr-key" class:search-match={highlightKey}>{attrKey}</span>
       <span class="attr-type attr-type--{typeLabel}">{typeLabel}</span>
     </div>
     <div class="attr-actions">
@@ -98,7 +106,10 @@
       {/if}
     </div>
   </div>
-  <pre class="attr-value" class:multiline={isMultiline}>{displayValue}</pre>
+  <pre
+    class="attr-value"
+    class:multiline={isMultiline}
+    class:search-match={highlightValue}>{displayValue}</pre>
   {#if needsTruncation}
     <button class="expand-btn" onclick={() => (isExpanded = !isExpanded)}>
       {isExpanded ? 'Show less' : 'Show more'}
@@ -114,6 +125,17 @@
 
   .attribute-item:last-child {
     border-bottom: none;
+  }
+
+  .attr-key.search-match,
+  .attr-value.search-match {
+    background: var(--highlight-bg);
+    border-radius: 3px;
+    padding: 0.05rem 0.2rem;
+  }
+
+  .attr-value.search-match {
+    display: inline-block;
   }
 
   .attr-header {
