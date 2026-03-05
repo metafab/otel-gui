@@ -8,6 +8,7 @@
     onFullscreen?: (key: string, formatted: string) => void
     highlightKey?: boolean
     highlightValue?: boolean
+    highlightQuery?: string
   }
 
   let {
@@ -16,6 +17,7 @@
     onFullscreen,
     highlightKey = false,
     highlightValue = false,
+    highlightQuery = '',
   }: Props = $props()
 
   let isExpanded = $state(false)
@@ -42,12 +44,64 @@
   }
 
   const typeLabel = $derived(valueType(value))
+
+  type MatchSegment = {
+    text: string
+    isMatch: boolean
+  }
+
+  function splitByQuery(text: string, query: string): MatchSegment[] {
+    if (!query) return [{ text, isMatch: false }]
+
+    const lowerText = text.toLowerCase()
+    const lowerQuery = query.toLowerCase()
+    const segments: MatchSegment[] = []
+    let cursor = 0
+
+    while (cursor < text.length) {
+      const matchAt = lowerText.indexOf(lowerQuery, cursor)
+      if (matchAt === -1) {
+        segments.push({ text: text.slice(cursor), isMatch: false })
+        break
+      }
+
+      if (matchAt > cursor) {
+        segments.push({ text: text.slice(cursor, matchAt), isMatch: false })
+      }
+
+      segments.push({
+        text: text.slice(matchAt, matchAt + lowerQuery.length),
+        isMatch: true,
+      })
+      cursor = matchAt + lowerQuery.length
+    }
+
+    return segments
+  }
+
+  const normalizedHighlightQuery = $derived(highlightQuery.trim())
+  const keySegments = $derived(
+    highlightKey && normalizedHighlightQuery
+      ? splitByQuery(attrKey, normalizedHighlightQuery)
+      : [{ text: attrKey, isMatch: false }],
+  )
+  const valueSegments = $derived(
+    highlightValue && normalizedHighlightQuery
+      ? splitByQuery(displayValue, normalizedHighlightQuery)
+      : [{ text: displayValue, isMatch: false }],
+  )
 </script>
 
 <div class="attribute-item">
   <div class="attr-header">
     <div class="attr-key-group">
-      <span class="attr-key" class:search-match={highlightKey}>{attrKey}</span>
+      <span class="attr-key">
+        {#each keySegments as segment}
+          <span class="match-segment" class:is-match={segment.isMatch}
+            >{segment.text}</span
+          >
+        {/each}
+      </span>
       <span class="attr-type attr-type--{typeLabel}">{typeLabel}</span>
     </div>
     <div class="attr-actions">
@@ -108,8 +162,10 @@
   </div>
   <pre
     class="attr-value"
-    class:multiline={isMultiline}
-    class:search-match={highlightValue}>{displayValue}</pre>
+    class:multiline={isMultiline}>{#each valueSegments as segment}<span
+        class="match-segment"
+        class:is-match={segment.isMatch}>{segment.text}</span
+      >{/each}</pre>
   {#if needsTruncation}
     <button class="expand-btn" onclick={() => (isExpanded = !isExpanded)}>
       {isExpanded ? 'Show less' : 'Show more'}
@@ -127,15 +183,11 @@
     border-bottom: none;
   }
 
-  .attr-key.search-match,
-  .attr-value.search-match {
-    background: var(--highlight-bg);
-    border-radius: 3px;
-    padding: 0.05rem 0.2rem;
-  }
-
-  .attr-value.search-match {
-    display: inline-block;
+  .match-segment.is-match {
+    background: var(--highlight-bg-hover);
+    border-radius: 2px;
+    box-shadow: inset 0 -1px 0 var(--highlight-border);
+    padding: 0;
   }
 
   .attr-header {

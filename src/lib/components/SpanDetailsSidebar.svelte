@@ -75,6 +75,47 @@
     )
   }
 
+  type MatchSegment = {
+    text: string
+    isMatch: boolean
+  }
+
+  function splitByQuery(text: string, query: string): MatchSegment[] {
+    if (!query) return [{ text, isMatch: false }]
+
+    const lowerText = text.toLowerCase()
+    const lowerQuery = query.toLowerCase()
+    const segments: MatchSegment[] = []
+    let cursor = 0
+
+    while (cursor < text.length) {
+      const matchAt = lowerText.indexOf(lowerQuery, cursor)
+      if (matchAt === -1) {
+        segments.push({ text: text.slice(cursor), isMatch: false })
+        break
+      }
+
+      if (matchAt > cursor) {
+        segments.push({ text: text.slice(cursor, matchAt), isMatch: false })
+      }
+
+      segments.push({
+        text: text.slice(matchAt, matchAt + lowerQuery.length),
+        isMatch: true,
+      })
+      cursor = matchAt + lowerQuery.length
+    }
+
+    return segments
+  }
+
+  function eventNameSegments(eventName: string): MatchSegment[] {
+    if (!normalizedSearchQuery || !textMatchesSearch(eventName)) {
+      return [{ text: eventName, isMatch: false }]
+    }
+    return splitByQuery(eventName, normalizedSearchQuery)
+  }
+
   function eventMatchesSearch(event: StoredSpan['events'][number]): boolean {
     if (textMatchesSearch(event.name)) return true
     for (const [key, value] of Object.entries(event.attributes)) {
@@ -257,11 +298,13 @@
           class:search-match={eventMatchesSearch(event)}
         >
           <div class="event-header">
-            <div
-              class="event-name"
-              class:search-match={textMatchesSearch(event.name)}
-            >
-              {event.name}
+            <div class="event-name">
+              {#each eventNameSegments(event.name) as segment}
+                <span
+                  class="event-name-segment"
+                  class:is-match={segment.isMatch}>{segment.text}</span
+                >
+              {/each}
             </div>
             <div
               class="event-timestamp"
@@ -279,6 +322,7 @@
                   {onFullscreen}
                   highlightKey={keyMatchesSearch(key)}
                   highlightValue={valueMatchesSearch(value)}
+                  highlightQuery={searchQuery}
                 />
               {/each}
             </div>
@@ -375,6 +419,7 @@
               {onFullscreen}
               highlightKey={keyMatchesSearch(key)}
               highlightValue={valueMatchesSearch(value)}
+              highlightQuery={searchQuery}
             />
           {/each}
         </div>
@@ -423,6 +468,7 @@
               {onFullscreen}
               highlightKey={keyMatchesSearch(key)}
               highlightValue={valueMatchesSearch(value)}
+              highlightQuery={searchQuery}
             />
           {/each}
         </div>
@@ -496,6 +542,7 @@
                 {onFullscreen}
                 highlightKey={keyMatchesSearch(key)}
                 highlightValue={valueMatchesSearch(value)}
+                highlightQuery={searchQuery}
               />
             {/each}
           </div>
@@ -653,11 +700,17 @@
   }
 
   .value.search-match,
-  .event-name.search-match,
   .parent-link.search-match {
     background: var(--highlight-bg);
     border-radius: 3px;
     padding: 0.05rem 0.2rem;
+  }
+
+  .event-name-segment.is-match {
+    background: var(--highlight-bg-hover);
+    border-radius: 2px;
+    box-shadow: inset 0 -1px 0 var(--highlight-border);
+    padding: 0;
   }
 
   .event-header {

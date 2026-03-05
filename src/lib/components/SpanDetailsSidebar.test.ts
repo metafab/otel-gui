@@ -208,23 +208,29 @@ describe('SpanDetailsSidebar', () => {
     expect(screen.getByText('exception.stacktrace')).toBeInTheDocument()
   })
 
-  it('highlights event section when search query matches event name', () => {
+  it('highlights event section and only the matched event-name substring', () => {
     const { container } = render(SpanDetailsSidebar, {
       props: {
         span: makeSpan({
           events: [
             {
-              name: 'db.query',
+              name: 'production',
               timeUnixNano: '1700000000010000000',
               attributes: {},
             },
           ],
         }),
-        searchQuery: 'db.query',
+        searchQuery: 'duct',
       },
     })
 
     expect(container.querySelector('.event-item.search-match')).toBeTruthy()
+
+    const highlighted = Array.from(
+      container.querySelectorAll('.event-name-segment.is-match'),
+    ).map((el) => el.textContent)
+    expect(highlighted).toContain('duct')
+    expect(highlighted).not.toContain('production')
   })
 
   it('highlights only attribute value when search query matches value', () => {
@@ -240,8 +246,11 @@ describe('SpanDetailsSidebar', () => {
       },
     })
 
-    expect(container.querySelector('.attr-value.search-match')).toBeTruthy()
-    expect(container.querySelector('.attr-key.search-match')).toBeNull()
+    const highlighted = Array.from(
+      container.querySelectorAll('.match-segment.is-match'),
+    ).map((el) => el.textContent)
+    expect(highlighted).toContain('SELECT * FROM users')
+    expect(highlighted).not.toContain('db.statement')
   })
 
   it('highlights only attribute key when search query matches key', () => {
@@ -256,8 +265,11 @@ describe('SpanDetailsSidebar', () => {
       },
     })
 
-    expect(container.querySelector('.attr-key.search-match')).toBeTruthy()
-    expect(container.querySelector('.attr-value.search-match')).toBeNull()
+    const highlighted = Array.from(
+      container.querySelectorAll('.match-segment.is-match'),
+    ).map((el) => el.textContent)
+    expect(highlighted).toContain('http.method')
+    expect(highlighted).not.toContain('GET')
   })
 
   // ── Links section ─────────────────────────────────────────────────────────

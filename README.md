@@ -13,7 +13,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Real-time updates** — new traces appear instantly via SSE (Server-Sent Events), no polling
 - **Waterfall timeline** — Honeycomb-style span waterfall with resizable name column and sidebar
 - **Service map** — auto-generated graph of cross-service calls with error rates and latency (p50/p99)
-- **Search & filter** — filter trace list by text, service, status, and duration range; search spans inside a trace
+- **Search & filter** — filter trace list by text, service, status, and duration range; search spans inside a trace based on attributes, events, and span name and id
 - **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `m` to toggle service map, escape key to clear search and go back to the trace list, `?` for shortcuts help
 - **Error navigation** — jump between error spans with one key
 - **Span details** — attributes, events with timeline markers, resource attributes, instrumentation scope, span links

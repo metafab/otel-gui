@@ -57,10 +57,11 @@ describe('AttributeItem', () => {
         value: 'GET',
         highlightKey: true,
         highlightValue: false,
+        highlightQuery: 'method',
       },
     })
-    expect(container.querySelector('.attr-key.search-match')).toBeTruthy()
-    expect(container.querySelector('.attr-value.search-match')).toBeNull()
+    const highlighted = Array.from(container.querySelectorAll('.match-segment.is-match')).map((el) => el.textContent)
+    expect(highlighted).toEqual(['method'])
   })
 
   it('highlights only attribute value when highlightValue is true', () => {
@@ -70,10 +71,11 @@ describe('AttributeItem', () => {
         value: 'GET',
         highlightKey: false,
         highlightValue: true,
+        highlightQuery: 'ET',
       },
     })
-    expect(container.querySelector('.attr-key.search-match')).toBeNull()
-    expect(container.querySelector('.attr-value.search-match')).toBeTruthy()
+    const highlighted = Array.from(container.querySelectorAll('.match-segment.is-match')).map((el) => el.textContent)
+    expect(highlighted).toEqual(['ET'])
   })
 
   // ── Copy button ──────────────────────────────────────────────────────────
