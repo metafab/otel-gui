@@ -3,7 +3,7 @@ import { spanKindLabel } from '$lib/utils/spans'
 
 /**
  * Returns the set of span IDs in `spanTree` that match `query`.
- * Searches: name, service name, span kind, attributes, events, resource, scope.
+ * Searches: span id, name, service name, span kind, attributes, events, resource, scope.
  *
  * Returns an empty Set when `query` is blank.
  */
@@ -16,89 +16,113 @@ export function findMatchingSpanIds(
 
   const matches = new Set<string>()
 
-  for (const node of spanTree) {
-    const span = node.span
-    const serviceName = (span.resource['service.name'] as string) || 'unknown'
-
-    // Span name
-    if (span.name.toLowerCase().includes(q)) {
-      matches.add(span.spanId)
-      continue
+  function valueContainsQuery(value: unknown): boolean {
+    if (value == null) return false
+    if (typeof value === 'string') return value.toLowerCase().includes(q)
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value).toLowerCase().includes(q)
     }
 
-    // Service name
-    if (serviceName.toLowerCase().includes(q)) {
-      matches.add(span.spanId)
-      continue
-    }
-
-    // Span kind label
-    if (spanKindLabel(span.kind).toLowerCase().includes(q)) {
-      matches.add(span.spanId)
-      continue
-    }
-
-    // Attribute keys / values
-    for (const [key, value] of Object.entries(span.attributes)) {
-      if (
-        key.toLowerCase().includes(q) ||
-        JSON.stringify(value).toLowerCase().includes(q)
-      ) {
-        matches.add(span.spanId)
-        break
-      }
-    }
-    if (matches.has(span.spanId)) continue
-
-    // Events: name and attributes
-    for (const event of span.events) {
-      if (event.name.toLowerCase().includes(q)) {
-        matches.add(span.spanId)
-        break
-      }
-      for (const [key, value] of Object.entries(event.attributes)) {
-        if (
-          key.toLowerCase().includes(q) ||
-          JSON.stringify(value).toLowerCase().includes(q)
-        ) {
-          matches.add(span.spanId)
-          break
-        }
-      }
-      if (matches.has(span.spanId)) break
-    }
-    if (matches.has(span.spanId)) continue
-
-    // Resource attributes
-    for (const [key, value] of Object.entries(span.resource)) {
-      if (
-        key.toLowerCase().includes(q) ||
-        JSON.stringify(value).toLowerCase().includes(q)
-      ) {
-        matches.add(span.spanId)
-        break
-      }
-    }
-    if (matches.has(span.spanId)) continue
-
-    // Scope name, version, and attributes
-    if (
-      span.scopeName.toLowerCase().includes(q) ||
-      span.scopeVersion.toLowerCase().includes(q)
-    ) {
-      matches.add(span.spanId)
-      continue
-    }
-    for (const [key, value] of Object.entries(span.scopeAttributes)) {
-      if (
-        key.toLowerCase().includes(q) ||
-        JSON.stringify(value).toLowerCase().includes(q)
-      ) {
-        matches.add(span.spanId)
-        break
-      }
+    try {
+      const serialized = JSON.stringify(value)
+      return typeof serialized === 'string' && serialized.toLowerCase().includes(q)
+    } catch {
+      return false
     }
   }
+
+  function visit(nodes: SpanTreeNode[]) {
+    for (const node of nodes) {
+      const span = node.span
+      const serviceName = (span.resource['service.name'] as string) || 'unknown'
+      let didMatch = false
+
+      // Span ID
+      if (span.spanId.toLowerCase().includes(q)) {
+        didMatch = true
+      }
+
+      // Span name
+      if (!didMatch && span.name.toLowerCase().includes(q)) {
+        didMatch = true
+      }
+
+      // Service name
+      if (!didMatch && serviceName.toLowerCase().includes(q)) {
+        didMatch = true
+      }
+
+      // Span kind label
+      if (!didMatch && spanKindLabel(span.kind).toLowerCase().includes(q)) {
+        didMatch = true
+      }
+
+      // Attribute keys / values
+      if (!didMatch) {
+        for (const [key, value] of Object.entries(span.attributes)) {
+          if (key.toLowerCase().includes(q) || valueContainsQuery(value)) {
+            didMatch = true
+            break
+          }
+        }
+      }
+
+      // Events: name and attributes
+      if (!didMatch) {
+        for (const event of span.events) {
+          if (event.name.toLowerCase().includes(q)) {
+            didMatch = true
+            break
+          }
+
+          for (const [key, value] of Object.entries(event.attributes)) {
+            if (key.toLowerCase().includes(q) || valueContainsQuery(value)) {
+              didMatch = true
+              break
+            }
+          }
+
+          if (didMatch) break
+        }
+      }
+
+      // Resource attributes
+      if (!didMatch) {
+        for (const [key, value] of Object.entries(span.resource)) {
+          if (key.toLowerCase().includes(q) || valueContainsQuery(value)) {
+            didMatch = true
+            break
+          }
+        }
+      }
+
+      // Scope name, version, and attributes
+      if (
+        !didMatch &&
+        (span.scopeName.toLowerCase().includes(q) ||
+          span.scopeVersion.toLowerCase().includes(q))
+      ) {
+        didMatch = true
+      }
+
+      if (!didMatch) {
+        for (const [key, value] of Object.entries(span.scopeAttributes)) {
+          if (key.toLowerCase().includes(q) || valueContainsQuery(value)) {
+            didMatch = true
+            break
+          }
+        }
+      }
+
+      if (didMatch) {
+        matches.add(span.spanId)
+      }
+
+      visit(node.children)
+    }
+  }
+
+  visit(spanTree)
 
   return matches
 }

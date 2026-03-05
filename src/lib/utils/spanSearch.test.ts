@@ -44,6 +44,13 @@ describe('findMatchingSpanIds', () => {
     expect(findMatchingSpanIds(tree, '   ').size).toBe(0)
   })
 
+  it('matches on span id', () => {
+    const span = makeSpan({ spanId: 'abc123def456', name: 'unrelated-name' })
+    expect(findMatchingSpanIds([makeNode(span)], '123def')).toContain(
+      'abc123def456',
+    )
+  })
+
   // ── Span name ────────────────────────────────────────────────────────────
 
   it('matches on span name (exact)', () => {
@@ -212,5 +219,42 @@ describe('findMatchingSpanIds', () => {
 
   it('handles an empty span tree', () => {
     expect(findMatchingSpanIds([], 'anything').size).toBe(0)
+  })
+
+  it('matches descendant spans when only root nodes are provided', () => {
+    const root = makeNode(makeSpan({ spanId: 'root', name: 'root-span' }))
+    const childSpan = makeSpan({
+      spanId: 'child',
+      parentSpanId: 'root',
+      attributes: { 'db.statement': 'SELECT * FROM users' },
+    })
+
+    root.children = [
+      {
+        span: childSpan,
+        depth: 1,
+        children: [],
+        collapsed: false,
+        subtreeSize: 1,
+      },
+    ]
+
+    const result = findMatchingSpanIds([root], 'select * from users')
+    expect(result).toEqual(new Set(['child']))
+  })
+
+  it('does not throw when attribute values are undefined or circular objects', () => {
+    const circular: Record<string, unknown> = { name: 'loop' }
+    circular.self = circular
+
+    const span = makeSpan({
+      spanId: 'a',
+      attributes: {
+        hasUndefined: undefined,
+        nested: circular,
+      },
+    })
+
+    expect(() => findMatchingSpanIds([makeNode(span)], 'loop')).not.toThrow()
   })
 })
