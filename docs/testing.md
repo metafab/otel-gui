@@ -346,6 +346,75 @@ Fixtures live in `tests/fixtures/` (simple-trace, multi-service-trace, error-tra
 2. Add E2E coverage for linked-trace navigation from sidebar links
 3. Add E2E coverage for parent-span jump action in sidebar
 
+
+## v2 Benchmark Checklist
+
+Use this checklist for every release candidate to validate the v2 product contract metrics defined in [docs/plan.md](./plan.md).
+
+### Benchmark Preconditions
+
+- [ ] Run benchmark entrypoint: `pnpm run benchmark:contract`
+- [ ] Capture machine-readable skeleton: `pnpm run benchmark:contract -- --json`
+- [ ] Capture PR-ready markdown skeleton: `pnpm run benchmark:contract -- --markdown`
+- [ ] Record machine profile (CPU, RAM, OS, Node.js version)
+- [ ] Use the same fixture set for all runs (simple, multi-service, error, out-of-order)
+- [ ] Start from clean state (no previous traces in memory)
+- [ ] Run each benchmark at least 5 times and report median (p50) and p95
+
+Optional: write JSON to file for CI artifacts
+
+```sh
+pnpm run benchmark:contract -- --out tmp/contract-benchmark.json
+pnpm run benchmark:contract -- --markdown --out tmp/contract-benchmark.md
+```
+
+### Metric Checklist (Pass/Fail)
+
+| Metric | Target | Measured | Pass |
+| --- | --- | --- | --- |
+| Time to root cause | ≤ 5 min (p50) |  | ☐ |
+| Setup time (fresh clone → first trace in UI) | ≤ 10 min |  | ☐ |
+| Memory footprint (RSS, 1,000 traces, p95) | ≤ 300 MB |  | ☐ |
+| Startup latency (`pnpm dev` → UI + OTLP ready, p95) | ≤ 5 s |  | ☐ |
+
+### Measurement Protocol
+
+1. **Setup time**
+  - Start from a fresh clone.
+  - Run `pnpm install` then `pnpm dev`.
+  - Send first trace to `POST /v1/traces` and stop timer when it appears in UI.
+
+2. **Startup latency**
+  - Measure from command start (`pnpm dev`) to both conditions true:
+    - `GET /` returns the UI.
+    - `POST /v1/traces` accepts payload and appears in list.
+
+3. **Memory footprint**
+  - Ingest enough fixture data to reach 1,000 traces.
+  - Sample process RSS during normal interactions (list filters + trace detail navigation).
+  - Record p95 RSS.
+
+4. **Time to root cause**
+  - Use a predefined local debugging scenario (known failing span/service).
+  - Start timer when trace first appears in UI.
+  - Stop when tester identifies likely failing span/service and supporting evidence.
+
+### Release Note Snippet Template
+
+Copy this into release notes or PR descriptions:
+
+```markdown
+## v2 Contract Metrics
+
+- Time to root cause (p50): X min (target ≤ 5 min) — ✅/❌
+- Setup time: X min (target ≤ 10 min) — ✅/❌
+- Memory footprint RSS (p95, 1,000 traces): X MB (target ≤ 300 MB) — ✅/❌
+- Startup latency (p95): X s (target ≤ 5 s) — ✅/❌
+
+Benchmark env: <CPU/RAM/OS/Node>
+Fixture set: <name/version>
+```
+
 ## Resources
 
 - [Vitest Docs](https://vitest.dev/)

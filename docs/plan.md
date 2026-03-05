@@ -1,6 +1,8 @@
 # Implementation Plan: otel-gui
 
 A lightweight, local OpenTelemetry trace viewer inspired by Honeycomb's trace detail UI.
+`otel-gui` is a **local-first debugging tool** for OpenTelemetry during development.
+It optimizes the shortest path from "app emits telemetry" to "developer understands the issue" on localhost.
 
 ## Tech Stack
 
@@ -328,20 +330,42 @@ interface TraceStore {
 
 ---
 
-## Deferred to v2
+## v2 Product Contract & Guardrails
 
-| Feature                 | Description                                                                                                                                                                                                                                                                |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ~~SSE real-time push~~  | ~~Replace polling with Server-Sent Events~~ — **Done**                                                                                                                                                                                                                     |
-| Subtree zoom            | Magnifying glass per parent span, re-scales timeline                                                                                                                                                                                                                       |
-| Customizable columns    | "Fields" button to add attribute columns to waterfall                                                                                                                                                                                                                      |
-| Resizable columns       | Drag column borders                                                                                                                                                                                                                                                        |
-| Change color-by field   | Click column header → "Color rows based on this field"                                                                                                                                                                                                                     |
-| Batch collapse/expand   | Context menu: "Collapse spans at this depth", "Collapse spans with this ServiceName and Name"                                                                                                                                                                              |
-| ~~Keyboard navigation~~ | ~~Arrow keys to navigate waterfall~~ — **Done**: full shortcut set implemented (`/` focus search, `n`/`Shift+N` next/prev match, `e`/`Shift+E` next/prev error, `Esc` dismiss search / go back, `Alt/⌥+Delete` clear all, `?` help overlay, arrow keys for waterfall tree) |
-| SQLite persistence      | Swap `TraceStore` implementation for on-disk storage                                                                                                                                                                                                                       |
-| Span search in sidebar  | Sidebar filter that persists across span selections                                                                                                                                                                                                                        |
-| Minigraph               | Heatmap view of selected span relative to others (Honeycomb feature)                                                                                                                                                                                                       |
+v2 focuses on **traces + lightweight correlated logs** for fast local debugging, not on becoming a full observability platform.
+
+### Scope
+
+- **Primary scope**: traces + lightweight, trace-correlated logs for local debugging and root-cause analysis
+- **Deployment model**: single local process, no required external backend
+- **Default behavior**: ephemeral in-memory state
+- **State option**: optional local persistence mode (opt-in only)
+- **Design principle**: fast startup, low friction, minimal setup
+
+### Explicit Non-Goals
+
+- Not a full observability suite (no enterprise dashboards/alerting/policy engine)
+- Not a production-scale telemetry backend or long-term retention system
+- Not a managed cloud competitor to Honeycomb/Datadog/New Relic/Grafana Cloud/Sematext
+- Not a "collect everything forever" platform (bounded local storage remains required)
+- Not replacing existing collector/backends in production environments
+
+### Success Metrics
+
+These metrics are the acceptance criteria for v2 usability and performance.
+
+| Metric | Definition | v2 Target |
+| --- | --- | --- |
+| Time to root cause | Median time from first trace appearance in UI to identifying likely failing span/service (local debugging task) | **≤ 5 min (p50)** |
+| Setup time | Time from fresh clone to receiving first trace in UI (`pnpm install && pnpm dev` + standard OTLP endpoint) | **≤ 10 min** |
+| Memory footprint | Server RSS (Resident Set Size) while handling the max in-memory window (1,000 traces) in normal interactive use | **≤ 300 MB (p95)** |
+| Startup latency | Time from running `pnpm dev` to OTLP endpoint and UI being usable on localhost | **≤ 5 s (p95)** |
+
+### Metric Measurement Guardrails
+
+- Use a documented local benchmark script and repeatable fixture set.
+- Publish machine profile (CPU/RAM/OS/Node version) with each benchmark run.
+- Track trends across releases; regressions beyond 10% require explicit sign-off.
 
 ---
 
