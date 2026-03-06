@@ -19,7 +19,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
     // Decompress gzip if needed
     if (contentEncoding.includes('gzip')) {
-      buffer = new Uint8Array(await gunzipAsync(buffer))
+      try {
+        buffer = new Uint8Array(await gunzipAsync(buffer))
+      } catch {
+        return json({ error: 'Malformed gzip payload' }, { status: 400 })
+      }
     }
 
     let body: { resourceSpans: any[] }
@@ -29,11 +33,19 @@ export const POST: RequestHandler = async ({ request }) => {
       contentType.includes('application/x-protobuf') ||
       contentType.includes('application/protobuf')
     ) {
-      body = await decodeProtobuf(buffer)
+      try {
+        body = await decodeProtobuf(buffer)
+      } catch {
+        return json({ error: 'Malformed protobuf payload' }, { status: 400 })
+      }
     }
     // Handle JSON format
     else if (contentType.includes('application/json')) {
-      body = JSON.parse(new TextDecoder().decode(buffer))
+      try {
+        body = JSON.parse(new TextDecoder().decode(buffer))
+      } catch {
+        return json({ error: 'Malformed JSON payload' }, { status: 400 })
+      }
     }
     // Unsupported content type
     else {

@@ -78,6 +78,19 @@ describe('POST /v1/traces', () => {
     expect(body.error).toMatch(/resourceSpans/i)
   })
 
+  it('returns 400 for malformed JSON payload', async () => {
+    const request = new Request('http://localhost:4318/v1/traces', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{"resourceSpans": [',
+    })
+
+    const response = await POST({ request } as any)
+    expect(response.status).toBe(400)
+    const body = await response.json()
+    expect(body.error).toMatch(/malformed json/i)
+  })
+
   it('incremental ingestion: merges two batches of the same trace', async () => {
     const batches = outOfOrderSpans as any[]
     await POST({ request: makePostRequest(batches[0]) } as any)
