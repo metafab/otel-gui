@@ -342,9 +342,10 @@ Fixtures live in `tests/fixtures/` (simple-trace, multi-service-trace, error-tra
 
 **Next steps**:
 
-1. Add E2E coverage for fullscreen attribute modal flow (open/copy/close)
-2. Add E2E coverage for linked-trace navigation from sidebar links
-3. Add E2E coverage for parent-span jump action in sidebar
+1. Add tests for WaterfallRow
+2. Add E2E coverage for fullscreen attribute modal flow (open/copy/close)
+3. Add E2E coverage for linked-trace navigation from sidebar links
+4. Add E2E coverage for parent-span jump action in sidebar
 
 ## v2 Benchmark Checklist
 

@@ -87,14 +87,75 @@
     return Math.max(0, Math.min(100, percent))
   }
 
+  const MARKER_MIN_GAP_PERCENT = 0.9
+  const MARKER_LANE_STEP_PERCENT = 11
+  const EVENT_BASE_TOP_PERCENT = 35
+  const LOG_BASE_TOP_PERCENT = 65
+  const MARKER_TOP_MIN_PERCENT = 10
+  const MARKER_TOP_MAX_PERCENT = 90
+
+  function clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value))
+  }
+
+  // Assign markers to sub-lanes when x-positions are too close, so markers
+  // remain individually clickable in dense spans.
+  function packMarkerTops(
+    positions: number[],
+    baseTopPercent: number,
+    direction: -1 | 1,
+  ): number[] {
+    const sorted = positions
+      .map((position, index) => ({ position, index }))
+      .sort((a, b) => a.position - b.position)
+
+    const laneLastPosition: number[] = []
+    const packedTop: number[] = new Array(positions.length).fill(baseTopPercent)
+
+    for (const marker of sorted) {
+      let laneIndex = laneLastPosition.findIndex(
+        (lastPosition) =>
+          marker.position - lastPosition >= MARKER_MIN_GAP_PERCENT,
+      )
+
+      if (laneIndex === -1) {
+        laneIndex = laneLastPosition.length
+        laneLastPosition.push(marker.position)
+      } else {
+        laneLastPosition[laneIndex] = marker.position
+      }
+
+      const top = clamp(
+        baseTopPercent + direction * laneIndex * MARKER_LANE_STEP_PERCENT,
+        MARKER_TOP_MIN_PERCENT,
+        MARKER_TOP_MAX_PERCENT,
+      )
+
+      packedTop[marker.index] = top
+    }
+
+    return packedTop
+  }
+
   // Calculate event positions on timeline
   const eventPositions = $derived(
-    span.events.map((event) => {
-      return {
+    (() => {
+      const raw = span.events.map((event) => ({
         name: event.name,
         position: toSpanPositionPercent(event.timeUnixNano),
-      }
-    }),
+      }))
+      const packedTops = packMarkerTops(
+        raw.map((event) => event.position),
+        EVENT_BASE_TOP_PERCENT,
+        -1,
+      )
+
+      return raw.map((event, index) => ({
+        name: event.name,
+        position: event.position,
+        top: packedTops[index],
+      }))
+    })(),
   )
 
   function normalizeLogBody(body: unknown): string {
@@ -126,21 +187,34 @@
   }
 
   const logPositions = $derived(
-    spanLogs.map((log) => {
-      const timestamp =
-        log.timeUnixNano || log.observedTimeUnixNano || span.startTimeUnixNano
-      const body = normalizeLogBody(log.body)
-      const severity = log.severityText || 'UNSET'
-      const bodyPreview = body.length > 80 ? `${body.slice(0, 80)}...` : body
-      return {
-        id: log.id,
-        position: toSpanPositionPercent(timestamp),
-        severityBucket: severityBucket(log),
-        title: bodyPreview
-          ? `Log (${severity}): ${bodyPreview}`
-          : `Log (${severity})`,
-      }
-    }),
+    (() => {
+      const raw = spanLogs.map((log) => {
+        const timestamp =
+          log.timeUnixNano || log.observedTimeUnixNano || span.startTimeUnixNano
+        const body = normalizeLogBody(log.body)
+        const severity = log.severityText || 'UNSET'
+        const bodyPreview = body.length > 80 ? `${body.slice(0, 80)}...` : body
+        return {
+          id: log.id,
+          position: toSpanPositionPercent(timestamp),
+          severityBucket: severityBucket(log),
+          title: bodyPreview
+            ? `Log (${severity}): ${bodyPreview}`
+            : `Log (${severity})`,
+        }
+      })
+
+      const packedTops = packMarkerTops(
+        raw.map((log) => log.position),
+        LOG_BASE_TOP_PERCENT,
+        1,
+      )
+
+      return raw.map((log, index) => ({
+        ...log,
+        top: packedTops[index],
+      }))
+    })(),
   )
 
   function handleEventClick(eventIndex: number, e: MouseEvent | KeyboardEvent) {
@@ -239,7 +313,7 @@
       {#each eventPositions as event, index}
         <div
           class="event-marker"
-          style="left: {event.position}%"
+          style="left: {event.position}%; top: {event.top}%"
           title={`Event: ${event.name}`}
           onclick={(e) => handleEventClick(index, e)}
           onkeydown={(e) => e.key === 'Enter' && handleEventClick(index, e)}
@@ -258,7 +332,7 @@
           class:sev-info={log.severityBucket === 'info'}
           class:sev-debug={log.severityBucket === 'debug'}
           class:sev-trace={log.severityBucket === 'trace'}
-          style="left: {log.position}%"
+          style="left: {log.position}%; top: {log.top}%"
           title={log.title}
           onclick={(e) => handleLogClick(log.id, e)}
           onkeydown={(e) => e.key === 'Enter' && handleLogClick(log.id, e)}
