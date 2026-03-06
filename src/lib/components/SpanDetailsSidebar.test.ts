@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/svelte'
 import SpanDetailsSidebar from './SpanDetailsSidebar.svelte'
-import type { StoredSpan } from '$lib/types'
+import type { StoredSpan, TraceLogListItem } from '$lib/types'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -29,6 +29,20 @@ function makeSpan(overrides: Partial<StoredSpan> = {}): StoredSpan {
     scopeName: 'my-scope',
     scopeVersion: '1.0.0',
     scopeAttributes: {},
+    ...overrides,
+  }
+}
+
+function makeLog(overrides: Partial<TraceLogListItem> = {}): TraceLogListItem {
+  return {
+    id: 'log-001',
+    traceId: 'trace-abc',
+    spanId: 'span-001',
+    timeUnixNano: '1700000000020000000',
+    observedTimeUnixNano: '1700000000020000000',
+    severityNumber: 17,
+    severityText: 'ERROR',
+    body: 'database timeout',
     ...overrides,
   }
 }
@@ -324,5 +338,68 @@ describe('SpanDetailsSidebar', () => {
     })
     await fireEvent.click(screen.getByTitle('Expand resource'))
     expect(screen.getByText('host.name')).toBeInTheDocument()
+  })
+
+  // ── Correlated logs section ──────────────────────────────────────────────
+
+  it('renders correlated logs section when trace logs are provided', () => {
+    render(SpanDetailsSidebar, {
+      props: {
+        span: makeSpan(),
+        traceLogs: [makeLog()],
+      },
+    })
+
+    expect(screen.getByText(/Correlated Logs/)).toBeInTheDocument()
+    expect(screen.getByText('database timeout')).toBeInTheDocument()
+  })
+
+  it('filters correlated logs by text', async () => {
+    render(SpanDetailsSidebar, {
+      props: {
+        span: makeSpan(),
+        traceLogs: [
+          makeLog({ id: 'log-a', body: 'database timeout', severityText: 'ERROR' }),
+          makeLog({ id: 'log-b', body: 'cache miss', severityText: 'INFO', severityNumber: 9 }),
+        ],
+      },
+    })
+
+    const filterInput = screen.getByPlaceholderText(
+      'Filter logs by severity/text...',
+    )
+    await fireEvent.input(filterInput, { target: { value: 'cache' } })
+
+    expect(screen.queryByText('database timeout')).not.toBeInTheDocument()
+    expect(screen.getByText('cache miss')).toBeInTheDocument()
+  })
+
+  it('calls onSelectLog when jumping to a log record', async () => {
+    const onSelectLog = vi.fn()
+    render(SpanDetailsSidebar, {
+      props: {
+        span: makeSpan(),
+        traceLogs: [makeLog()],
+        onSelectLog,
+      },
+    })
+
+    await fireEvent.click(screen.getByTitle('Jump to log record'))
+    expect(onSelectLog).toHaveBeenCalledWith('log-001', 'span-001')
+  })
+
+  it('shows jump-to-span action for logs linked to another span', async () => {
+    const onSelectSpan = vi.fn()
+    render(SpanDetailsSidebar, {
+      props: {
+        span: makeSpan({ spanId: 'span-001' }),
+        traceLogs: [makeLog({ spanId: 'span-other' })],
+        onSelectSpan,
+      },
+    })
+
+    await fireEvent.click(screen.getByLabelText('Current span only'))
+    await fireEvent.click(screen.getByTitle('Jump to related span'))
+    expect(onSelectSpan).toHaveBeenCalledWith('span-other')
   })
 })

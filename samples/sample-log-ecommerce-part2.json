@@ -1,0 +1,160 @@
+{
+  "resourceLogs": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "auth-service" }
+          },
+          {
+            "key": "deployment.environment",
+            "value": { "stringValue": "production" }
+          }
+        ]
+      },
+      "scopeLogs": [
+        {
+          "scope": {
+            "name": "auth-logger",
+            "version": "1.0.0"
+          },
+          "logRecords": [
+            {
+              "timeUnixNano": "1707825600515000000",
+              "observedTimeUnixNano": "1707825600515200000",
+              "severityNumber": 9,
+              "severityText": "INFO",
+              "body": {
+                "stringValue": "session verification started"
+              },
+              "attributes": [
+                {
+                  "key": "auth.method",
+                  "value": { "stringValue": "jwt" }
+                },
+                {
+                  "key": "session.id",
+                  "value": { "stringValue": "sess_abc123xyz" }
+                }
+              ],
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "6f7a8b9c0d1e2f3a"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "database" }
+          },
+          {
+            "key": "db.system",
+            "value": { "stringValue": "postgresql" }
+          }
+        ]
+      },
+      "scopeLogs": [
+        {
+          "scope": {
+            "name": "db-logger",
+            "version": "1.0.0"
+          },
+          "logRecords": [
+            {
+              "timeUnixNano": "1707825600925000000",
+              "observedTimeUnixNano": "1707825600925200000",
+              "severityNumber": 17,
+              "severityText": "ERROR",
+              "body": {
+                "stringValue": "deadlock detected while updating inventory"
+              },
+              "attributes": [
+                {
+                  "key": "db.operation",
+                  "value": { "stringValue": "UPDATE" }
+                },
+                {
+                  "key": "error.type",
+                  "value": { "stringValue": "deadlock_detected" }
+                },
+                {
+                  "key": "retry.scheduled",
+                  "value": { "boolValue": true }
+                }
+              ],
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "9c0d1e2f3a4b5c6d"
+            },
+            {
+              "timeUnixNano": "1707825601070000000",
+              "observedTimeUnixNano": "1707825601070300000",
+              "severityNumber": 9,
+              "severityText": "INFO",
+              "body": {
+                "stringValue": "inventory update retry succeeded"
+              },
+              "attributes": [
+                {
+                  "key": "retry.attempt",
+                  "value": { "intValue": "1" }
+                },
+                {
+                  "key": "rows.affected",
+                  "value": { "intValue": "3" }
+                }
+              ],
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "0d1e2f3a4b5c6d7e"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "backend-api" }
+          }
+        ]
+      },
+      "scopeLogs": [
+        {
+          "scope": {
+            "name": "backend-logger",
+            "version": "2.0.0"
+          },
+          "logRecords": [
+            {
+              "timeUnixNano": "1707825601210000000",
+              "observedTimeUnixNano": "1707825601210200000",
+              "severityNumber": 9,
+              "severityText": "INFO",
+              "body": {
+                "stringValue": "order confirmation email queued"
+              },
+              "attributes": [
+                {
+                  "key": "notification.service",
+                  "value": { "stringValue": "sendgrid" }
+                },
+                {
+                  "key": "queue.id",
+                  "value": { "stringValue": "msg_xyz789" }
+                }
+              ],
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "1e2f3a4b5c6d7e8f"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -8,6 +8,10 @@ const { mockFetchTrace } = vi.hoisted(() => ({
   mockFetchTrace: vi.fn(),
 }))
 
+const { mockFetchTraceLogs } = vi.hoisted(() => ({
+  mockFetchTraceLogs: vi.fn(),
+}))
+
 vi.mock('$app/navigation', () => ({
   replaceState: vi.fn(),
 }))
@@ -28,6 +32,7 @@ vi.mock('$lib/stores/traces.svelte', () => ({
     connectSSE: vi.fn(),
     traces: [],
     fetchTrace: mockFetchTrace,
+    fetchTraceLogs: mockFetchTraceLogs,
   },
 }))
 
@@ -96,6 +101,8 @@ describe('traces/[traceId] page search UI', () => {
         [childSpan.spanId]: childSpan,
       },
     })
+
+    mockFetchTraceLogs.mockResolvedValue([])
 
     vi.stubGlobal(
       'fetch',

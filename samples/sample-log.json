@@ -1,0 +1,119 @@
+{
+  "resourceLogs": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "frontend" }
+          },
+          {
+            "key": "service.version",
+            "value": { "stringValue": "1.0.0" }
+          }
+        ]
+      },
+      "scopeLogs": [
+        {
+          "scope": {
+            "name": "web-logger",
+            "version": "1.0.0"
+          },
+          "logRecords": [
+            {
+              "timeUnixNano": "1707785400002000000",
+              "observedTimeUnixNano": "1707785400002100000",
+              "severityNumber": 9,
+              "severityText": "INFO",
+              "body": {
+                "stringValue": "incoming request GET /api/users"
+              },
+              "attributes": [
+                {
+                  "key": "http.method",
+                  "value": { "stringValue": "GET" }
+                },
+                {
+                  "key": "http.route",
+                  "value": { "stringValue": "/api/users" }
+                }
+              ],
+              "traceId": "5b8aa5a2d2c872e8321cf37308d69df2",
+              "spanId": "051581bf3cb55c13"
+            },
+            {
+              "timeUnixNano": "1707785400109000000",
+              "observedTimeUnixNano": "1707785400109200000",
+              "severityNumber": 9,
+              "severityText": "INFO",
+              "body": {
+                "stringValue": "response sent status=200"
+              },
+              "attributes": [
+                {
+                  "key": "http.status_code",
+                  "value": { "intValue": "200" }
+                },
+                {
+                  "key": "response.size",
+                  "value": { "intValue": "746" }
+                }
+              ],
+              "traceId": "5b8aa5a2d2c872e8321cf37308d69df2",
+              "spanId": "051581bf3cb55c13"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "frontend" }
+          },
+          {
+            "key": "service.version",
+            "value": { "stringValue": "1.0.0" }
+          }
+        ]
+      },
+      "scopeLogs": [
+        {
+          "scope": {
+            "name": "db-client-logger",
+            "version": "1.0.0"
+          },
+          "logRecords": [
+            {
+              "timeUnixNano": "1707785400051000000",
+              "observedTimeUnixNano": "1707785400051200000",
+              "severityNumber": 13,
+              "severityText": "WARN",
+              "body": {
+                "stringValue": "slow query on users table"
+              },
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": { "stringValue": "postgresql" }
+                },
+                {
+                  "key": "db.statement",
+                  "value": { "stringValue": "SELECT * FROM users" }
+                },
+                {
+                  "key": "db.duration_ms",
+                  "value": { "doubleValue": 86.7 }
+                }
+              ],
+              "traceId": "5b8aa5a2d2c872e8321cf37308d69df2",
+              "spanId": "5fb397be161d0b51"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

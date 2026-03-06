@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { StoredSpan } from '$lib/types'
+  import type { StoredSpan, TraceLogListItem } from '$lib/types'
   import AttributeItem from '$lib/components/AttributeItem.svelte'
   import ChevronIcon from '$lib/components/ChevronIcon.svelte'
   import {
@@ -16,6 +16,12 @@
     onSelectSpan?: (spanId: string) => void
     /** Called when the user opens the fullscreen value viewer. */
     onFullscreen?: (key: string, formatted: string) => void
+    /** Correlated logs available for the current trace. */
+    traceLogs?: TraceLogListItem[]
+    /** Currently highlighted log ID. */
+    selectedLogId?: string | null
+    /** Called to jump/focus a correlated log (and optionally its span). */
+    onSelectLog?: (logId: string, relatedSpanId?: string) => void
     /** Index of the highlighted event (from clicking a WaterfallRow event dot). */
     highlightedEventIndex?: number | null
     /** Global span search query from trace page. */
@@ -26,6 +32,9 @@
     span,
     onSelectSpan,
     onFullscreen,
+    traceLogs = [],
+    selectedLogId = null,
+    onSelectLog,
     highlightedEventIndex = null,
     searchQuery = '',
   }: Props = $props()
@@ -124,10 +133,44 @@
     return false
   }
 
+  function normalizeLogBody(body: unknown): string {
+    if (body == null) return ''
+    if (
+      typeof body === 'string' ||
+      typeof body === 'number' ||
+      typeof body === 'boolean'
+    ) {
+      return String(body)
+    }
+
+    try {
+      return JSON.stringify(body)
+    } catch {
+      return ''
+    }
+  }
+
+  function severityBucket(
+    log: TraceLogListItem,
+  ): 'trace' | 'debug' | 'info' | 'warn' | 'error' {
+    const n = Number(log.severityNumber) || 0
+    if (n >= 17) return 'error'
+    if (n >= 13) return 'warn'
+    if (n >= 9) return 'info'
+    if (n >= 5) return 'debug'
+    return 'trace'
+  }
+
   // Per-section filter state (local, resets when span changes)
   let attributeFilter = $state('')
   let resourceFilter = $state('')
   let scopeFilter = $state('')
+  let logTextFilter = $state('')
+  let logSeverityFilter = $state<
+    'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error'
+  >('all')
+  let logsCollapsed = $state(false)
+  let logsOnlyCurrentSpan = $state(true)
   let eventsCollapsed = $state(false)
   let attributesCollapsed = $state(false)
   let resourceCollapsed = $state(true)
@@ -139,9 +182,49 @@
     attributeFilter = ''
     resourceFilter = ''
     scopeFilter = ''
+    logTextFilter = ''
+    logSeverityFilter = 'all'
+    logsOnlyCurrentSpan = true
     resourceCollapsed = true
     scopeCollapsed = true
   })
+
+  const logsForSection = $derived(
+    (logsOnlyCurrentSpan
+      ? traceLogs.filter((log) => log.spanId === span.spanId)
+      : traceLogs
+    ).slice(),
+  )
+
+  const filteredLogs = $derived(
+    logsForSection
+      .filter((log) => {
+        if (
+          logSeverityFilter !== 'all' &&
+          severityBucket(log) !== logSeverityFilter
+        ) {
+          return false
+        }
+
+        const q = logTextFilter.trim().toLowerCase()
+        if (!q) return true
+
+        const severity = (log.severityText || '').toLowerCase()
+        const body = normalizeLogBody(log.body).toLowerCase()
+        const spanId = (log.spanId || '').toLowerCase()
+        return severity.includes(q) || body.includes(q) || spanId.includes(q)
+      })
+      .sort((a, b) => {
+        const aTs = BigInt(a.timeUnixNano || a.observedTimeUnixNano || '0')
+        const bTs = BigInt(b.timeUnixNano || b.observedTimeUnixNano || '0')
+        return aTs > bTs ? -1 : aTs < bTs ? 1 : 0
+      }),
+  )
+
+  const totalTraceLogsCount = $derived(traceLogs.length)
+  const currentSpanLogsCount = $derived(
+    traceLogs.filter((log) => log.spanId === span.spanId).length,
+  )
 
   // Filtered attribute entries
   const allAttributes = $derived(
@@ -375,6 +458,110 @@
         {/if}
       </div>
     {/each}
+  {/if}
+
+  <!-- Correlated Logs -->
+  {#if totalTraceLogsCount > 0}
+    <div class="section-divider"></div>
+    <div class="section-header logs-section-header">
+      <button
+        class="section-toggle"
+        onclick={() => (logsCollapsed = !logsCollapsed)}
+        aria-expanded={!logsCollapsed}
+        title={logsCollapsed
+          ? 'Expand correlated logs'
+          : 'Collapse correlated logs'}
+      >
+        <ChevronIcon expanded={!logsCollapsed} />
+        <h4 class="section-title">
+          Correlated Logs
+          {#if logsOnlyCurrentSpan}
+            ({filteredLogs.length} of {currentSpanLogsCount})
+          {:else}
+            ({filteredLogs.length} of {totalTraceLogsCount})
+          {/if}
+        </h4>
+      </button>
+      {#if !logsCollapsed}
+        <label class="logs-scope-toggle">
+          <input type="checkbox" bind:checked={logsOnlyCurrentSpan} />
+          Current span only
+        </label>
+      {/if}
+    </div>
+
+    {#if !logsCollapsed}
+      <div class="logs-filters">
+        <select bind:value={logSeverityFilter} class="log-severity-filter">
+          <option value="all">All severities</option>
+          <option value="error">Error+</option>
+          <option value="warn">Warn</option>
+          <option value="info">Info</option>
+          <option value="debug">Debug</option>
+          <option value="trace">Trace</option>
+        </select>
+        <input
+          type="text"
+          bind:value={logTextFilter}
+          placeholder="Filter logs by severity/text..."
+          class="attribute-filter log-text-filter"
+        />
+      </div>
+
+      {#if filteredLogs.length > 0}
+        <div class="logs-list">
+          {#each filteredLogs as log}
+            <div
+              class="log-item"
+              class:is-selected={selectedLogId === log.id}
+              data-log-id={log.id}
+            >
+              <div class="log-header">
+                <span class="log-severity" data-level={severityBucket(log)}>
+                  {log.severityText || 'UNSET'}
+                </span>
+                <span
+                  class="log-timestamp"
+                  title={formatTimestamp(
+                    log.timeUnixNano || log.observedTimeUnixNano || '0',
+                  )}
+                >
+                  {formatRelativeTime(
+                    span.startTimeUnixNano,
+                    log.timeUnixNano ||
+                      log.observedTimeUnixNano ||
+                      span.startTimeUnixNano,
+                  )}
+                </span>
+              </div>
+              <div class="log-body">
+                {normalizeLogBody(log.body) || '(empty body)'}
+              </div>
+              <div class="log-actions">
+                <button
+                  class="log-action"
+                  onclick={() => onSelectLog?.(log.id, log.spanId || undefined)}
+                  title="Jump to log record"
+                >
+                  Jump to log
+                </button>
+                {#if log.spanId && log.spanId !== span.spanId}
+                  <button
+                    class="log-action"
+                    onclick={() => onSelectSpan?.(log.spanId)}
+                    title="Jump to related span"
+                  >
+                    Jump to span
+                  </button>
+                {/if}
+              </div>
+            </div>
+          {/each}
+        </div>
+      {:else}
+        <div class="no-attributes">No logs match the current filters.</div>
+      {/if}
+    {/if}
   {/if}
 
   <!-- Attributes -->
@@ -807,5 +994,120 @@
     font-size: 0.875rem;
     background: var(--bg-surface-hover);
     border-radius: 4px;
+  }
+
+  .logs-section-header {
+    align-items: center;
+  }
+
+  .logs-scope-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .logs-filters {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .log-severity-filter {
+    width: 140px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+  }
+
+  .log-text-filter {
+    width: auto;
+    flex: 1;
+  }
+
+  .logs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .log-item {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 6px;
+    padding: 0.6rem;
+    background: var(--bg-surface-hover);
+  }
+
+  .log-item.is-selected {
+    border-color: var(--accent);
+    border-left-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-ring);
+  }
+
+  .log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .log-severity {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-secondary);
+  }
+
+  .log-severity[data-level='error'] {
+    color: var(--error-text);
+  }
+
+  .log-severity[data-level='warn'] {
+    color: #b26b00;
+  }
+
+  .log-severity[data-level='info'] {
+    color: var(--accent);
+  }
+
+  .log-timestamp {
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .log-body {
+    font-size: 0.8125rem;
+    color: var(--text-primary);
+    word-break: break-word;
+    margin-bottom: 0.45rem;
+  }
+
+  .log-actions {
+    display: flex;
+    gap: 0.45rem;
+  }
+
+  .log-action {
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.45rem;
+    cursor: pointer;
+  }
+
+  .log-action:hover {
+    border-color: var(--accent);
+    color: var(--accent);
   }
 </style>

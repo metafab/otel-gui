@@ -1,5 +1,10 @@
 // Client-side reactive store for traces using Svelte 5 runes
-import type { TraceListItem, StoredTrace } from '$lib/types'
+import type {
+  TraceListItem,
+  StoredTrace,
+  TraceLogListItem,
+  TraceLogDetail,
+} from '$lib/types'
 
 // State management
 let traces = $state.raw<TraceListItem[]>([])
@@ -53,6 +58,58 @@ async function fetchTrace(traceId: string): Promise<StoredTrace | null> {
   }
 }
 
+async function fetchTraceLogs(
+  traceId: string,
+  options?: { limit?: number; spanId?: string },
+): Promise<TraceLogListItem[]> {
+  try {
+    isLoading = true
+    error = null
+
+    const params = new URLSearchParams()
+    if (options?.limit) params.set('limit', String(options.limit))
+    if (options?.spanId) params.set('spanId', options.spanId)
+    const query = params.toString()
+
+    const response = await fetch(
+      `/api/traces/${traceId}/logs${query ? `?${query}` : ''}`,
+    )
+    if (!response.ok) {
+      throw new Error(`Failed to fetch trace logs: ${response.statusText}`)
+    }
+
+    return await response.json()
+  } catch (err) {
+    error =
+      err instanceof Error ? err.message : 'Unknown error fetching trace logs'
+    console.error('Error fetching trace logs:', err)
+    return []
+  } finally {
+    isLoading = false
+  }
+}
+
+async function fetchTraceLog(
+  traceId: string,
+  logId: string,
+): Promise<TraceLogDetail | null> {
+  try {
+    isLoading = true
+    error = null
+    const response = await fetch(`/api/traces/${traceId}/logs/${logId}`)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch trace log: ${response.statusText}`)
+    }
+    return await response.json()
+  } catch (err) {
+    error = err instanceof Error ? err.message : 'Unknown error fetching log'
+    console.error('Error fetching trace log:', err)
+    return null
+  } finally {
+    isLoading = false
+  }
+}
+
 // Select a trace by ID
 function selectTrace(traceId: string | null) {
   selectedId = traceId
@@ -95,6 +152,8 @@ export const traceStore = {
     return error
   },
   fetchTrace,
+  fetchTraceLogs,
+  fetchTraceLog,
   selectTrace,
   clearAllTraces,
   connectSSE,

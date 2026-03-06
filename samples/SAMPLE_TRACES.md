@@ -32,6 +32,11 @@ Simple trace with a single frontend service showing basic span hierarchy.
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @samples/sample-trace.json
+
+# Correlated logs for sample-trace.json
+curl -X POST http://localhost:4318/v1/logs \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-log.json
 ```
 
 ### Advanced Examples
@@ -73,10 +78,36 @@ curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @samples/sample-trace-ecommerce-part1.json
 
+# Send part 1 correlated logs
+curl -X POST http://localhost:4318/v1/logs \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-log-ecommerce-part1.json
+
 # Wait a few seconds, then send part 2 (auth-service and database spans)
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @samples/sample-trace-ecommerce-part2.json
+
+# Send part 2 correlated logs
+curl -X POST http://localhost:4318/v1/logs \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-log-ecommerce-part2.json
+```
+
+#### `sample-log.json`
+
+Standalone OTLP logs example correlated with `sample-trace.json`:
+
+- 3 log records
+- INFO and WARN severities
+- Linked to trace + span IDs for jump actions in the sidebar
+
+**Usage:**
+
+```bash
+curl -X POST http://localhost:4318/v1/logs \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-log.json
 ```
 
 ## Features to Explore
@@ -118,13 +149,22 @@ Once traces are loaded, visit http://localhost:5173 to explore:
 - Filter attributes by typing in the search box
 - Click event diamonds on the timeline to jump to events
 
-### 6. View Controls
+### 6. Correlated Logs in Sidebar
+
+- Open any span in trace detail
+- In **Correlated Logs**:
+  - Filter by severity (Error/Warn/Info/etc.)
+  - Filter by text (severity/body/spanId)
+  - Toggle **Current span only**
+- Use **Jump to log** and **Jump to span** to navigate context quickly
+
+### 7. View Controls
 
 - **Hide/Show Trace Details** - Focus on the waterfall view
 - **Hide/Show Span Details** - Maximize waterfall space
 - Toggle panels independently based on your workflow
 
-### 7. Events on Timeline
+### 8. Events on Timeline
 
 - Orange diamonds (◆) mark events on the timeline
 - Position shows when events occurred within the span

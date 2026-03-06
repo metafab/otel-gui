@@ -33,6 +33,21 @@ export interface StoredLog {
   scopeAttributes: Record<string, any>
 }
 
+export interface TraceLogListItem {
+  id: string
+  traceId: string
+  spanId: string
+  timeUnixNano: string
+  observedTimeUnixNano: string
+  severityNumber: number
+  severityText: string
+  body: unknown
+}
+
+export interface TraceLogDetail extends StoredLog {
+  id: string
+}
+
 export interface StoredSpan {
   traceId: string
   spanId: string

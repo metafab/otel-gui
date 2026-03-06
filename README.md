@@ -126,6 +126,16 @@ No other configuration needed. The viewer accepts the standard `POST /v1/traces`
 
 Requests with `Content-Encoding: gzip` are also supported.
 
+### Sending Logs
+
+The viewer also accepts OTLP logs at:
+
+```sh
+POST /v1/logs
+```
+
+Use the same `traceId`/`spanId` values as your spans to get correlated logs in trace detail sidebar.
+
 ### Try the demo
 
 Run the bundled e-commerce demo to see all features immediately:
@@ -144,15 +154,30 @@ curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @samples/sample-trace.json
 
+# Correlated logs for the simple trace
+curl -X POST http://localhost:4318/v1/logs \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-log.json
+
 # E-commerce trace — part 1 (frontend + backend-api)
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @samples/sample-trace-ecommerce-part1.json
 
+# E-commerce correlated logs — part 1
+curl -X POST http://localhost:4318/v1/logs \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-log-ecommerce-part1.json
+
 # E-commerce trace — part 2 (auth-service + database with errors)
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @samples/sample-trace-ecommerce-part2.json
+
+# E-commerce correlated logs — part 2
+curl -X POST http://localhost:4318/v1/logs \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-log-ecommerce-part2.json
 
 # Trace with error spans (status.code = 2)
 curl -X POST http://localhost:4318/v1/traces \
@@ -195,8 +220,10 @@ In Docker, traces are still in-memory only and are lost when the container stops
 
 ```
 POST /v1/traces          ← OTLP receiver (JSON + Protobuf)
+POST /v1/logs            ← OTLP logs receiver (JSON + Protobuf)
 GET  /api/traces         ← trace list for the UI
 GET  /api/traces/:id     ← single trace
+GET  /api/traces/:id/logs ← trace-scoped correlated logs
 GET  /api/traces/stream  ← SSE stream (real-time push)
 GET  /api/service-map    ← aggregated service graph
 ```

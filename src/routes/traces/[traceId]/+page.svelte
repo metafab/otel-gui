@@ -13,7 +13,12 @@
   import { formatDuration } from '$lib/utils/time'
   import { onMount } from 'svelte'
 
-  import type { ServiceMapData, SpanTreeNode, StoredTrace } from '$lib/types'
+  import type {
+    ServiceMapData,
+    SpanTreeNode,
+    StoredTrace,
+    TraceLogListItem,
+  } from '$lib/types'
 
   // Keep SSE active on detail page so we can detect when this trace changes.
   traceStore.connectSSE()
@@ -21,6 +26,7 @@
   // Get trace ID from URL
   const traceId = $derived($page.params.traceId)
   const spanIdFromUrl = $derived($page.url.searchParams.get('spanId'))
+  const logIdFromUrl = $derived($page.url.searchParams.get('logId'))
 
   // Page title with shortened trace ID
   const pageTitle = $derived(
@@ -32,6 +38,8 @@
   let spanTreeRoot = $state<SpanTreeNode[]>([]) // Tree structure with collapse state
   let spanTree = $state<SpanTreeNode[]>([]) // Flattened view for rendering
   let selectedSpanId = $state<string | null>(null)
+  let selectedLogId = $state<string | null>(null)
+  let traceLogs = $state<TraceLogListItem[]>([])
   let selectedEventIndex = $state<number | null>(null)
   let spanSearchQuery = $state<string>('')
   let currentMatchIndex = $state<number>(0)
@@ -294,6 +302,24 @@
         } else {
           selectedSpanId = null
         }
+
+        traceLogs = await traceStore.fetchTraceLogs(traceId, { limit: 1000 })
+        if (logIdFromUrl && traceLogs.some((log) => log.id === logIdFromUrl)) {
+          selectedLogId = logIdFromUrl
+        } else {
+          selectedLogId = null
+        }
+
+        if (!spanIdFromUrl && selectedLogId) {
+          const selectedLog = traceLogs.find((log) => log.id === selectedLogId)
+          if (
+            selectedLog?.spanId &&
+            spansMap.has(selectedLog.spanId) &&
+            selectedSpanId !== selectedLog.spanId
+          ) {
+            selectedSpanId = selectedLog.spanId
+          }
+        }
       } else {
         error = 'Trace not found'
       }
@@ -373,10 +399,34 @@
     selectedSpanId = spanId
     showSpanDetails = true
     selectedEventIndex = null // Clear event selection when selecting a different span
-    // Update URL to include selected span (for bookmarking/sharing)
+    updateSelectionUrl(spanId, selectedLogId)
+  }
+
+  function updateSelectionUrl(spanId: string | null, logId: string | null) {
     const url = new URL(window.location.href)
-    url.searchParams.set('spanId', spanId)
+    if (spanId) {
+      url.searchParams.set('spanId', spanId)
+    } else {
+      url.searchParams.delete('spanId')
+    }
+
+    if (logId) {
+      url.searchParams.set('logId', logId)
+    } else {
+      url.searchParams.delete('logId')
+    }
+
     replaceState(url, {})
+  }
+
+  function handleLogSelect(logId: string, relatedSpanId?: string) {
+    selectedLogId = logId
+
+    if (relatedSpanId && trace?.spans.has(relatedSpanId)) {
+      selectedSpanId = relatedSpanId
+    }
+
+    updateSelectionUrl(selectedSpanId, selectedLogId)
   }
 
   function handleEventClick(spanId: string, eventIndex: number) {
@@ -1019,7 +1069,10 @@
               <h3>Span Details</h3>
               <SpanDetailsSidebar
                 span={selectedSpan}
+                {traceLogs}
+                {selectedLogId}
                 onSelectSpan={handleSpanSelect}
+                onSelectLog={handleLogSelect}
                 onFullscreen={openFullscreen}
                 highlightedEventIndex={selectedEventIndex}
                 searchQuery={spanSearchQuery}

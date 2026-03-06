@@ -1,0 +1,132 @@
+{
+  "resourceLogs": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "frontend" }
+          },
+          {
+            "key": "deployment.environment",
+            "value": { "stringValue": "production" }
+          }
+        ]
+      },
+      "scopeLogs": [
+        {
+          "scope": {
+            "name": "frontend-logger",
+            "version": "1.0.0"
+          },
+          "logRecords": [
+            {
+              "timeUnixNano": "1707825600040000000",
+              "observedTimeUnixNano": "1707825600040200000",
+              "severityNumber": 9,
+              "severityText": "INFO",
+              "body": {
+                "stringValue": "checkout request accepted"
+              },
+              "attributes": [
+                {
+                  "key": "http.route",
+                  "value": { "stringValue": "/checkout" }
+                },
+                {
+                  "key": "cart.items",
+                  "value": { "intValue": "3" }
+                }
+              ],
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "1a2b3c4d5e6f7a8b"
+            },
+            {
+              "timeUnixNano": "1707825600140000000",
+              "observedTimeUnixNano": "1707825600140300000",
+              "severityNumber": 9,
+              "severityText": "INFO",
+              "body": {
+                "stringValue": "cart validation succeeded"
+              },
+              "attributes": [
+                {
+                  "key": "validation.passed",
+                  "value": { "boolValue": true }
+                }
+              ],
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "2b3c4d5e6f7a8b9c"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "backend-api" }
+          },
+          {
+            "key": "deployment.environment",
+            "value": { "stringValue": "production" }
+          }
+        ]
+      },
+      "scopeLogs": [
+        {
+          "scope": {
+            "name": "backend-logger",
+            "version": "2.0.0"
+          },
+          "logRecords": [
+            {
+              "timeUnixNano": "1707825600230000000",
+              "observedTimeUnixNano": "1707825600230200000",
+              "severityNumber": 9,
+              "severityText": "INFO",
+              "body": {
+                "stringValue": "payment processor call started"
+              },
+              "attributes": [
+                {
+                  "key": "payment.method",
+                  "value": { "stringValue": "credit_card" }
+                },
+                {
+                  "key": "processor",
+                  "value": { "stringValue": "stripe" }
+                }
+              ],
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "3c4d5e6f7a8b9c0d"
+            },
+            {
+              "timeUnixNano": "1707825600450000000",
+              "observedTimeUnixNano": "1707825600450100000",
+              "severityNumber": 13,
+              "severityText": "WARN",
+              "body": {
+                "stringValue": "inventory check latency above threshold"
+              },
+              "attributes": [
+                {
+                  "key": "latency.ms",
+                  "value": { "doubleValue": 13.0 }
+                },
+                {
+                  "key": "inventory.location",
+                  "value": { "stringValue": "warehouse-east" }
+                }
+              ],
+              "traceId": "7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c",
+              "spanId": "5e6f7a8b9c0d1e2f"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
