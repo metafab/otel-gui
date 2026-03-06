@@ -384,6 +384,10 @@
     window.location.href = '/'
   }
 
+  async function handleRefresh() {
+    await loadTrace()
+  }
+
   function handleNextMatch() {
     if (matchCount === 0) return
     currentMatchIndex = (currentMatchIndex + 1) % matchCount
@@ -633,6 +637,36 @@
     {#if trace}
       <div class="view-controls">
         <button
+          class="toggle-button refresh-button"
+          onclick={handleRefresh}
+          title="Refresh trace to load late-arriving spans"
+          disabled={isLoading}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            aria-hidden="true"
+            class:is-spinning={isLoading}
+          >
+            <path
+              d="M11.8 7A4.8 4.8 0 1 1 10.4 3.6"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+            <path
+              d="M10.4 1.7v2.3h2.3"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          {isLoading ? 'Refreshing...' : 'Refresh'}
+        </button>
+        <button
           class="toggle-button"
           onpointerdown={captureWaterfallFocus}
           onclick={() => {
@@ -641,6 +675,40 @@
           }}
           title={showTraceDetails ? 'Hide trace details' : 'Show trace details'}
         >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            aria-hidden="true"
+          >
+            {#if !showTraceDetails}
+              <path
+                d="M1.3 7s2.1-3.3 5.7-3.3S12.7 7 12.7 7s-2.1 3.3-5.7 3.3S1.3 7 1.3 7Z"
+                stroke="currentColor"
+                stroke-width="1.3"
+              />
+              <circle
+                cx="7"
+                cy="7"
+                r="1.8"
+                stroke="currentColor"
+                stroke-width="1.3"
+              />
+            {:else}
+              <path
+                d="M1.3 7s2.1-3.3 5.7-3.3S12.7 7 12.7 7s-2.1 3.3-5.7 3.3S1.3 7 1.3 7Z"
+                stroke="currentColor"
+                stroke-width="1.3"
+              />
+              <path
+                d="M2 12 12 2"
+                stroke="currentColor"
+                stroke-width="1.3"
+                stroke-linecap="round"
+              />
+            {/if}
+          </svg>
           {showTraceDetails ? 'Hide' : 'Show'} Trace Details
         </button>
         <button
@@ -652,6 +720,41 @@
           }}
           title={showSpanDetails ? 'Hide span details' : 'Show span details'}
         >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            aria-hidden="true"
+          >
+            {#if !showSpanDetails}
+              <path
+                d="M2.2 2.2h9.6v9.6H2.2z"
+                stroke="currentColor"
+                stroke-width="1.3"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M5 2.2v9.6"
+                stroke="currentColor"
+                stroke-width="1.3"
+                stroke-linecap="round"
+              />
+            {:else}
+              <path
+                d="M2.2 2.2h9.6v9.6H2.2z"
+                stroke="currentColor"
+                stroke-width="1.3"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M2 12 12 2"
+                stroke="currentColor"
+                stroke-width="1.3"
+                stroke-linecap="round"
+              />
+            {/if}
+          </svg>
           {showSpanDetails ? 'Hide' : 'Show'} Span Details
         </button>
         {#if !isMaximized}
@@ -996,6 +1099,9 @@
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
     cursor: pointer;
     font-size: 0.875rem;
     color: var(--text-primary);
@@ -1009,6 +1115,33 @@
 
   .toggle-button:active {
     background: var(--selected-bg);
+  }
+
+  .toggle-button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+
+  .refresh-button {
+    border-color: var(--border-strong, var(--border));
+    font-variant-numeric: tabular-nums;
+  }
+
+  .refresh-button svg {
+    transform-origin: 50% 50%;
+  }
+
+  .refresh-button svg.is-spinning {
+    animation: spin 0.9s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .maximize-button {
