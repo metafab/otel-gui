@@ -5,6 +5,8 @@ import {
   DELETE as deleteTraces,
 } from './api/traces/+server'
 import { GET as getTrace } from './api/traces/[traceId]/+server'
+import { GET as getTraceLogs } from './api/traces/[traceId]/logs/+server'
+import { GET as getTraceLog } from './api/traces/[traceId]/logs/[logId]/+server'
 import { GET as getServiceMap } from './api/service-map/+server'
 import { GET as getMetrics } from './metrics/+server'
 import { POST as postOtlpMetrics } from './v1/metrics/+server'
@@ -338,6 +340,122 @@ describe('GET /api/traces/:traceId', () => {
     const response = await getTrace({ params: { traceId } } as any)
     const trace = await response.json()
     expect(trace.rootSpanName).toBe('GET /')
+  })
+})
+
+describe('GET /api/traces/:traceId/logs', () => {
+  it('returns 404 for unknown traceId', async () => {
+    await expect(
+      getTraceLogs({
+        params: { traceId: 'nonexistent' },
+        url: makeUrl('/api/traces/nonexistent/logs'),
+      } as any),
+    ).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('returns empty array when trace has no correlated logs', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const [{ traceId }] = await listResponse.json()
+
+    const response = await getTraceLogs({
+      params: { traceId },
+      url: makeUrl(`/api/traces/${traceId}/logs`),
+    } as any)
+    const logs = await response.json()
+
+    expect(logs).toEqual([])
+  })
+
+  it('returns correlated logs for a trace', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+    await postOtlpLogs({ request: makeLogsPostRequest(simpleLog) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const [{ traceId }] = await listResponse.json()
+
+    const response = await getTraceLogs({
+      params: { traceId },
+      url: makeUrl(`/api/traces/${traceId}/logs`),
+    } as any)
+    const logs = await response.json()
+
+    expect(logs).toHaveLength(1)
+    expect(logs[0].traceId).toBe(traceId)
+    expect(logs[0].severityText).toBe('ERROR')
+  })
+
+  it('supports spanId filtering', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+    await postOtlpLogs({ request: makeLogsPostRequest(simpleLog) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const [{ traceId }] = await listResponse.json()
+
+    const response = await getTraceLogs({
+      params: { traceId },
+      url: makeUrl(`/api/traces/${traceId}/logs`, { spanId: 'unknown-span' }),
+    } as any)
+    const logs = await response.json()
+
+    expect(logs).toEqual([])
+  })
+})
+
+describe('GET /api/traces/:traceId/logs/:logId', () => {
+  it('returns 404 for unknown traceId', async () => {
+    await expect(
+      getTraceLog({
+        params: { traceId: 'nonexistent', logId: 'abc' },
+      } as any),
+    ).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('returns 404 for unknown logId in an existing trace', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const [{ traceId }] = await listResponse.json()
+
+    await expect(
+      getTraceLog({
+        params: { traceId, logId: 'missing' },
+      } as any),
+    ).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('returns full log detail payload', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+    await postOtlpLogs({ request: makeLogsPostRequest(simpleLog) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const [{ traceId }] = await listResponse.json()
+
+    const logsResponse = await getTraceLogs({
+      params: { traceId },
+      url: makeUrl(`/api/traces/${traceId}/logs`),
+    } as any)
+    const logs = await logsResponse.json()
+
+    const detailResponse = await getTraceLog({
+      params: { traceId, logId: logs[0].id },
+    } as any)
+    const detail = await detailResponse.json()
+
+    expect(detail.id).toBe(logs[0].id)
+    expect(detail.traceId).toBe(traceId)
+    expect(detail.attributes['retry_count']).toBe(2)
   })
 })
 
