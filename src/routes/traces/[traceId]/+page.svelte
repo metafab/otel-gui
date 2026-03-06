@@ -117,6 +117,22 @@
     spanTree.filter((node) => matchingSpanIds.has(node.span.spanId)),
   )
 
+  const traceLogsBySpanId = $derived(
+    (() => {
+      const bySpanId = new Map<string, TraceLogListItem[]>()
+      for (const log of traceLogs) {
+        if (!log.spanId) continue
+        const forSpan = bySpanId.get(log.spanId)
+        if (forSpan) {
+          forSpan.push(log)
+        } else {
+          bySpanId.set(log.spanId, [log])
+        }
+      }
+      return bySpanId
+    })(),
+  )
+
   const matchCount = $derived(matchingSpanIds.size)
 
   // Error span tracking
@@ -484,6 +500,26 @@
         eventElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
     }, 100)
+  }
+
+  function scrollToLogInSidebar(logId: string) {
+    setTimeout(() => {
+      const logElement = Array.from(
+        document.querySelectorAll('[data-log-id]'),
+      ).find((el) => el.getAttribute('data-log-id') === logId)
+      if (logElement) {
+        logElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }, 100)
+  }
+
+  function handleWaterfallLogClick(spanId: string, logId: string) {
+    if (selectedSpanId !== spanId) {
+      selectedSpanId = spanId
+      selectedEventIndex = null
+    }
+    handleLogSelect(logId, spanId)
+    scrollToLogInSidebar(logId)
   }
 
   function handleBack() {
@@ -1070,6 +1106,8 @@
               <div class="waterfall-cell" data-span-id={node.span.spanId}>
                 <WaterfallRow
                   span={node.span}
+                  spanLogs={traceLogsBySpanId.get(node.span.spanId) || []}
+                  {selectedLogId}
                   depth={node.depth}
                   traceStartNano={trace.startTimeUnixNano}
                   {traceDurationNs}
@@ -1084,6 +1122,8 @@
                   onToggleCollapse={() => toggleNodeCollapse(node.span.spanId)}
                   onEventClick={(eventIndex) =>
                     handleEventClick(node.span.spanId, eventIndex)}
+                  onLogClick={(logId) =>
+                    handleWaterfallLogClick(node.span.spanId, logId)}
                 />
               </div>
             {/each}

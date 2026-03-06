@@ -375,7 +375,7 @@ describe('SpanDetailsSidebar', () => {
     expect(screen.getByText('database timeout')).toBeInTheDocument()
   })
 
-  it('hides logs section when there are no correlated logs for current span', () => {
+  it('shows logs section when trace has logs but selected span has none', () => {
     render(SpanDetailsSidebar, {
       props: {
         span: makeSpan({ spanId: 'span-001' }),
@@ -383,7 +383,10 @@ describe('SpanDetailsSidebar', () => {
       },
     })
 
-    expect(screen.queryByText(/Logs/)).not.toBeInTheDocument()
+    expect(screen.getByText(/Logs/)).toBeInTheDocument()
+    expect(
+      screen.getByText('No logs match the current filters.'),
+    ).toBeInTheDocument()
     expect(screen.queryByText('cache miss')).not.toBeInTheDocument()
   })
 
@@ -428,6 +431,28 @@ describe('SpanDetailsSidebar', () => {
 
     await fireEvent.click(screen.getByTitle('Select log record'))
     expect(onSelectLog).toHaveBeenCalledWith('log-001', 'span-001')
+  })
+
+  it('expands logs section when a log becomes selected', async () => {
+    const view = render(SpanDetailsSidebar, {
+      props: {
+        span: makeSpan(),
+        traceLogs: [makeLog()],
+        selectedLogId: null,
+      },
+    })
+
+    await fireEvent.click(screen.getByTitle('Collapse correlated logs'))
+    expect(screen.queryByText('database timeout')).not.toBeInTheDocument()
+
+    await view.rerender({
+      span: makeSpan(),
+      traceLogs: [makeLog()],
+      selectedLogId: 'log-001',
+    })
+
+    expect(screen.getByTitle('Collapse correlated logs')).toBeInTheDocument()
+    expect(screen.getByText('database timeout')).toBeInTheDocument()
   })
 
   it('hides Select log button when the log is already selected', () => {

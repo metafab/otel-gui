@@ -232,6 +232,13 @@
     scopeCollapsed = true
   })
 
+  // Selecting a log from outside the sidebar should reveal the logs section.
+  $effect(() => {
+    if (selectedLogId) {
+      logsCollapsed = false
+    }
+  })
+
   const logsForSection = $derived(
     (logsOnlyCurrentSpan
       ? traceLogs.filter((log) => log.spanId === span.spanId)
@@ -504,7 +511,7 @@
   {/if}
 
   <!-- Correlated Logs -->
-  {#if currentSpanLogsCount > 0}
+  {#if totalTraceLogsCount > 0}
     <div class="section-divider"></div>
     <div class="section-header logs-section-header">
       <button

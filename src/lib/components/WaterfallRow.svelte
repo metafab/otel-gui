@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { StoredSpan } from '$lib/types'
+  import type { StoredSpan, TraceLogListItem } from '$lib/types'
   import { formatDuration } from '$lib/utils/time'
   import { getServiceColor } from '$lib/utils/colors'
   import { themeStore } from '$lib/stores/theme.svelte'
@@ -21,6 +21,9 @@
     onSelect: () => void
     onToggleCollapse?: () => void
     onEventClick?: (eventIndex: number) => void
+    spanLogs?: TraceLogListItem[]
+    selectedLogId?: string | null
+    onLogClick?: (logId: string) => void
   }
 
   let {
@@ -38,6 +41,9 @@
     onSelect,
     onToggleCollapse,
     onEventClick,
+    spanLogs = [],
+    selectedLogId = null,
+    onLogClick,
   }: Props = $props()
 
   // Calculate span position and width as percentages (reactive)
@@ -71,16 +77,68 @@
     })(),
   )
 
+  const nonZeroSpanDurationNs = $derived(
+    spanDurationNs > 0n ? spanDurationNs : 1n,
+  )
+
+  function toSpanPositionPercent(ts: string): number {
+    const offsetNs = BigInt(ts) - BigInt(span.startTimeUnixNano)
+    const percent = Number((offsetNs * 10000n) / nonZeroSpanDurationNs) / 100
+    return Math.max(0, Math.min(100, percent))
+  }
+
   // Calculate event positions on timeline
   const eventPositions = $derived(
     span.events.map((event) => {
-      const eventOffsetNs =
-        BigInt(event.timeUnixNano) - BigInt(span.startTimeUnixNano)
-      const positionPercent =
-        Number((eventOffsetNs * 10000n) / spanDurationNs) / 100
       return {
         name: event.name,
-        position: Math.max(0, Math.min(100, positionPercent)),
+        position: toSpanPositionPercent(event.timeUnixNano),
+      }
+    }),
+  )
+
+  function normalizeLogBody(body: unknown): string {
+    if (body == null) return ''
+    if (
+      typeof body === 'string' ||
+      typeof body === 'number' ||
+      typeof body === 'boolean'
+    ) {
+      return String(body)
+    }
+
+    try {
+      return JSON.stringify(body)
+    } catch {
+      return ''
+    }
+  }
+
+  function severityBucket(
+    log: TraceLogListItem,
+  ): 'trace' | 'debug' | 'info' | 'warn' | 'error' {
+    const n = Number(log.severityNumber) || 0
+    if (n >= 17) return 'error'
+    if (n >= 13) return 'warn'
+    if (n >= 9) return 'info'
+    if (n >= 5) return 'debug'
+    return 'trace'
+  }
+
+  const logPositions = $derived(
+    spanLogs.map((log) => {
+      const timestamp =
+        log.timeUnixNano || log.observedTimeUnixNano || span.startTimeUnixNano
+      const body = normalizeLogBody(log.body)
+      const severity = log.severityText || 'UNSET'
+      const bodyPreview = body.length > 80 ? `${body.slice(0, 80)}...` : body
+      return {
+        id: log.id,
+        position: toSpanPositionPercent(timestamp),
+        severityBucket: severityBucket(log),
+        title: bodyPreview
+          ? `Log (${severity}): ${bodyPreview}`
+          : `Log (${severity})`,
       }
     }),
   )
@@ -89,6 +147,13 @@
     e.stopPropagation()
     if (onEventClick) {
       onEventClick(eventIndex)
+    }
+  }
+
+  function handleLogClick(logId: string, e: MouseEvent | KeyboardEvent) {
+    e.stopPropagation()
+    if (onLogClick) {
+      onLogClick(logId)
     }
   }
 
@@ -175,9 +240,28 @@
         <div
           class="event-marker"
           style="left: {event.position}%"
-          title={event.name}
+          title={`Event: ${event.name}`}
           onclick={(e) => handleEventClick(index, e)}
           onkeydown={(e) => e.key === 'Enter' && handleEventClick(index, e)}
+          role="button"
+          tabindex="0"
+        ></div>
+      {/each}
+
+      <!-- Correlated log markers -->
+      {#each logPositions as log}
+        <div
+          class="log-marker"
+          class:is-selected={selectedLogId === log.id}
+          class:sev-error={log.severityBucket === 'error'}
+          class:sev-warn={log.severityBucket === 'warn'}
+          class:sev-info={log.severityBucket === 'info'}
+          class:sev-debug={log.severityBucket === 'debug'}
+          class:sev-trace={log.severityBucket === 'trace'}
+          style="left: {log.position}%"
+          title={log.title}
+          onclick={(e) => handleLogClick(log.id, e)}
+          onkeydown={(e) => e.key === 'Enter' && handleLogClick(log.id, e)}
           role="button"
           tabindex="0"
         ></div>
@@ -414,5 +498,54 @@
   .event-marker:focus {
     outline: 2px solid var(--event-color);
     outline-offset: 2px;
+  }
+
+  .log-marker {
+    position: absolute;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    border: 1.5px solid rgba(3, 8, 18, 0.8);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    transition: all 0.15s ease;
+    z-index: 9;
+  }
+
+  .log-marker:hover {
+    transform: translate(-50%, -50%) scale(1.25);
+  }
+
+  .log-marker:focus {
+    outline: 2px solid #f8fafc;
+    outline-offset: 2px;
+  }
+
+  .log-marker.is-selected {
+    box-shadow:
+      0 0 0 2px rgba(255, 255, 255, 0.9),
+      0 1px 4px rgba(0, 0, 0, 0.45);
+  }
+
+  .log-marker.sev-error {
+    background: #ef4444;
+  }
+
+  .log-marker.sev-warn {
+    background: #f59e0b;
+  }
+
+  .log-marker.sev-info {
+    background: #22c55e;
+  }
+
+  .log-marker.sev-debug {
+    background: #60a5fa;
+  }
+
+  .log-marker.sev-trace {
+    background: #94a3b8;
   }
 </style>
