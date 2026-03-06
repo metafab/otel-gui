@@ -17,6 +17,7 @@
     ServiceMapData,
     SpanTreeNode,
     StoredTrace,
+    TraceLogDetail,
     TraceLogListItem,
   } from '$lib/types'
 
@@ -39,6 +40,9 @@
   let spanTree = $state<SpanTreeNode[]>([]) // Flattened view for rendering
   let selectedSpanId = $state<string | null>(null)
   let selectedLogId = $state<string | null>(null)
+  let logDetailsById = $state<Record<string, TraceLogDetail>>({})
+  let loadingLogDetailById = $state<Record<string, boolean>>({})
+  let logDetailErrorsById = $state<Record<string, string>>({})
   let traceLogs = $state<TraceLogListItem[]>([])
   let selectedEventIndex = $state<number | null>(null)
   let spanSearchQuery = $state<string>('')
@@ -309,6 +313,9 @@
         } else {
           selectedLogId = null
         }
+        logDetailsById = {}
+        loadingLogDetailById = {}
+        logDetailErrorsById = {}
 
         if (!spanIdFromUrl && selectedLogId) {
           const selectedLog = traceLogs.find((log) => log.id === selectedLogId)
@@ -427,6 +434,40 @@
     }
 
     updateSelectionUrl(selectedSpanId, selectedLogId)
+  }
+
+  async function handleOpenLogDetail(logId: string) {
+    handleLogSelect(logId)
+    if (!traceId) return
+    if (loadingLogDetailById[logId] || logDetailsById[logId]) return
+
+    loadingLogDetailById = {
+      ...loadingLogDetailById,
+      [logId]: true,
+    }
+    const { [logId]: _removedError, ...remainingErrors } = logDetailErrorsById
+    logDetailErrorsById = remainingErrors
+
+    try {
+      const detail = await traceStore.fetchTraceLog(traceId, logId)
+      if (!detail) {
+        const { [logId]: _removedDetail, ...remainingDetails } = logDetailsById
+        logDetailsById = remainingDetails
+        logDetailErrorsById = {
+          ...logDetailErrorsById,
+          [logId]: 'Could not load log detail.',
+        }
+        return
+      }
+      logDetailsById = {
+        ...logDetailsById,
+        [logId]: detail,
+      }
+    } finally {
+      const { [logId]: _removedLoading, ...remainingLoading } =
+        loadingLogDetailById
+      loadingLogDetailById = remainingLoading
+    }
   }
 
   function handleEventClick(spanId: string, eventIndex: number) {
@@ -1071,8 +1112,12 @@
                 span={selectedSpan}
                 {traceLogs}
                 {selectedLogId}
+                {logDetailsById}
+                {loadingLogDetailById}
+                {logDetailErrorsById}
                 onSelectSpan={handleSpanSelect}
                 onSelectLog={handleLogSelect}
+                onOpenLogDetail={handleOpenLogDetail}
                 onFullscreen={openFullscreen}
                 highlightedEventIndex={selectedEventIndex}
                 searchQuery={spanSearchQuery}

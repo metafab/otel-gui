@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { StoredSpan, TraceLogListItem } from '$lib/types'
+  import type { StoredSpan, TraceLogDetail, TraceLogListItem } from '$lib/types'
   import AttributeItem from '$lib/components/AttributeItem.svelte'
   import ChevronIcon from '$lib/components/ChevronIcon.svelte'
   import {
@@ -22,6 +22,14 @@
     selectedLogId?: string | null
     /** Called to jump/focus a correlated log (and optionally its span). */
     onSelectLog?: (logId: string, relatedSpanId?: string) => void
+    /** Called to load the full detail record for a log. */
+    onOpenLogDetail?: (logId: string) => void
+    /** Full detail payloads keyed by log ID. */
+    logDetailsById?: Record<string, TraceLogDetail>
+    /** Loading flags keyed by log ID. */
+    loadingLogDetailById?: Record<string, boolean>
+    /** Inline errors keyed by log ID when detail loading fails. */
+    logDetailErrorsById?: Record<string, string>
     /** Index of the highlighted event (from clicking a WaterfallRow event dot). */
     highlightedEventIndex?: number | null
     /** Global span search query from trace page. */
@@ -35,6 +43,10 @@
     traceLogs = [],
     selectedLogId = null,
     onSelectLog,
+    onOpenLogDetail,
+    logDetailsById = {},
+    loadingLogDetailById = {},
+    logDetailErrorsById = {},
     highlightedEventIndex = null,
     searchQuery = '',
   }: Props = $props()
@@ -171,6 +183,7 @@
   >('all')
   let logsCollapsed = $state(false)
   let logsOnlyCurrentSpan = $state(true)
+  let openLogDetailIds = $state<string[]>([])
   let eventsCollapsed = $state(false)
   let attributesCollapsed = $state(false)
   let resourceCollapsed = $state(true)
@@ -185,6 +198,7 @@
     logTextFilter = ''
     logSeverityFilter = 'all'
     logsOnlyCurrentSpan = true
+    openLogDetailIds = []
     resourceCollapsed = true
     scopeCollapsed = true
   })
@@ -461,7 +475,7 @@
   {/if}
 
   <!-- Correlated Logs -->
-  {#if totalTraceLogsCount > 0}
+  {#if currentSpanLogsCount > 0}
     <div class="section-divider"></div>
     <div class="section-header logs-section-header">
       <button
@@ -474,7 +488,7 @@
       >
         <ChevronIcon expanded={!logsCollapsed} />
         <h4 class="section-title">
-          Correlated Logs
+          Logs
           {#if logsOnlyCurrentSpan}
             ({filteredLogs.length} of {currentSpanLogsCount})
           {:else}
@@ -511,6 +525,9 @@
       {#if filteredLogs.length > 0}
         <div class="logs-list">
           {#each filteredLogs as log}
+            {@const logDetail = logDetailsById[log.id] || null}
+            {@const isLogDetailLoading = !!loadingLogDetailById[log.id]}
+            {@const logDetailError = logDetailErrorsById[log.id] || null}
             <div
               class="log-item"
               class:is-selected={selectedLogId === log.id}
@@ -539,24 +556,124 @@
               </div>
               <div class="log-actions">
                 <button
-                  class="log-action"
-                  onclick={() => onSelectLog?.(log.id, log.spanId || undefined)}
-                  title={log.spanId === span.spanId
-                    ? 'Select log record'
-                    : 'Jump to log record'}
+                  class="log-action log-action-secondary"
+                  onclick={() => {
+                    if (openLogDetailIds.includes(log.id)) {
+                      openLogDetailIds = openLogDetailIds.filter(
+                        (id) => id !== log.id,
+                      )
+                      return
+                    }
+                    openLogDetailIds = [...openLogDetailIds, log.id]
+                    onOpenLogDetail?.(log.id)
+                  }}
+                  title={openLogDetailIds.includes(log.id)
+                    ? 'Hide full log details'
+                    : 'Show full log details'}
+                  disabled={isLogDetailLoading}
                 >
-                  {log.spanId === span.spanId ? 'Select log' : 'Jump to log'}
+                  <svg
+                    class="log-action-icon"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M1.5 2.25h9m-9 3.75h9m-9 3.75h9"
+                      stroke="currentColor"
+                      stroke-width="1.2"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                  {isLogDetailLoading
+                    ? 'Loading...'
+                    : openLogDetailIds.includes(log.id)
+                      ? 'Hide details'
+                      : 'Show details'}
                 </button>
-                {#if log.spanId && log.spanId !== span.spanId}
+                {#if selectedLogId !== log.id}
                   <button
                     class="log-action"
-                    onclick={() => onSelectSpan?.(log.spanId)}
-                    title="Jump to related span"
+                    onclick={() =>
+                      onSelectLog?.(log.id, log.spanId || undefined)}
+                    title={log.spanId === span.spanId
+                      ? 'Select log record'
+                      : 'Jump to log record'}
                   >
-                    Jump to span
+                    {log.spanId === span.spanId ? 'Select log' : 'Jump to log'}
                   </button>
                 {/if}
               </div>
+              {#if openLogDetailIds.includes(log.id) && (isLogDetailLoading || logDetailError || logDetail)}
+                <div class="log-detail-panel">
+                  {#if isLogDetailLoading}
+                    <div class="no-attributes">Loading full log detail...</div>
+                  {:else if logDetailError}
+                    <div class="log-detail-error">{logDetailError}</div>
+                  {:else}
+                    {#if logDetail && Object.keys(logDetail.attributes).length > 0}
+                      <div class="log-detail-group">
+                        <div class="log-detail-heading">Attributes</div>
+                        <div class="attributes">
+                          {#each Object.entries(logDetail.attributes).sort( ([a], [b]) => a.localeCompare(b), ) as [key, value]}
+                            <AttributeItem
+                              attrKey={key}
+                              {value}
+                              {onFullscreen}
+                            />
+                          {/each}
+                        </div>
+                      </div>
+                    {/if}
+
+                    {#if logDetail && Object.keys(logDetail.resource).length > 0}
+                      <div class="log-detail-group">
+                        <div class="log-detail-heading">Resource</div>
+                        <div class="attributes">
+                          {#each Object.entries(logDetail.resource).sort( ([a], [b]) => a.localeCompare(b), ) as [key, value]}
+                            <AttributeItem
+                              attrKey={key}
+                              {value}
+                              {onFullscreen}
+                            />
+                          {/each}
+                        </div>
+                      </div>
+                    {/if}
+
+                    {#if logDetail && (logDetail.scopeName || logDetail.scopeVersion || Object.keys(logDetail.scopeAttributes).length > 0)}
+                      <div class="log-detail-group">
+                        <div class="log-detail-heading">Scope</div>
+                        {#if logDetail.scopeName}
+                          <div class="detail-row detail-row-compact">
+                            <span class="label">Name:</span>
+                            <span class="value">{logDetail.scopeName}</span>
+                          </div>
+                        {/if}
+                        {#if logDetail.scopeVersion}
+                          <div class="detail-row detail-row-compact">
+                            <span class="label">Version:</span>
+                            <span class="value">{logDetail.scopeVersion}</span>
+                          </div>
+                        {/if}
+                        {#if Object.keys(logDetail.scopeAttributes).length > 0}
+                          <div class="attributes">
+                            {#each Object.entries(logDetail.scopeAttributes).sort( ([a], [b]) => a.localeCompare(b), ) as [key, value]}
+                              <AttributeItem
+                                attrKey={key}
+                                {value}
+                                {onFullscreen}
+                              />
+                            {/each}
+                          </div>
+                        {/if}
+                      </div>
+                    {/if}
+                  {/if}
+                </div>
+              {/if}
             </div>
           {/each}
         </div>
@@ -1106,10 +1223,61 @@
     font-size: 0.75rem;
     padding: 0.25rem 0.45rem;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
   }
 
   .log-action:hover {
     border-color: var(--accent);
     color: var(--accent);
+  }
+
+  .log-action-secondary {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  }
+
+  .log-action:disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+
+  .log-detail-panel {
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px dashed var(--border);
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .log-action-icon {
+    flex-shrink: 0;
+  }
+
+  .log-detail-group {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .log-detail-heading {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .detail-row-compact {
+    border-bottom: none;
+    padding: 0.05rem 0;
+    grid-template-columns: 64px 1fr;
+  }
+
+  .log-detail-error {
+    color: var(--error-text);
+    font-size: 0.75rem;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--error-text) 35%, var(--border));
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--error-bg) 65%, transparent);
   }
 </style>

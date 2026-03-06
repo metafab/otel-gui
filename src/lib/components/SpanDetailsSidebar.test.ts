@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/svelte'
 import SpanDetailsSidebar from './SpanDetailsSidebar.svelte'
-import type { StoredSpan, TraceLogListItem } from '$lib/types'
+import type { StoredSpan, TraceLogDetail, TraceLogListItem } from '$lib/types'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +43,25 @@ function makeLog(overrides: Partial<TraceLogListItem> = {}): TraceLogListItem {
     severityNumber: 17,
     severityText: 'ERROR',
     body: 'database timeout',
+    ...overrides,
+  }
+}
+
+function makeLogDetail(overrides: Partial<TraceLogDetail> = {}): TraceLogDetail {
+  return {
+    id: 'log-001',
+    traceId: 'trace-abc',
+    spanId: 'span-001',
+    timeUnixNano: '1700000000020000000',
+    observedTimeUnixNano: '1700000000020000000',
+    severityNumber: 17,
+    severityText: 'ERROR',
+    body: 'database timeout',
+    attributes: { 'log.attr': 'value-1' },
+    resource: { 'service.name': 'users-service' },
+    scopeName: 'logger-scope',
+    scopeVersion: '2.1.0',
+    scopeAttributes: { 'scope.attr': 'value-2' },
     ...overrides,
   }
 }
@@ -340,9 +359,9 @@ describe('SpanDetailsSidebar', () => {
     expect(screen.getByText('host.name')).toBeInTheDocument()
   })
 
-  // ── Correlated logs section ──────────────────────────────────────────────
+  // ── Logs section ─────────────────────────────────────────────────────────
 
-  it('renders correlated logs section when trace logs are provided', () => {
+  it('renders logs section when correlated logs are provided for the span', () => {
     render(SpanDetailsSidebar, {
       props: {
         span: makeSpan(),
@@ -350,8 +369,20 @@ describe('SpanDetailsSidebar', () => {
       },
     })
 
-    expect(screen.getByText(/Correlated Logs/)).toBeInTheDocument()
+    expect(screen.getByText(/Logs/)).toBeInTheDocument()
     expect(screen.getByText('database timeout')).toBeInTheDocument()
+  })
+
+  it('hides logs section when there are no correlated logs for current span', () => {
+    render(SpanDetailsSidebar, {
+      props: {
+        span: makeSpan({ spanId: 'span-001' }),
+        traceLogs: [makeLog({ spanId: 'span-other' })],
+      },
+    })
+
+    expect(screen.queryByText(/Logs/)).not.toBeInTheDocument()
+    expect(screen.queryByText('cache miss')).not.toBeInTheDocument()
   })
 
   it('filters correlated logs by text', async () => {
@@ -388,19 +419,133 @@ describe('SpanDetailsSidebar', () => {
     expect(onSelectLog).toHaveBeenCalledWith('log-001', 'span-001')
   })
 
-  it('shows jump-to-span action for logs linked to another span', async () => {
-    const onSelectSpan = vi.fn()
+  it('hides Select log button when the log is already selected', () => {
+    render(SpanDetailsSidebar, {
+      props: {
+        span: makeSpan(),
+        traceLogs: [makeLog()],
+        selectedLogId: 'log-001',
+      },
+    })
+
+    expect(screen.queryByTitle('Select log record')).not.toBeInTheDocument()
+  })
+
+  it('uses jump-to-log action for logs linked to another span', async () => {
+    const onSelectLog = vi.fn()
     render(SpanDetailsSidebar, {
       props: {
         span: makeSpan({ spanId: 'span-001' }),
-        traceLogs: [makeLog({ spanId: 'span-other' })],
-        onSelectSpan,
+        traceLogs: [
+          makeLog({ id: 'log-self', spanId: 'span-001' }),
+          makeLog({ id: 'log-other', spanId: 'span-other' }),
+        ],
+        onSelectLog,
       },
     })
 
     await fireEvent.click(screen.getByLabelText('Current span only'))
     expect(screen.getByTitle('Jump to log record')).toBeInTheDocument()
-    await fireEvent.click(screen.getByTitle('Jump to related span'))
-    expect(onSelectSpan).toHaveBeenCalledWith('span-other')
+    await fireEvent.click(screen.getByTitle('Jump to log record'))
+    expect(onSelectLog).toHaveBeenCalledWith('log-other', 'span-other')
+  })
+
+  it('calls onOpenLogDetail when show details is clicked', async () => {
+    const onOpenLogDetail = vi.fn()
+    render(SpanDetailsSidebar, {
+      props: {
+        span: makeSpan(),
+        traceLogs: [makeLog()],
+        onOpenLogDetail,
+      },
+    })
+
+    await fireEvent.click(screen.getByTitle('Show full log details'))
+    expect(onOpenLogDetail).toHaveBeenCalledWith('log-001')
+  })
+
+  it('renders attributes/resource/scope for the selected detailed log', () => {
+    render(SpanDetailsSidebar, {
+      props: {
+        span: makeSpan(),
+        traceLogs: [makeLog()],
+        selectedLogId: 'log-001',
+        logDetailsById: { 'log-001': makeLogDetail() },
+      },
+    })
+
+    expect(screen.getByText('Show details')).toBeInTheDocument()
+  })
+
+  it('allows hiding full log detail after opening it', async () => {
+    const onOpenLogDetail = vi.fn()
+    render(SpanDetailsSidebar, {
+      props: {
+        span: makeSpan(),
+        traceLogs: [makeLog()],
+        selectedLogId: 'log-001',
+        logDetailsById: { 'log-001': makeLogDetail() },
+        onOpenLogDetail,
+      },
+    })
+
+    const openButton = screen.getByTitle('Show full log details')
+    await fireEvent.click(openButton)
+    expect(onOpenLogDetail).toHaveBeenCalledWith('log-001')
+
+    expect(screen.getByText('Hide details')).toBeInTheDocument()
+    expect(screen.getByText('Attributes')).toBeInTheDocument()
+    expect(screen.getByText('Resource')).toBeInTheDocument()
+    expect(screen.getAllByText('Scope').length).toBeGreaterThan(0)
+    expect(screen.getByText('log.attr')).toBeInTheDocument()
+    expect(screen.getByText('scope.attr')).toBeInTheDocument()
+    expect(screen.getByText('logger-scope')).toBeInTheDocument()
+    expect(screen.getByText('2.1.0')).toBeInTheDocument()
+
+    await fireEvent.click(screen.getByTitle('Hide full log details'))
+    expect(screen.queryByText('Attributes')).not.toBeInTheDocument()
+    expect(screen.queryByText('Resource')).not.toBeInTheDocument()
+    expect(screen.queryByText('logger-scope')).not.toBeInTheDocument()
+  })
+
+  it('allows showing details for multiple logs at the same time', async () => {
+    const onOpenLogDetail = vi.fn()
+    render(SpanDetailsSidebar, {
+      props: {
+        span: makeSpan({ spanId: 'span-001' }),
+        traceLogs: [
+          makeLog({
+            id: 'log-001',
+            spanId: 'span-001',
+            body: 'first log body',
+          }),
+          makeLog({
+            id: 'log-002',
+            spanId: 'span-001',
+            body: 'second log body',
+          }),
+        ],
+        logDetailsById: {
+          'log-001': makeLogDetail({
+            id: 'log-001',
+            attributes: { 'log.attr': 'value-1' },
+          }),
+          'log-002': makeLogDetail({
+            id: 'log-002',
+            attributes: { 'log.attr': 'value-2' },
+          }),
+        },
+        onOpenLogDetail,
+      },
+    })
+
+    const showButtons = screen.getAllByTitle('Show full log details')
+    await fireEvent.click(showButtons[0])
+    await fireEvent.click(showButtons[1])
+
+    expect(onOpenLogDetail).toHaveBeenNthCalledWith(1, 'log-001')
+    expect(onOpenLogDetail).toHaveBeenNthCalledWith(2, 'log-002')
+    expect(screen.getAllByText('value-1').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('value-2').length).toBeGreaterThan(0)
   })
 })
