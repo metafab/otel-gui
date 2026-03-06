@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { findMatchingSpanIds } from './spanSearch'
 import type { SpanTreeNode, StoredSpan } from '$lib/types'
+import type { TraceLogListItem } from '$lib/types'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -27,6 +28,20 @@ function makeSpan(overrides: Partial<StoredSpan> = {}): StoredSpan {
 
 function makeNode(span: StoredSpan): SpanTreeNode {
   return { span, depth: 0, children: [], collapsed: false, subtreeSize: 1 }
+}
+
+function makeLog(overrides: Partial<TraceLogListItem> = {}): TraceLogListItem {
+  return {
+    id: 'log-1',
+    traceId: 'trace1',
+    spanId: 'span1',
+    timeUnixNano: '1000000000',
+    observedTimeUnixNano: '1000000000',
+    severityNumber: 9,
+    severityText: 'INFO',
+    body: 'default log body',
+    ...overrides,
+  }
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
@@ -256,5 +271,28 @@ describe('findMatchingSpanIds', () => {
     })
 
     expect(() => findMatchingSpanIds([makeNode(span)], 'loop')).not.toThrow()
+  })
+
+  it('matches a span when one of its logs matches the query', () => {
+    const span = makeSpan({ spanId: 'a', name: 'unrelated-span' })
+    const logs = [
+      makeLog({
+        id: 'log-a',
+        spanId: 'a',
+        severityText: 'ERROR',
+        body: 'database timeout while connecting',
+      }),
+    ]
+
+    const result = findMatchingSpanIds([makeNode(span)], 'timeout', logs)
+    expect(result).toEqual(new Set(['a']))
+  })
+
+  it('does not match logs whose spanId is not in the current span tree', () => {
+    const span = makeSpan({ spanId: 'a', name: 'root-span' })
+    const logs = [makeLog({ id: 'log-b', spanId: 'missing-span', body: 'match me' })]
+
+    const result = findMatchingSpanIds([makeNode(span)], 'match me', logs)
+    expect(result).toEqual(new Set())
   })
 })

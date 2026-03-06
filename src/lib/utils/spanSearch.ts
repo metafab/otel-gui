@@ -1,4 +1,5 @@
 import type { SpanTreeNode } from '$lib/types'
+import type { TraceLogListItem } from '$lib/types'
 import { spanKindLabel } from '$lib/utils/spans'
 
 /**
@@ -10,11 +11,13 @@ import { spanKindLabel } from '$lib/utils/spans'
 export function findMatchingSpanIds(
   spanTree: SpanTreeNode[],
   query: string,
+  traceLogs: TraceLogListItem[] = [],
 ): Set<string> {
   const q = query.trim().toLowerCase()
   if (!q) return new Set<string>()
 
   const matches = new Set<string>()
+  const spanIdsInTree = new Set<string>()
 
   function valueContainsQuery(value: unknown): boolean {
     if (value == null) return false
@@ -34,6 +37,7 @@ export function findMatchingSpanIds(
   function visit(nodes: SpanTreeNode[]) {
     for (const node of nodes) {
       const span = node.span
+      spanIdsInTree.add(span.spanId)
       const serviceName = (span.resource['service.name'] as string) || 'unknown'
       let didMatch = false
 
@@ -123,6 +127,21 @@ export function findMatchingSpanIds(
   }
 
   visit(spanTree)
+
+  for (const log of traceLogs) {
+    if (!log.spanId || !spanIdsInTree.has(log.spanId)) {
+      continue
+    }
+
+    const severity = (log.severityText || '').toLowerCase()
+    const body = valueContainsQuery(log.body)
+    const spanIdMatches = log.spanId.toLowerCase().includes(q)
+    const logIdMatches = log.id.toLowerCase().includes(q)
+
+    if (severity.includes(q) || body || spanIdMatches || logIdMatches) {
+      matches.add(log.spanId)
+    }
+  }
 
   return matches
 }

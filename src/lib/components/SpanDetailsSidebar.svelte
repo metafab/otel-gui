@@ -162,6 +162,35 @@
     }
   }
 
+  function logMatchesSearch(log: TraceLogListItem): boolean {
+    if (!normalizedSearchQuery) return false
+    const severity = (log.severityText || '').toLowerCase()
+    const body = normalizeLogBody(log.body).toLowerCase()
+    const spanId = (log.spanId || '').toLowerCase()
+    const logId = (log.id || '').toLowerCase()
+    return (
+      severity.includes(normalizedSearchQuery) ||
+      body.includes(normalizedSearchQuery) ||
+      spanId.includes(normalizedSearchQuery) ||
+      logId.includes(normalizedSearchQuery)
+    )
+  }
+
+  function logTextSegments(text: string): MatchSegment[] {
+    if (!normalizedSearchQuery || !textMatchesSearch(text)) {
+      return [{ text, isMatch: false }]
+    }
+    return splitByQuery(text, normalizedSearchQuery)
+  }
+
+  function logBodySegments(body: unknown): MatchSegment[] {
+    const bodyText = normalizeLogBody(body)
+    if (!bodyText) {
+      return [{ text: '(empty body)', isMatch: false }]
+    }
+    return logTextSegments(bodyText)
+  }
+
   function severityBucket(
     log: TraceLogListItem,
   ): 'trace' | 'debug' | 'info' | 'warn' | 'error' {
@@ -531,11 +560,17 @@
             <div
               class="log-item"
               class:is-selected={selectedLogId === log.id}
+              class:search-match={logMatchesSearch(log)}
               data-log-id={log.id}
             >
               <div class="log-header">
                 <span class="log-severity" data-level={severityBucket(log)}>
-                  {log.severityText || 'UNSET'}
+                  {#each logTextSegments(log.severityText || 'UNSET') as segment}
+                    <span
+                      class="log-text-segment"
+                      class:is-match={segment.isMatch}>{segment.text}</span
+                    >
+                  {/each}
                 </span>
                 <span
                   class="log-timestamp"
@@ -552,7 +587,12 @@
                 </span>
               </div>
               <div class="log-body">
-                {normalizeLogBody(log.body) || '(empty body)'}
+                {#each logBodySegments(log.body) as segment}
+                  <span
+                    class="log-text-segment"
+                    class:is-match={segment.isMatch}>{segment.text}</span
+                  >
+                {/each}
               </div>
               <div class="log-actions">
                 <button
@@ -1169,6 +1209,11 @@
     box-shadow: 0 0 0 1px var(--accent-ring);
   }
 
+  .log-item.search-match {
+    border-left-color: var(--highlight-border);
+    box-shadow: inset 2px 0 0 var(--highlight-border);
+  }
+
   .log-header {
     display: flex;
     justify-content: space-between;
@@ -1195,6 +1240,12 @@
 
   .log-severity[data-level='info'] {
     color: var(--accent);
+  }
+
+  .log-text-segment.is-match {
+    background: var(--highlight-bg-hover);
+    border-radius: 2px;
+    box-shadow: inset 0 -1px 0 var(--highlight-border);
   }
 
   .log-timestamp {

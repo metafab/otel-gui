@@ -110,7 +110,7 @@
   )
 
   const matchingSpanIds = $derived(
-    findMatchingSpanIds(spanTree, spanSearchQuery),
+    findMatchingSpanIds(spanTree, spanSearchQuery, traceLogs),
   )
 
   const matchingSpans = $derived(
