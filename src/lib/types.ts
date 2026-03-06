@@ -18,6 +18,21 @@ export interface SpanStatus {
   message: string
 }
 
+export interface StoredLog {
+  traceId: string
+  spanId: string
+  timeUnixNano: string
+  observedTimeUnixNano: string
+  severityNumber: number
+  severityText: string
+  body: unknown
+  attributes: Record<string, any>
+  resource: Record<string, any>
+  scopeName: string
+  scopeVersion: string
+  scopeAttributes: Record<string, any>
+}
+
 export interface StoredSpan {
   traceId: string
   spanId: string
@@ -46,6 +61,8 @@ export interface StoredTrace {
   spanCount: number
   hasError: boolean // any span with status.code === 2
   spans: Map<string, StoredSpan>
+  logs?: Map<string, StoredLog>
+  logCount?: number
 }
 
 export interface TraceListItem {
@@ -89,6 +106,7 @@ export interface ServiceMapData {
 // Swappable storage interface
 export interface TraceStore {
   ingest(resourceSpans: any[]): void
+  ingestLogs(resourceLogs: any[]): void
   getTraceList(limit?: number): TraceListItem[]
   getTrace(traceId: string): StoredTrace | undefined
   getServiceMap(traceId?: string): ServiceMapData

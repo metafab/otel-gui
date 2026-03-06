@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { traceStore, resolveRootSpanName } from '$lib/server/traceStore'
 import type { StoredTrace } from '$lib/types'
 import simpleTrace from '../../../tests/fixtures/simple-trace.json'
+import simpleLog from '../../../tests/fixtures/simple-log.json'
 import multiServiceTrace from '../../../tests/fixtures/multi-service-trace.json'
 import errorTrace from '../../../tests/fixtures/error-trace.json'
 import outOfOrderSpans from '../../../tests/fixtures/out-of-order-spans.json'
@@ -91,6 +92,43 @@ describe('traceStore.ingest / getTraceList', () => {
     // AAAABBBBCCCCDDDD… is one traceId, all spans belong to it
     expect(list).toHaveLength(1)
     expect(list[0].spanCount).toBe(3) // root + 2 backend spans
+  })
+})
+
+describe('traceStore.ingestLogs', () => {
+  it('ignores ingestion of non-array resourceLogs', () => {
+    traceStore.ingestLogs(null as any)
+    expect(traceStore.getTraceList()).toHaveLength(0)
+  })
+
+  it('correlates logs into an existing trace by traceId', () => {
+    traceStore.ingest(simpleTrace.resourceSpans)
+    traceStore.ingestLogs(simpleLog.resourceLogs)
+
+    const traceId = traceStore.getTraceList()[0].traceId
+    const trace = traceStore.getTrace(traceId)
+
+    expect(trace?.logCount).toBe(1)
+    expect(trace?.logs?.size).toBe(1)
+
+    const [log] = Array.from(trace?.logs?.values() || [])
+    expect(log.traceId).toBe('5B8EFFF798038103D269B633813FC60C')
+    expect(log.spanId).toBe('EEE19B7EC3C1B174')
+    expect(log.body).toBe('database timeout')
+  })
+
+  it('creates a trace shell when logs arrive before spans', () => {
+    traceStore.ingestLogs(simpleLog.resourceLogs)
+    const [traceItem] = traceStore.getTraceList()
+    expect(traceItem).toBeDefined()
+    expect(traceItem.traceId).toBe('5B8EFFF798038103D269B633813FC60C')
+    expect(traceItem.serviceName).toBe('frontend')
+  })
+
+  it('sets hasError when log severity is error or above', () => {
+    traceStore.ingestLogs(simpleLog.resourceLogs)
+    const [traceItem] = traceStore.getTraceList()
+    expect(traceItem.hasError).toBe(true)
   })
 })
 

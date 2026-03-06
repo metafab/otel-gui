@@ -11,6 +11,7 @@ import { POST as postOtlpMetrics } from './v1/metrics/+server'
 import { POST as postOtlpLogs } from './v1/logs/+server'
 import { traceStore } from '$lib/server/traceStore'
 import simpleTrace from '../../tests/fixtures/simple-trace.json'
+import simpleLog from '../../tests/fixtures/simple-log.json'
 import multiServiceTrace from '../../tests/fixtures/multi-service-trace.json'
 import errorTrace from '../../tests/fixtures/error-trace.json'
 import outOfOrderSpans from '../../tests/fixtures/out-of-order-spans.json'
@@ -22,6 +23,17 @@ function makePostRequest(
   contentType = 'application/json',
 ): Request {
   return new Request('http://localhost:4318/v1/traces', {
+    method: 'POST',
+    headers: { 'Content-Type': contentType },
+    body: JSON.stringify(body),
+  })
+}
+
+function makeLogsPostRequest(
+  body: unknown,
+  contentType = 'application/json',
+): Request {
+  return new Request('http://localhost:4318/v1/logs', {
     method: 'POST',
     headers: { 'Content-Type': contentType },
     body: JSON.stringify(body),
@@ -127,6 +139,32 @@ describe('POST /v1/traces', () => {
     const traces = await listResponse.json()
 
     expect(traces[0].hasError).toBe(true)
+  })
+})
+
+describe('POST /v1/logs', () => {
+  it('returns 200 for valid JSON payload', async () => {
+    const request = makeLogsPostRequest(simpleLog)
+    const response = await postOtlpLogs({ request } as any)
+    expect(response.status).toBe(200)
+  })
+
+  it('returns 400 when resourceLogs is missing', async () => {
+    const request = makeLogsPostRequest({ wrongKey: [] })
+    const response = await postOtlpLogs({ request } as any)
+    expect(response.status).toBe(400)
+    const body = await response.json()
+    expect(body.error).toMatch(/resourceLogs/i)
+  })
+
+  it('returns 400 for unsupported content type', async () => {
+    const request = new Request('http://localhost:4318/v1/logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: 'hello',
+    })
+    const response = await postOtlpLogs({ request } as any)
+    expect(response.status).toBe(400)
   })
 })
 
@@ -398,12 +436,4 @@ describe('Unimplemented endpoints', () => {
     expect(body.error).toMatch(/not implemented/i)
   })
 
-  it('returns 501 for POST /v1/logs', async () => {
-    const request = makePostRequest({ resourceLogs: [] })
-    const response = await postOtlpLogs({ request } as any)
-    expect(response.status).toBe(501)
-
-    const body = await response.json()
-    expect(body.error).toMatch(/not implemented/i)
-  })
 })

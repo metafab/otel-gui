@@ -3,10 +3,11 @@ import type {
   TraceStore,
   StoredTrace,
   StoredSpan,
+  StoredLog,
   TraceListItem,
   ServiceMapData,
 } from '$lib/types'
-import { flattenAttributes } from '$lib/utils/attributes'
+import { extractAnyValue, flattenAttributes } from '$lib/utils/attributes'
 import { formatTimestamp, getDurationMs } from '$lib/utils/time'
 import { buildServiceMap } from '$lib/server/serviceMap'
 
@@ -20,6 +21,40 @@ function notifyListeners() {
   for (const listener of listeners) {
     listener()
   }
+}
+
+function isBeforeNano(a: string, b: string): boolean {
+  return BigInt(a) < BigInt(b)
+}
+
+function isAfterNano(a: string, b: string): boolean {
+  return BigInt(a) > BigInt(b)
+}
+
+function getLogTimestamp(logRecord: any): string {
+  return logRecord.timeUnixNano || logRecord.observedTimeUnixNano || ''
+}
+
+function createLogId(logRecord: any, index: number): string {
+  const traceId = logRecord.traceId || ''
+  const spanId = logRecord.spanId || ''
+  const timeUnixNano = logRecord.timeUnixNano || ''
+  const observedTimeUnixNano = logRecord.observedTimeUnixNano || ''
+  const severityText = logRecord.severityText || ''
+  const body = extractAnyValue(logRecord.body)
+  const bodyPart =
+    typeof body === 'string' || typeof body === 'number' || typeof body === 'boolean'
+      ? String(body)
+      : ''
+  return [
+    traceId,
+    spanId,
+    timeUnixNano,
+    observedTimeUnixNano,
+    severityText,
+    bodyPart,
+    String(index),
+  ].join(':')
 }
 
 function ingest(resourceSpans: any[]): void {
@@ -113,10 +148,10 @@ function ingest(resourceSpans: any[]): void {
         }
 
         // Update trace time range
-        if (span.startTimeUnixNano < trace.startTimeUnixNano) {
+        if (isBeforeNano(span.startTimeUnixNano, trace.startTimeUnixNano)) {
           trace.startTimeUnixNano = span.startTimeUnixNano
         }
-        if (span.endTimeUnixNano > trace.endTimeUnixNano) {
+        if (isAfterNano(span.endTimeUnixNano, trace.endTimeUnixNano)) {
           trace.endTimeUnixNano = span.endTimeUnixNano
         }
 
@@ -126,6 +161,103 @@ function ingest(resourceSpans: any[]): void {
         }
 
         // Use first seen service name if not set
+        if (trace.serviceName === 'unknown' && serviceName !== 'unknown') {
+          trace.serviceName = serviceName
+        }
+      }
+    }
+  }
+
+  notifyListeners()
+}
+
+function ingestLogs(resourceLogs: any[]): void {
+  if (!resourceLogs || !Array.isArray(resourceLogs)) {
+    return
+  }
+
+  for (const rl of resourceLogs) {
+    const resourceAttrs = flattenAttributes(rl.resource?.attributes)
+    const serviceName = (resourceAttrs['service.name'] as string) || 'unknown'
+
+    const scopeLogsList = rl.scopeLogs || []
+    for (const sl of scopeLogsList) {
+      const scopeName = sl.scope?.name || ''
+      const scopeVersion = sl.scope?.version || ''
+      const scopeAttributes = flattenAttributes(sl.scope?.attributes)
+      const logRecords = sl.logRecords || []
+
+      for (const [index, logRecord] of logRecords.entries()) {
+        const traceId = logRecord.traceId
+        if (!traceId) continue
+
+        const now = Date.now()
+        const timestamp = getLogTimestamp(logRecord)
+        if (!timestamp) continue
+
+        let trace = traces.get(traceId)
+        if (!trace) {
+          trace = {
+            traceId,
+            rootSpanName: 'unknown',
+            serviceName,
+            startTimeUnixNano: timestamp,
+            endTimeUnixNano: timestamp,
+            updatedAt: now,
+            spanCount: 0,
+            hasError: false,
+            spans: new Map(),
+            logs: new Map(),
+            logCount: 0,
+          }
+          traces.set(traceId, trace)
+
+          if (traces.size > MAX_TRACES) {
+            const oldestTraceId = traces.keys().next().value
+            if (oldestTraceId) {
+              traces.delete(oldestTraceId)
+            }
+          }
+        }
+
+        if (!trace.logs) {
+          trace.logs = new Map()
+        }
+
+        const storedLog: StoredLog = {
+          traceId,
+          spanId: logRecord.spanId || '',
+          timeUnixNano: logRecord.timeUnixNano || '',
+          observedTimeUnixNano: logRecord.observedTimeUnixNano || '',
+          severityNumber:
+            typeof logRecord.severityNumber === 'number'
+              ? logRecord.severityNumber
+              : Number(logRecord.severityNumber) || 0,
+          severityText: logRecord.severityText || '',
+          body: extractAnyValue(logRecord.body),
+          attributes: flattenAttributes(logRecord.attributes),
+          resource: resourceAttrs,
+          scopeName,
+          scopeVersion,
+          scopeAttributes,
+        }
+
+        const logId = createLogId(logRecord, index)
+        trace.logs.set(logId, storedLog)
+        trace.logCount = trace.logs.size
+        trace.updatedAt = now
+
+        if (isBeforeNano(timestamp, trace.startTimeUnixNano)) {
+          trace.startTimeUnixNano = timestamp
+        }
+        if (isAfterNano(timestamp, trace.endTimeUnixNano)) {
+          trace.endTimeUnixNano = timestamp
+        }
+
+        if (storedLog.severityNumber >= 17) {
+          trace.hasError = true
+        }
+
         if (trace.serviceName === 'unknown' && serviceName !== 'unknown') {
           trace.serviceName = serviceName
         }
@@ -204,6 +336,7 @@ function subscribe(fn: () => void): () => void {
 // Export the store instance
 export const traceStore: TraceStore = {
   ingest,
+  ingestLogs,
   getTraceList,
   getTrace,
   getServiceMap,
