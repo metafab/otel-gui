@@ -28,7 +28,9 @@ export function findMatchingSpanIds(
 
     try {
       const serialized = JSON.stringify(value)
-      return typeof serialized === 'string' && serialized.toLowerCase().includes(q)
+      return (
+        typeof serialized === 'string' && serialized.toLowerCase().includes(q)
+      )
     } catch {
       return false
     }

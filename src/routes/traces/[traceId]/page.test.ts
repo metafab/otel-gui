@@ -126,14 +126,18 @@ describe('traces/[traceId] page search UI', () => {
     })
 
     await waitFor(() => {
-      expect(container.querySelector('[data-span-id="child-hidden-span"]')).toBeTruthy()
+      expect(
+        container.querySelector('[data-span-id="child-hidden-span"]'),
+      ).toBeTruthy()
     })
 
     const collapseBtn = screen.getByRole('button', { name: 'Collapse' })
     await fireEvent.click(collapseBtn)
 
     await waitFor(() => {
-      expect(container.querySelector('[data-span-id="child-hidden-span"]')).toBeNull()
+      expect(
+        container.querySelector('[data-span-id="child-hidden-span"]'),
+      ).toBeNull()
     })
 
     const searchInput = screen.getByPlaceholderText('Search spans...')

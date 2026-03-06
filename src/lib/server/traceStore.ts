@@ -43,7 +43,9 @@ function createLogId(logRecord: any, index: number): string {
   const severityText = logRecord.severityText || ''
   const body = extractAnyValue(logRecord.body)
   const bodyPart =
-    typeof body === 'string' || typeof body === 'number' || typeof body === 'boolean'
+    typeof body === 'string' ||
+    typeof body === 'number' ||
+    typeof body === 'boolean'
       ? String(body)
       : ''
   return [

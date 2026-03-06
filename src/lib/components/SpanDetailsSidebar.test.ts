@@ -47,7 +47,9 @@ function makeLog(overrides: Partial<TraceLogListItem> = {}): TraceLogListItem {
   }
 }
 
-function makeLogDetail(overrides: Partial<TraceLogDetail> = {}): TraceLogDetail {
+function makeLogDetail(
+  overrides: Partial<TraceLogDetail> = {},
+): TraceLogDetail {
   return {
     id: 'log-001',
     traceId: 'trace-abc',
@@ -390,8 +392,17 @@ describe('SpanDetailsSidebar', () => {
       props: {
         span: makeSpan(),
         traceLogs: [
-          makeLog({ id: 'log-a', body: 'database timeout', severityText: 'ERROR' }),
-          makeLog({ id: 'log-b', body: 'cache miss', severityText: 'INFO', severityNumber: 9 }),
+          makeLog({
+            id: 'log-a',
+            body: 'database timeout',
+            severityText: 'ERROR',
+          }),
+          makeLog({
+            id: 'log-b',
+            body: 'cache miss',
+            severityText: 'INFO',
+            severityNumber: 9,
+          }),
         ],
       },
     })

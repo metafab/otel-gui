@@ -553,5 +553,4 @@ describe('Unimplemented endpoints', () => {
     const body = await response.json()
     expect(body.error).toMatch(/not implemented/i)
   })
-
 })

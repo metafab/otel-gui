@@ -290,7 +290,9 @@ describe('findMatchingSpanIds', () => {
 
   it('does not match logs whose spanId is not in the current span tree', () => {
     const span = makeSpan({ spanId: 'a', name: 'root-span' })
-    const logs = [makeLog({ id: 'log-b', spanId: 'missing-span', body: 'match me' })]
+    const logs = [
+      makeLog({ id: 'log-b', spanId: 'missing-span', body: 'match me' }),
+    ]
 
     const result = findMatchingSpanIds([makeNode(span)], 'match me', logs)
     expect(result).toEqual(new Set())

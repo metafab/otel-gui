@@ -60,7 +60,9 @@ describe('AttributeItem', () => {
         highlightQuery: 'method',
       },
     })
-    const highlighted = Array.from(container.querySelectorAll('.match-segment.is-match')).map((el) => el.textContent)
+    const highlighted = Array.from(
+      container.querySelectorAll('.match-segment.is-match'),
+    ).map((el) => el.textContent)
     expect(highlighted).toEqual(['method'])
   })
 
@@ -74,7 +76,9 @@ describe('AttributeItem', () => {
         highlightQuery: 'ET',
       },
     })
-    const highlighted = Array.from(container.querySelectorAll('.match-segment.is-match')).map((el) => el.textContent)
+    const highlighted = Array.from(
+      container.querySelectorAll('.match-segment.is-match'),
+    ).map((el) => el.textContent)
     expect(highlighted).toEqual(['ET'])
   })
 

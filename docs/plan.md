@@ -114,12 +114,12 @@ v2 focuses on **traces + lightweight correlated logs** for fast local debugging,
 
 These metrics are the acceptance criteria for v2 usability and performance.
 
-| Metric | Definition | v2 Target |
-| --- | --- | --- |
-| Time to root cause | Median time from first trace appearance in UI to identifying likely failing span/service (local debugging task) | **≤ 5 min (p50)** |
-| Setup time | Time from fresh clone to receiving first trace in UI (`pnpm install && pnpm dev` + standard OTLP endpoint) | **≤ 10 min** |
-| Memory footprint | Server RSS (Resident Set Size) while handling the max in-memory window (1,000 traces) in normal interactive use | **≤ 300 MB (p95)** |
-| Startup latency | Time from running `pnpm dev` to OTLP endpoint and UI being usable on localhost | **≤ 5 s (p95)** |
+| Metric             | Definition                                                                                                      | v2 Target          |
+| ------------------ | --------------------------------------------------------------------------------------------------------------- | ------------------ |
+| Time to root cause | Median time from first trace appearance in UI to identifying likely failing span/service (local debugging task) | **≤ 5 min (p50)**  |
+| Setup time         | Time from fresh clone to receiving first trace in UI (`pnpm install && pnpm dev` + standard OTLP endpoint)      | **≤ 10 min**       |
+| Memory footprint   | Server RSS (Resident Set Size) while handling the max in-memory window (1,000 traces) in normal interactive use | **≤ 300 MB (p95)** |
+| Startup latency    | Time from running `pnpm dev` to OTLP endpoint and UI being usable on localhost                                  | **≤ 5 s (p95)**    |
 
 ### Metric Measurement Guardrails
 

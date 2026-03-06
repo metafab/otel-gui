@@ -2,7 +2,10 @@ import { json, error } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import { traceStore } from '$lib/server/traceStore'
 
-function getLogTimestamp(log: { timeUnixNano: string; observedTimeUnixNano: string }): string {
+function getLogTimestamp(log: {
+  timeUnixNano: string
+  observedTimeUnixNano: string
+}): string {
   return log.timeUnixNano || log.observedTimeUnixNano || '0'
 }
 

@@ -346,7 +346,6 @@ Fixtures live in `tests/fixtures/` (simple-trace, multi-service-trace, error-tra
 2. Add E2E coverage for linked-trace navigation from sidebar links
 3. Add E2E coverage for parent-span jump action in sidebar
 
-
 ## v2 Benchmark Checklist
 
 Use this checklist for every release candidate to validate the v2 product contract metrics defined in [docs/plan.md](./plan.md).
@@ -370,34 +369,38 @@ pnpm run benchmark:contract -- --markdown --out tmp/contract-benchmark.md
 
 ### Metric Checklist (Pass/Fail)
 
-| Metric | Target | Measured | Pass |
-| --- | --- | --- | --- |
-| Time to root cause | ≤ 5 min (p50) |  | ☐ |
-| Setup time (fresh clone → first trace in UI) | ≤ 10 min |  | ☐ |
-| Memory footprint (RSS, 1,000 traces, p95) | ≤ 300 MB |  | ☐ |
-| Startup latency (`pnpm dev` → UI + OTLP ready, p95) | ≤ 5 s |  | ☐ |
+| Metric                                              | Target        | Measured | Pass |
+| --------------------------------------------------- | ------------- | -------- | ---- |
+| Time to root cause                                  | ≤ 5 min (p50) |          | ☐    |
+| Setup time (fresh clone → first trace in UI)        | ≤ 10 min      |          | ☐    |
+| Memory footprint (RSS, 1,000 traces, p95)           | ≤ 300 MB      |          | ☐    |
+| Startup latency (`pnpm dev` → UI + OTLP ready, p95) | ≤ 5 s         |          | ☐    |
 
 ### Measurement Protocol
 
 1. **Setup time**
-  - Start from a fresh clone.
-  - Run `pnpm install` then `pnpm dev`.
-  - Send first trace to `POST /v1/traces` and stop timer when it appears in UI.
+
+- Start from a fresh clone.
+- Run `pnpm install` then `pnpm dev`.
+- Send first trace to `POST /v1/traces` and stop timer when it appears in UI.
 
 2. **Startup latency**
-  - Measure from command start (`pnpm dev`) to both conditions true:
-    - `GET /` returns the UI.
-    - `POST /v1/traces` accepts payload and appears in list.
+
+- Measure from command start (`pnpm dev`) to both conditions true:
+  - `GET /` returns the UI.
+  - `POST /v1/traces` accepts payload and appears in list.
 
 3. **Memory footprint**
-  - Ingest enough fixture data to reach 1,000 traces.
-  - Sample process RSS during normal interactions (list filters + trace detail navigation).
-  - Record p95 RSS.
+
+- Ingest enough fixture data to reach 1,000 traces.
+- Sample process RSS during normal interactions (list filters + trace detail navigation).
+- Record p95 RSS.
 
 4. **Time to root cause**
-  - Use a predefined local debugging scenario (known failing span/service).
-  - Start timer when trace first appears in UI.
-  - Stop when tester identifies likely failing span/service and supporting evidence.
+
+- Use a predefined local debugging scenario (known failing span/service).
+- Start timer when trace first appears in UI.
+- Stop when tester identifies likely failing span/service and supporting evidence.
 
 ### Release Note Snippet Template
 
