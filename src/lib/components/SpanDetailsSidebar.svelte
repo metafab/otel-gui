@@ -231,7 +231,7 @@
       .sort((a, b) => {
         const aTs = BigInt(a.timeUnixNano || a.observedTimeUnixNano || '0')
         const bTs = BigInt(b.timeUnixNano || b.observedTimeUnixNano || '0')
-        return aTs > bTs ? -1 : aTs < bTs ? 1 : 0
+        return aTs > bTs ? 1 : aTs < bTs ? -1 : 0
       }),
   )
 
