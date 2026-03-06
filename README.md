@@ -16,7 +16,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Search & filter** — filter trace list by text, service, status, and duration range; search spans inside a trace based on attributes, events, and span name and id
 - **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `m` to toggle service map, escape key to clear search and go back to the trace list, `?` for shortcuts help
 - **Error navigation** — jump between error spans with one key
-- **Span details** — attributes, events with timeline markers, resource attributes, instrumentation scope, span links
+- **Span details** — attributes, events with timeline markers, resource attributes, instrumentation scope, span links, correlated logs
 - **Collapse/expand** — hide subtrees in the waterfall for cleaner viewing
 - **Resizable panels** — drag splitters to resize the waterfall name column and the span details sidebar
 - **Dark mode** — toggle between light and dark themes
