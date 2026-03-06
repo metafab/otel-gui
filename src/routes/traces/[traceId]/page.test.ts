@@ -25,6 +25,8 @@ vi.mock('$app/stores', async () => {
 
 vi.mock('$lib/stores/traces.svelte', () => ({
   traceStore: {
+    connectSSE: vi.fn(),
+    traces: [],
     fetchTrace: mockFetchTrace,
   },
 }))
@@ -86,6 +88,7 @@ describe('traces/[traceId] page search UI', () => {
       serviceName: 'checkout-service',
       startTimeUnixNano: '1000000000',
       endTimeUnixNano: '8000000000',
+      updatedAt: Date.now(),
       spanCount: 2,
       hasError: false,
       spans: {

@@ -194,6 +194,7 @@ describe('resolveRootSpanName', () => {
       serviceName: '',
       startTimeUnixNano: '0',
       endTimeUnixNano: '0',
+      updatedAt: 0,
       spanCount: 0,
       hasError: false,
       spans: new Map(),

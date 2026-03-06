@@ -15,6 +15,9 @@
 
   import type { ServiceMapData, SpanTreeNode, StoredTrace } from '$lib/types'
 
+  // Keep SSE active on detail page so we can detect when this trace changes.
+  traceStore.connectSSE()
+
   // Get trace ID from URL
   const traceId = $derived($page.params.traceId)
   const spanIdFromUrl = $derived($page.url.searchParams.get('spanId'))
@@ -52,6 +55,15 @@
   let spanSearchInputEl = $state<HTMLInputElement | null>(null)
   let showShortcuts = $state(false)
 
+  const liveTraceSummary = $derived(
+    traceStore.traces.find((item) => item.traceId === traceId) || null,
+  )
+  const needsRefresh = $derived(
+    !!trace &&
+      !!liveTraceSummary &&
+      liveTraceSummary.updatedAt > trace.updatedAt,
+  )
+
   function openFullscreen(key: string, formatted: string) {
     fullscreenAttr = { key, value: formatted }
   }
@@ -85,7 +97,6 @@
     spanTree.length > 0 ? Math.max(...spanTree.map((n) => n.depth)) + 1 : 0,
   )
 
-  // Span search matching
   const matchingSpanIds = $derived(
     findMatchingSpanIds(spanTree, spanSearchQuery),
   )
@@ -265,7 +276,11 @@
           spansMap.set(id, span)
           spansArray.push(span)
         }
-        trace = { ...data, spans: spansMap }
+        trace = {
+          ...data,
+          updatedAt: data.updatedAt ?? Date.now(),
+          spans: spansMap,
+        }
         // Build tree and flatten for rendering
         spanTreeRoot = buildSpanTree(spansArray)
         spanTree = flattenSpanTree(spanTreeRoot)
@@ -638,8 +653,12 @@
       <div class="view-controls">
         <button
           class="toggle-button refresh-button"
+          class:refresh-needed={needsRefresh}
+          class:refresh-alert={needsRefresh && !isLoading}
           onclick={handleRefresh}
-          title="Refresh trace to load late-arriving spans"
+          title={needsRefresh
+            ? 'This trace has new data. Refresh to update the timeline.'
+            : 'Refresh trace to load late-arriving spans'}
           disabled={isLoading}
         >
           <svg
@@ -1127,6 +1146,23 @@
     font-variant-numeric: tabular-nums;
   }
 
+  .refresh-button.refresh-needed {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent-ring);
+  }
+
+  .refresh-button.refresh-alert {
+    animation: refreshPulse 1.15s ease-in-out infinite;
+  }
+
+  .refresh-button.refresh-alert:not(:hover) {
+    background: color-mix(in srgb, var(--selected-bg) 55%, var(--bg-surface));
+  }
+
+  .refresh-button.refresh-alert svg {
+    animation: refreshNudge 1.15s ease-in-out infinite;
+  }
+
   .refresh-button svg {
     transform-origin: 50% 50%;
   }
@@ -1141,6 +1177,45 @@
     }
     to {
       transform: rotate(360deg);
+    }
+  }
+
+  @keyframes refreshPulse {
+    0%,
+    100% {
+      box-shadow:
+        inset 0 0 0 1px var(--accent-ring),
+        0 0 0 0 color-mix(in srgb, var(--accent) 30%, transparent);
+    }
+    45% {
+      box-shadow:
+        inset 0 0 0 1px var(--accent-ring),
+        0 0 0 6px color-mix(in srgb, var(--accent) 0%, transparent);
+    }
+    55% {
+      box-shadow:
+        inset 0 0 0 1px var(--accent-ring),
+        0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+    }
+  }
+
+  @keyframes refreshNudge {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.08);
+      opacity: 0.85;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .refresh-button.refresh-alert,
+    .refresh-button.refresh-alert svg,
+    .refresh-button svg.is-spinning {
+      animation: none;
     }
   }
 

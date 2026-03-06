@@ -42,6 +42,7 @@ function ingest(resourceSpans: any[]): void {
       for (const span of spans) {
         const traceId = span.traceId
         if (!traceId) continue
+        const now = Date.now()
 
         // Get or create trace
         let trace = traces.get(traceId)
@@ -52,6 +53,7 @@ function ingest(resourceSpans: any[]): void {
             serviceName,
             startTimeUnixNano: span.startTimeUnixNano,
             endTimeUnixNano: span.endTimeUnixNano,
+            updatedAt: now,
             spanCount: 0,
             hasError: false,
             spans: new Map(),
@@ -100,6 +102,7 @@ function ingest(resourceSpans: any[]): void {
 
         // Add span to trace
         trace.spans.set(span.spanId, storedSpan)
+        trace.updatedAt = now
 
         // Update trace metadata
         trace.spanCount = trace.spans.size
@@ -171,6 +174,7 @@ function getTraceList(limit = 100): TraceListItem[] {
     spanCount: trace.spanCount,
     hasError: trace.hasError,
     startTime: formatTimestamp(trace.startTimeUnixNano),
+    updatedAt: trace.updatedAt,
   }))
 }
 

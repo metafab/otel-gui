@@ -42,6 +42,7 @@ export interface StoredTrace {
   serviceName: string // from resource service.name
   startTimeUnixNano: string // earliest span start
   endTimeUnixNano: string // latest span end
+  updatedAt: number // epoch ms, bumped whenever this trace is modified
   spanCount: number
   hasError: boolean // any span with status.code === 2
   spans: Map<string, StoredSpan>
@@ -55,6 +56,7 @@ export interface TraceListItem {
   spanCount: number
   hasError: boolean
   startTime: string // ISO timestamp for display
+  updatedAt: number // epoch ms, copied from StoredTrace
 }
 
 // Service map types
