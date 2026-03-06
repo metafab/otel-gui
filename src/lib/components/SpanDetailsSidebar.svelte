@@ -342,7 +342,7 @@
           <div class="link-field">
             <span class="link-label">Trace ID:</span>
             <a
-              href="/trace/{link.traceId}"
+              href="/traces/{link.traceId}"
               class="link-value mono link-anchor"
               title="Open linked trace"
             >
@@ -352,7 +352,7 @@
           <div class="link-field">
             <span class="link-label">Span ID:</span>
             <a
-              href="/trace/{link.traceId}?spanId={link.spanId}"
+              href="/traces/{link.traceId}?spanId={link.spanId}"
               class="link-value mono link-anchor"
               title="Open linked trace and select span"
             >

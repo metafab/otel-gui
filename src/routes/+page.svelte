@@ -112,7 +112,7 @@
   }
 
   function handleRowClick(traceId: string) {
-    window.location.href = `/trace/${traceId}`
+    window.location.href = `/traces/${traceId}`
   }
 
   async function handleClearAll() {

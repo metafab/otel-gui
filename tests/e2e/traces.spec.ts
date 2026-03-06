@@ -164,7 +164,7 @@ test.describe('Trace ingestion flow', () => {
 
     await traceRow.click()
 
-    expect(page.url()).toContain('/trace/5B8EFFF798038103D269B633813FC60C')
+    expect(page.url()).toContain('/traces/5B8EFFF798038103D269B633813FC60C')
     await expect(
       page.getByRole('button', { name: /Back to Traces/i }),
     ).toBeVisible()
@@ -222,7 +222,7 @@ test.describe('Trace ingestion flow', () => {
       data: simpleTrace,
     })
 
-    await page.goto('/trace/5B8EFFF798038103D269B633813FC60C')
+    await page.goto('/traces/5B8EFFF798038103D269B633813FC60C')
 
     await expect(page.getByRole('heading', { name: 'Timeline' })).toBeVisible()
 
@@ -245,7 +245,7 @@ test.describe('Trace ingestion flow', () => {
       data: multiServiceTrace,
     })
 
-    await page.goto('/trace/AAAABBBBCCCCDDDD0000111122223333')
+    await page.goto('/traces/AAAABBBBCCCCDDDD0000111122223333')
 
     const miniMapToggle = page
       .getByRole('button', { name: /Service Map/i })
@@ -271,7 +271,7 @@ test.describe('Trace ingestion flow', () => {
       data: multiServiceTrace,
     })
 
-    await page.goto('/trace/AAAABBBBCCCCDDDD0000111122223333')
+    await page.goto('/traces/AAAABBBBCCCCDDDD0000111122223333')
 
     const miniMapToggle = page
       .getByRole('button', { name: /Service Map/i })
@@ -295,7 +295,7 @@ test.describe('Trace ingestion flow', () => {
       data: errorNavigationTrace,
     })
 
-    await page.goto('/trace/ERRNAV000000000000000000000001')
+    await page.goto('/traces/ERRNAV000000000000000000000001')
 
     await expect(page.getByText('Spans with errors: 2')).toBeVisible()
     const errorPosition = page.locator('.position-indicator').first()
@@ -320,7 +320,7 @@ test.describe('Trace ingestion flow', () => {
       data: multiServiceTrace,
     })
 
-    await page.goto('/trace/AAAABBBBCCCCDDDD0000111122223333')
+    await page.goto('/traces/AAAABBBBCCCCDDDD0000111122223333')
 
     const spanTree = page.getByRole('tree', { name: 'Span tree' })
     const rows = page.locator('.waterfall-row')
@@ -361,7 +361,7 @@ test.describe('Trace ingestion flow', () => {
       data: sidebarSectionsTrace,
     })
 
-    await page.goto('/trace/SIDEBAR000000000000000000000001')
+    await page.goto('/traces/SIDEBAR000000000000000000000001')
 
     await expect(
       page.getByRole('heading', { name: 'Span Details' }),
@@ -375,7 +375,7 @@ test.describe('Trace ingestion flow', () => {
     const traceLink = page.locator('a.link-anchor').first()
     await expect(traceLink).toHaveAttribute(
       'href',
-      '/trace/LINKTRACE000000000000000000001',
+      '/traces/LINKTRACE000000000000000000001',
     )
 
     const attributeFilter = page.locator('#attribute-filter')
@@ -403,7 +403,7 @@ test.describe('Trace ingestion flow', () => {
         data: multiServiceTrace,
       })
 
-      await page.goto('/trace/AAAABBBBCCCCDDDD0000111122223333')
+      await page.goto('/traces/AAAABBBBCCCCDDDD0000111122223333')
 
       const rows = page.locator('.waterfall-row')
       await expect(rows).toHaveCount(3)
@@ -444,7 +444,7 @@ test.describe('Trace ingestion flow', () => {
         data: multiServiceTrace,
       })
 
-      await page.goto('/trace/AAAABBBBCCCCDDDD0000111122223333')
+      await page.goto('/traces/AAAABBBBCCCCDDDD0000111122223333')
 
       const selectedRow = page.locator('.waterfall-row.selected').first()
       await expect(selectedRow).toHaveCount(1)
@@ -474,7 +474,7 @@ test.describe('Trace ingestion flow', () => {
         data: multiServiceTrace,
       })
 
-      await page.goto('/trace/AAAABBBBCCCCDDDD0000111122223333')
+      await page.goto('/traces/AAAABBBBCCCCDDDD0000111122223333')
 
       const spanSearch = page.locator('#span-search')
       await spanSearch.fill('processCheckout')
@@ -510,7 +510,7 @@ test.describe('Trace ingestion flow', () => {
         data: errorNavigationTrace,
       })
 
-      await page.goto('/trace/ERRNAV000000000000000000000001')
+      await page.goto('/traces/ERRNAV000000000000000000000001')
 
       const errorRow = page
         .locator('.waterfall-row', { hasText: 'validateCart' })

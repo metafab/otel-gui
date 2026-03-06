@@ -18,7 +18,7 @@ vi.mock('$app/stores', async () => {
   return {
     page: readable({
       params: { traceId: 'trace-nested' },
-      url: new URL('http://localhost/trace/trace-nested'),
+      url: new URL('http://localhost/traces/trace-nested'),
     }),
   }
 })
@@ -52,7 +52,7 @@ function makeSpan(overrides: Partial<StoredSpan> = {}): StoredSpan {
   }
 }
 
-describe('trace/[traceId] page search UI', () => {
+describe('traces/[traceId] page search UI', () => {
   beforeEach(() => {
     const rootSpan = makeSpan({
       spanId: 'root-span',
