@@ -11,6 +11,7 @@ let traces = $state.raw<TraceListItem[]>([])
 let selectedId = $state<string | null>(null)
 let isLoading = $state<boolean>(false)
 let error = $state<string | null>(null)
+let maxTraces = $state<number>(1000)
 
 // Derived state
 const selected = $derived(traces.find((t) => t.traceId === selectedId) || null)
@@ -18,6 +19,13 @@ const selected = $derived(traces.find((t) => t.traceId === selectedId) || null)
 // Connect to SSE stream — receives trace list pushes in real-time
 function connectSSE() {
   $effect(() => {
+    // Fetch server config once on mount
+    fetch('/api/config')
+      .then((r) => r.json())
+      .then((cfg) => {
+        if (typeof cfg.maxTraces === 'number') maxTraces = cfg.maxTraces
+      })
+      .catch(() => {}) // non-critical, keep default
     const es = new EventSource('/api/traces/stream')
 
     es.addEventListener('traces', (event: MessageEvent) => {
@@ -150,6 +158,9 @@ export const traceStore = {
   },
   get error() {
     return error
+  },
+  get maxTraces() {
+    return maxTraces
   },
   fetchTrace,
   fetchTraceLogs,

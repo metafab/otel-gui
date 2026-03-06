@@ -10,12 +10,26 @@ import type {
 import { extractAnyValue, flattenAttributes } from '$lib/utils/attributes'
 import { formatTimestamp, getDurationMs } from '$lib/utils/time'
 import { buildServiceMap } from '$lib/server/serviceMap'
+import { env } from '$env/dynamic/private'
 
 // In-memory storage (persists across requests with adapter-node)
 const traces = new Map<string, StoredTrace>()
 const listeners = new Set<() => void>()
 
-const MAX_TRACES = 1000 // Maximum traces to keep in memory
+function resolveMaxTraces(): number {
+  const raw = env.OTEL_GUI_MAX_TRACES
+  if (raw === undefined || raw === '') return 1000
+  const parsed = Number.parseInt(raw, 10)
+  if (Number.isNaN(parsed) || parsed < 1 || parsed > 10_000) {
+    console.warn(
+      `[otel-gui] Invalid OTEL_GUI_MAX_TRACES="${raw}". Must be an integer between 1 and 10000. Falling back to 1000.`,
+    )
+    return 1000
+  }
+  return parsed
+}
+
+const MAX_TRACES = resolveMaxTraces()
 
 function notifyListeners() {
   for (const listener of listeners) {
@@ -344,4 +358,7 @@ export const traceStore: TraceStore = {
   getServiceMap,
   clear,
   subscribe,
+  get maxTraces() {
+    return MAX_TRACES
+  },
 }

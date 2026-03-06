@@ -127,6 +127,7 @@ export interface TraceStore {
   getServiceMap(traceId?: string): ServiceMapData
   clear(): void
   subscribe(fn: () => void): () => void
+  readonly maxTraces: number
 }
 
 // Span tree node for waterfall rendering

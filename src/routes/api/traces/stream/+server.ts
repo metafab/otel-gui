@@ -19,7 +19,7 @@ export const GET: RequestHandler = async () => {
   const stream = new ReadableStream({
     start(controller) {
       // Send current state immediately on connect
-      const initial = JSON.stringify(traceStore.getTraceList(1000))
+      const initial = JSON.stringify(traceStore.getTraceList(traceStore.maxTraces))
       controller.enqueue(encoder.encode(`event: traces\ndata: ${initial}\n\n`))
 
       // Debounce rapid-fire ingestion (batched exports can arrive all at once)
@@ -28,7 +28,7 @@ export const GET: RequestHandler = async () => {
         if (debounceTimer !== null) clearTimeout(debounceTimer)
         debounceTimer = setTimeout(() => {
           try {
-            const data = JSON.stringify(traceStore.getTraceList(1000))
+            const data = JSON.stringify(traceStore.getTraceList(traceStore.maxTraces))
             controller.enqueue(
               encoder.encode(`event: traces\ndata: ${data}\n\n`),
             )

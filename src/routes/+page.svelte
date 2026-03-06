@@ -14,6 +14,7 @@
   const traces = $derived(traceStore.traces)
   const error = $derived(traceStore.error)
   const isLoading = $derived(traceStore.isLoading)
+  const maxTraces = $derived(traceStore.maxTraces)
 
   // Tab navigation
   let activeTab = $state<'traces' | 'map'>('traces')
@@ -277,6 +278,13 @@
             </tbody>
           </table>
         </div>
+        <p class="retention-notice">
+          Keeping last
+          <span
+            class="retention-limit"
+            title="Set OTEL_GUI_MAX_TRACES=<number> (1–10 000) and restart to change this limit."
+          >{maxTraces}</span> traces
+        </p>
       {/if}
     {/if}
   {:else}
@@ -453,7 +461,21 @@
     overflow-y: auto;
     flex: 1;
     min-height: 0;
-    margin-bottom: 1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .retention-notice {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: right;
+    margin: 0.25rem 0 0.75rem;
+  }
+
+  .retention-limit {
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
+    cursor: help;
   }
 
   table {

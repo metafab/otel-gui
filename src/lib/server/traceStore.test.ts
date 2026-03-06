@@ -169,8 +169,9 @@ describe('traceStore.getTrace', () => {
 
 describe('traceStore eviction', () => {
   it('evicts oldest traces when limit exceeded', () => {
-    // Insert 1001 unique traces
-    for (let i = 0; i < 1001; i++) {
+    const limit = traceStore.maxTraces
+    // Insert limit + 1 unique traces
+    for (let i = 0; i < limit + 1; i++) {
       const traceId = `TRACE${i.toString().padStart(28, '0')}`
       traceStore.ingest([
         {
@@ -200,8 +201,7 @@ describe('traceStore eviction', () => {
         },
       ])
     }
-    // Total should be capped at 1000
-    expect(traceStore.getTraceList(2000)).toHaveLength(1000)
+    expect(traceStore.getTraceList(limit + 1)).toHaveLength(limit)
   })
 })
 
@@ -272,5 +272,18 @@ describe('traceStore.subscribe', () => {
     traceStore.clear()
     unsub()
     expect(callCount).toBe(1)
+  })
+})
+
+// ─── maxTraces ───────────────────────────────────────────────────────────────
+
+describe('traceStore.maxTraces', () => {
+  it('returns a positive integer', () => {
+    expect(traceStore.maxTraces).toBeGreaterThan(0)
+    expect(Number.isInteger(traceStore.maxTraces)).toBe(true)
+  })
+
+  it('defaults to 1000 when OTEL_GUI_MAX_TRACES is not set', () => {
+    expect(traceStore.maxTraces).toBe(1000)
   })
 })

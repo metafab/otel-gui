@@ -127,7 +127,7 @@ Shortcuts implemented:
 2. **adapter-node required** — In-memory `Map` must persist across requests
 3. **Protobuf and JSON supported** — Both `application/json` and `application/x-protobuf` content types accepted
 4. **No gzip yet** — Request body decompression deferred to v2
-5. **Max 1000 traces** — FIFO eviction to prevent memory leaks
+5. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1–10 000, default 1000). FIFO eviction. Read via `$env/dynamic/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000.
 
 ## Reference Files
 

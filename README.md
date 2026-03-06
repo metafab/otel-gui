@@ -21,7 +21,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Resizable panels** — drag splitters to resize the waterfall name column and the span details sidebar
 - **Dark mode** — toggle between light and dark themes
 - **Incremental ingestion** — spans from the same trace can arrive in separate requests and out of order; the store merges them correctly
-- **In-memory, no persistence** — stores up to 1 000 traces in memory (FIFO eviction), nothing written to disk
+- **In-memory, no persistence** — stores up to 1000 traces by default (configurable, FIFO eviction), nothing written to disk
 
 ## 📸 Screenshots
 
@@ -192,6 +192,20 @@ curl -X POST http://localhost:4318/v1/traces \
 
 See [SAMPLE_TRACES.md](./samples/SAMPLE_TRACES.md) for a full feature exploration guide.
 
+## ⚙️ Configuration
+
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `PORT` | `4318` | HTTP port the server listens on |
+| `OTEL_GUI_MAX_TRACES` | `1000` | Maximum number of traces kept in memory (1–10 000). Oldest traces are evicted first when the limit is reached. Requires a restart. |
+
+Copy [`.env.example`](./.env.example) to `.env` to customize:
+
+```sh
+cp .env.example .env
+# then edit .env
+```
+
 ## 🏗️ Building
 
 ```sh
@@ -228,7 +242,7 @@ GET  /api/traces/stream  ← SSE stream (real-time push)
 GET  /api/service-map    ← aggregated service graph
 ```
 
-Server-only state lives in `src/lib/server/traceStore.ts` — a `Map<traceId, StoredTrace>` with FIFO eviction at 1 000 entries. SSE subscribers are notified on every write and receive a debounced `event: traces` message.
+Server-only state lives in `src/lib/server/traceStore.ts` — a `Map<traceId, StoredTrace>` with FIFO eviction. The retention limit defaults to 1000 traces and is configurable via `OTEL_GUI_MAX_TRACES`. SSE subscribers are notified on every write and receive a debounced `event: traces` message.
 
 ## 💠 Tech Stack
 

@@ -9,6 +9,7 @@ import { GET as getTraceLogs } from './api/traces/[traceId]/logs/+server'
 import { GET as getTraceLog } from './api/traces/[traceId]/logs/[logId]/+server'
 import { GET as getServiceMap } from './api/service-map/+server'
 import { GET as getMetrics } from './metrics/+server'
+import { GET as getConfig } from './api/config/+server'
 import { POST as postOtlpMetrics } from './v1/metrics/+server'
 import { POST as postOtlpLogs } from './v1/logs/+server'
 import { traceStore } from '$lib/server/traceStore'
@@ -552,5 +553,24 @@ describe('Unimplemented endpoints', () => {
 
     const body = await response.json()
     expect(body.error).toMatch(/not implemented/i)
+  })
+})
+
+// ─── GET /api/config ─────────────────────────────────────────────────────────
+
+describe('GET /api/config', () => {
+  it('returns maxTraces as a positive integer', async () => {
+    const response = await getConfig({} as any)
+    expect(response.status).toBe(200)
+
+    const body = await response.json()
+    expect(typeof body.maxTraces).toBe('number')
+    expect(body.maxTraces).toBeGreaterThan(0)
+  })
+
+  it('returns the default of 1000 when no env var is set', async () => {
+    const response = await getConfig({} as any)
+    const { maxTraces } = await response.json()
+    expect(maxTraces).toBe(1000)
   })
 })
