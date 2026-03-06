@@ -374,7 +374,7 @@ describe('SpanDetailsSidebar', () => {
     expect(screen.getByText('cache miss')).toBeInTheDocument()
   })
 
-  it('calls onSelectLog when jumping to a log record', async () => {
+  it('calls onSelectLog when selecting a log record in the current span', async () => {
     const onSelectLog = vi.fn()
     render(SpanDetailsSidebar, {
       props: {
@@ -384,7 +384,7 @@ describe('SpanDetailsSidebar', () => {
       },
     })
 
-    await fireEvent.click(screen.getByTitle('Jump to log record'))
+    await fireEvent.click(screen.getByTitle('Select log record'))
     expect(onSelectLog).toHaveBeenCalledWith('log-001', 'span-001')
   })
 
@@ -399,6 +399,7 @@ describe('SpanDetailsSidebar', () => {
     })
 
     await fireEvent.click(screen.getByLabelText('Current span only'))
+    expect(screen.getByTitle('Jump to log record')).toBeInTheDocument()
     await fireEvent.click(screen.getByTitle('Jump to related span'))
     expect(onSelectSpan).toHaveBeenCalledWith('span-other')
   })

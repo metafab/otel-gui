@@ -541,9 +541,11 @@
                 <button
                   class="log-action"
                   onclick={() => onSelectLog?.(log.id, log.spanId || undefined)}
-                  title="Jump to log record"
+                  title={log.spanId === span.spanId
+                    ? 'Select log record'
+                    : 'Jump to log record'}
                 >
-                  Jump to log
+                  {log.spanId === span.spanId ? 'Select log' : 'Jump to log'}
                 </button>
                 {#if log.spanId && log.spanId !== span.spanId}
                   <button
