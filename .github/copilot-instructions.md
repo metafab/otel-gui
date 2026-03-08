@@ -11,11 +11,11 @@ pnpm run test       # Run unit tests (Vitest)
 pnpm run test:watch # Tests in watch mode
 ```
 
-**Required**: `pnpm` (not npm/yarn), `@sveltejs/adapter-node` (persistent in-memory state)
+**Required**: `pnpm` (not npm/yarn), Node.js 20+, `@sveltejs/adapter-node` (persistent server process state)
 
 ## Architecture
 
-- **Routes**: `/v1/traces` (OTLP receiver), `/api/traces` (frontend API), `/api/service-map` (service graph)
+- **Routes**: `/v1/traces` + `/v1/logs` (OTLP receivers), `/api/traces` (frontend API), `/api/service-map` (service graph), `/api/config` (runtime config + persistence status)
 - **Server-only code**: `$lib/server/` — never bundled for client
 - **Utilities**: `$lib/utils/` — shared helpers for OTLP data transformation
 - **Types**: `$lib/types.ts` — all interfaces (use `import type`)
@@ -47,7 +47,29 @@ Use `flattenAttributes()` from [attributes.ts](src/lib/utils/attributes.ts) — 
 
 **Scope attributes**: `InstrumentationScope.attributes` are flattened and stored as `scopeAttributes` on each `StoredSpan` (alongside `scopeName` and `scopeVersion`). The span detail sidebar shows them in a collapsible **Scope** section below Attributes.
 
-**Span merging**: Traces arrive incrementally across multiple POST requests. Store merges spans by `traceId`, handles out-of-order root spans. See [traceStore.ts](src/lib/server/traceStore.ts#L40-L125).
+**Span merging**: Traces arrive incrementally across multiple POST requests. Store merges spans by `traceId`, handles out-of-order root spans. The merge logic lives in [core.ts](src/lib/server/traceStore/core.ts) and is used by swappable backends.
+
+## Optional Persistence (PGlite)
+
+`traceStore` now supports pluggable backends:
+
+- `memory` (default, OSS built-in)
+- `pglite` (optional, typically provided by an external enterprise module)
+
+Environment variables used by the bootstrap layer in `traceStore.ts`:
+
+- `OTEL_GUI_PERSISTENCE_MODE`: `memory` or `pglite` (invalid values warn and fall back to `memory`)
+- `OTEL_GUI_PERSISTENCE_PATH`: local PGlite data path (default `.otel-gui/pglite`)
+- `OTEL_GUI_PERSISTENCE_FLUSH_MS`: flush debounce in ms (50-60000, default `750`)
+- `OTEL_GUI_PERSISTENCE_BACKEND_MODULE`: optional module id/path dynamically imported to register extra backends
+
+The runtime exposes persistence status via `getPersistenceStatus()` and `GET /api/config`:
+
+- `mode`, `enabled`, `backend`, `path`, `flushMs`
+- `lastRestoreAt`, `restoredTraceCount`, `pendingFlushCount`
+- `unavailableReason` when `pglite` is requested but unavailable or failed
+
+External backend interop detail: before dynamically importing backend modules, OSS hydrates selected license-related env vars from `$env/dynamic/private` into `process.env` (`OTEL_GUI_LICENSE_*`) so external modules reading `process.env` still work.
 
 ## Svelte 5 Runes (Planned)
 
@@ -127,11 +149,16 @@ Shortcuts implemented:
 2. **adapter-node required** — In-memory `Map` must persist across requests
 3. **Protobuf and JSON supported** — Both `application/json` and `application/x-protobuf` content types accepted
 4. **No gzip yet** — Request body decompression deferred to v2
-5. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1–10 000, default 1000). FIFO eviction. Read via `$env/dynamic/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000.
+5. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1-10 000, default 1000). FIFO eviction. Read via `$env/dynamic/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000.
+6. **Persistence is optional** — OSS always has `memory`; `pglite` requires a registered backend (usually via `OTEL_GUI_PERSISTENCE_BACKEND_MODULE`). If unavailable, runtime falls back to memory with `persistence.unavailableReason` in `GET /api/config`.
 
 ## Reference Files
 
-- [traceStore.ts](src/lib/server/traceStore.ts) — Ingestion, span merging, eviction, SSE subscriber notifications, `getServiceMap()`
+- [traceStore.ts](src/lib/server/traceStore.ts) — Trace store bootstrap: env parsing, optional backend module loading, fallback policy, `getPersistenceStatus()`
+- [backends.ts](src/lib/server/traceStore/backends.ts) — Backend registry (`memory` built-in) and persistence status contracts
+- [core.ts](src/lib/server/traceStore/core.ts) — Shared trace/log ingestion, span merging, eviction, and service-map aggregation logic
+- [memoryTraceStore.ts](src/lib/server/traceStore/memoryTraceStore.ts) — Default in-memory backend implementation
+- [moduleImport.ts](src/lib/server/traceStore/moduleImport.ts) — Dynamic import target resolution for external backend modules
 - [protobuf.ts](src/lib/server/protobuf.ts) — Protobuf decoder for OTLP traces
 - [attributes.ts](src/lib/utils/attributes.ts) — OTLP AnyValue extraction
 - [time.ts](src/lib/utils/time.ts) — BigInt nanosecond formatting
@@ -142,13 +169,15 @@ Shortcuts implemented:
 - [types.ts](src/lib/types.ts) — Complete OTLP data model + `ServiceMapNode`, `ServiceMapEdge`, `ServiceMapData`
 - [stream/+server.ts](src/routes/api/traces/stream/+server.ts) — SSE endpoint (debounced, heartbeat)
 - [service-map/+server.ts](src/routes/api/service-map/+server.ts) — `GET /api/service-map?traceId=` endpoint
+- [config/+server.ts](src/routes/api/config/+server.ts) — `GET /api/config` endpoint (`maxTraces` + persistence status)
+- [enterprise-persistence-module.md](docs/enterprise-persistence-module.md) — External backend registration contract for optional persistence modules
 - [docs/research.md](docs/research.md) — OTLP protocol details, data model, Honeycomb UI reference, gotchas
 - [docs/plan.md](docs/plan.md) — Full implementation plan (16 steps), architecture diagram, deferred v2 features
 - [docs/testing.md](docs/testing.md) — Testing strategy, priority test cases, sample test data
 
 ## Implementation Philosophy
 
-Deliberately minimal: no UI libraries, no OTLP libraries, no database. Clean upgrade path via swappable interfaces (`TraceStore` for future SQLite). Real-time updates use SSE (`GET /api/traces/stream`) — `traceStore.subscribe()` notifies the stream handler, which debounces and pushes `event: traces` to the client.
+Deliberately minimal in OSS runtime: no UI libraries and no OTLP libraries. Default storage is in-memory; optional durable storage can be plugged in via external backends (for example enterprise `pglite`). Real-time updates use SSE (`GET /api/traces/stream`) — `traceStore.subscribe()` notifies the stream handler, which debounces and pushes `event: traces` to the client.
 
 ## Service Map
 
