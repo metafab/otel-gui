@@ -573,4 +573,18 @@ describe('GET /api/config', () => {
     const { maxTraces } = await response.json()
     expect(maxTraces).toBe(1000)
   })
+
+  it('includes persistence mode metadata', async () => {
+    const response = await getConfig({} as any)
+    const body = await response.json()
+
+    expect(body.persistence).toBeDefined()
+    expect(['memory', 'pglite']).toContain(body.persistence.mode)
+    expect(typeof body.persistence.enabled).toBe('boolean')
+    expect(typeof body.persistence.restoredTraceCount).toBe('number')
+    expect(typeof body.persistence.pendingFlushCount).toBe('number')
+    if (body.persistence.unavailableReason != null) {
+      expect(typeof body.persistence.unavailableReason).toBe('string')
+    }
+  })
 })

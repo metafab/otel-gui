@@ -6,12 +6,33 @@ import type {
   TraceLogDetail,
 } from '$lib/types'
 
+interface PersistenceConfig {
+  mode: 'memory' | 'pglite'
+  enabled: boolean
+  backend: 'pglite' | null
+  path: string | null
+  flushMs: number | null
+  lastRestoreAt: string | null
+  restoredTraceCount: number
+  pendingFlushCount: number
+}
+
 // State management
 let traces = $state.raw<TraceListItem[]>([])
 let selectedId = $state<string | null>(null)
 let isLoading = $state<boolean>(false)
 let error = $state<string | null>(null)
 let maxTraces = $state<number>(1000)
+let persistence = $state<PersistenceConfig>({
+  mode: 'memory',
+  enabled: false,
+  backend: null,
+  path: null,
+  flushMs: null,
+  lastRestoreAt: null,
+  restoredTraceCount: 0,
+  pendingFlushCount: 0,
+})
 
 // Derived state
 const selected = $derived(traces.find((t) => t.traceId === selectedId) || null)
@@ -24,6 +45,33 @@ function connectSSE() {
       .then((r) => r.json())
       .then((cfg) => {
         if (typeof cfg.maxTraces === 'number') maxTraces = cfg.maxTraces
+        if (cfg.persistence && typeof cfg.persistence === 'object') {
+          persistence = {
+            mode: cfg.persistence.mode === 'pglite' ? 'pglite' : 'memory',
+            enabled: cfg.persistence.enabled === true,
+            backend: cfg.persistence.backend === 'pglite' ? 'pglite' : null,
+            path:
+              typeof cfg.persistence.path === 'string'
+                ? cfg.persistence.path
+                : null,
+            flushMs:
+              typeof cfg.persistence.flushMs === 'number'
+                ? cfg.persistence.flushMs
+                : null,
+            lastRestoreAt:
+              typeof cfg.persistence.lastRestoreAt === 'string'
+                ? cfg.persistence.lastRestoreAt
+                : null,
+            restoredTraceCount:
+              typeof cfg.persistence.restoredTraceCount === 'number'
+                ? cfg.persistence.restoredTraceCount
+                : 0,
+            pendingFlushCount:
+              typeof cfg.persistence.pendingFlushCount === 'number'
+                ? cfg.persistence.pendingFlushCount
+                : 0,
+          }
+        }
       })
       .catch(() => {}) // non-critical, keep default
     const es = new EventSource('/api/traces/stream')
@@ -161,6 +209,9 @@ export const traceStore = {
   },
   get maxTraces() {
     return maxTraces
+  },
+  get persistence() {
+    return persistence
   },
   fetchTrace,
   fetchTraceLogs,

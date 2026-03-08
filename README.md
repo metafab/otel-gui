@@ -21,7 +21,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Resizable panels** — drag splitters to resize the waterfall name column and the span details sidebar
 - **Dark mode** — toggle between light and dark themes
 - **Incremental ingestion** — spans from the same trace can arrive in separate requests and out of order; the store merges them correctly
-- **In-memory, no persistence** — stores up to 1000 traces by default (configurable, FIFO eviction), nothing written to disk
+- **In-memory with optional local persistence** — default is in-memory only; opt into PGlite-backed restart recovery with bounded retention
 
 ## 📸 Screenshots
 
@@ -194,10 +194,16 @@ See [SAMPLE_TRACES.md](./samples/SAMPLE_TRACES.md) for a full feature exploratio
 
 ## ⚙️ Configuration
 
-| Variable | Default | Description |
-| -------- | ------- | ----------- |
-| `PORT` | `4318` | HTTP port the server listens on |
-| `OTEL_GUI_MAX_TRACES` | `1000` | Maximum number of traces kept in memory (1–10 000). Oldest traces are evicted first when the limit is reached. Requires a restart. |
+| Variable                              | Default            | Description                                                                                                                                                                                                                                                                     |
+| ------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                                | `4318`             | HTTP port the server listens on                                                                                                                                                                                                                                                 |
+| `OTEL_GUI_MAX_TRACES`                 | `1000`             | Maximum number of traces kept in memory (1–10 000). Oldest traces are evicted first when the limit is reached. Requires a restart.                                                                                                                                              |
+| `OTEL_GUI_PERSISTENCE_MODE`           | `memory`           | Persistence backend mode. Use `memory` (default, no disk writes) or `pglite` (requires an external backend module, typically enterprise).                                                                                                                                       |
+| `OTEL_GUI_PERSISTENCE_PATH`           | `.otel-gui/pglite` | Directory path for local PGlite data when persistence mode is `pglite`.                                                                                                                                                                                                         |
+| `OTEL_GUI_PERSISTENCE_FLUSH_MS`       | `750`              | Debounce interval for batched persistence flushes in milliseconds (50–60000).                                                                                                                                                                                                   |
+| `OTEL_GUI_PERSISTENCE_BACKEND_MODULE` | _(empty)_          | Optional module id/path dynamically loaded at startup to register persistence backends. Relative file paths resolve from the `otel-gui` project root (examples: `@otel-gui/enterprise-persistence/register`, `../otel-gui-enterprise/enterprise-persistence/dist/register.js`). |
+| `OTEL_GUI_LICENSE_KEY`                | _(empty)_          | Optional enterprise license key consumed by private persistence backend modules.                                                                                                                                                                                                |
+| `OTEL_GUI_LICENSE_PUBLIC_KEY_PATH`    | _(empty)_          | Optional filesystem path to the PEM-encoded public key used by enterprise modules for offline license verification.                                                                                                                                                             |
 
 Copy [`.env.example`](./.env.example) to `.env` to customize:
 
@@ -205,6 +211,10 @@ Copy [`.env.example`](./.env.example) to `.env` to customize:
 cp .env.example .env
 # then edit .env
 ```
+
+For external backend registration details, see [`docs/enterprise-persistence-module.md`](./docs/enterprise-persistence-module.md).
+
+When `OTEL_GUI_PERSISTENCE_MODE=pglite` falls back to memory, check `GET /api/config` -> `persistence.unavailableReason` for a precise cause.
 
 ## 🏗️ Building
 
@@ -242,7 +252,11 @@ GET  /api/traces/stream  ← SSE stream (real-time push)
 GET  /api/service-map    ← aggregated service graph
 ```
 
-Server-only state lives in `src/lib/server/traceStore.ts` — a `Map<traceId, StoredTrace>` with FIFO eviction. The retention limit defaults to 1000 traces and is configurable via `OTEL_GUI_MAX_TRACES`. SSE subscribers are notified on every write and receive a debounced `event: traces` message.
+Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limit defaults to 1000 traces and is configurable via `OTEL_GUI_MAX_TRACES`.
+<br />
+SSE subscribers are notified on every write and receive a debounced `event: traces` message.
+<br />
+Additional persistence backends (including `pglite`) are loaded via `OTEL_GUI_PERSISTENCE_BACKEND_MODULE` and can be distributed separately (for example in an enterprise package).
 
 ## 💠 Tech Stack
 

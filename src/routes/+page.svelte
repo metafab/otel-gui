@@ -15,6 +15,7 @@
   const error = $derived(traceStore.error)
   const isLoading = $derived(traceStore.isLoading)
   const maxTraces = $derived(traceStore.maxTraces)
+  const persistence = $derived(traceStore.persistence)
 
   // Tab navigation
   let activeTab = $state<'traces' | 'map'>('traces')
@@ -283,7 +284,32 @@
           <span
             class="retention-limit"
             title="Set OTEL_GUI_MAX_TRACES=<number> (1–10 000) and restart to change this limit."
-          >{maxTraces}</span> traces
+            >{maxTraces}</span
+          >
+          traces
+          {#if persistence.enabled}
+            <span
+              class="persistence-mode"
+              title={persistence.path || undefined}
+            >
+              persisted via PGlite</span
+            >
+          {:else}
+            <span
+              class="persistence-mode persistence-mode--memory"
+              title="Optional persistence can be activated — see documentation"
+            >
+              in memory only
+              <a
+                href="https://github.com/metafab/otel-gui#%EF%B8%8F-configuration"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="persistence-docs-link"
+                title="View persistence configuration docs"
+                aria-label="Persistence documentation">?</a
+              >
+            </span>
+          {/if}
         </p>
       {/if}
     {/if}
@@ -476,6 +502,35 @@
     text-decoration-style: dotted;
     text-underline-offset: 2px;
     cursor: help;
+  }
+
+  .persistence-mode {
+    color: var(--text-secondary);
+  }
+
+  .persistence-docs-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin-left: 4px;
+    border-radius: 50%;
+    border: 1px solid var(--text-secondary);
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: bold;
+    line-height: 1;
+    text-decoration: none;
+    vertical-align: middle;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+  }
+
+  .persistence-docs-link:hover {
+    opacity: 1;
+    color: var(--accent, #3b82f6);
+    border-color: var(--accent, #3b82f6);
   }
 
   table {
