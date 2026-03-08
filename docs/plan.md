@@ -129,6 +129,14 @@ These metrics are the acceptance criteria for v2 usability and performance.
 
 ## Maybe Later
 
+### Docker Hub Mirroring
+
+Optional Docker Hub mirroring is available via GitHub Actions and is disabled by default. To enable it, set these repository secrets:
+
+- `DOCKERHUB_USERNAME`
+- `DOCKERHUB_TOKEN`
+- `DOCKERHUB_REPOSITORY` (for example, `metafab/otel-gui`)
+
 ### Trace Summary (`TraceSummary.svelte`)
 
 - Collapsible via caret toggle

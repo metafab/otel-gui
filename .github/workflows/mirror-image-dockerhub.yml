@@ -1,0 +1,100 @@
+name: Mirror Image to Docker Hub
+
+on:
+  workflow_run:
+    workflows: ['Publish Container Image']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: mirror-image-${{ github.event.workflow_run.head_branch || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mirror:
+    name: Mirror GHCR Image to Docker Hub
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Check mirror configuration
+        id: mirror_config
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${DOCKERHUB_USERNAME}" && -n "${DOCKERHUB_TOKEN}" && -n "${DOCKERHUB_REPOSITORY}" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Docker Hub mirror skipped: set DOCKERHUB_USERNAME, DOCKERHUB_TOKEN, and DOCKERHUB_REPOSITORY to enable it."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.mirror_config.outputs.enabled == 'true'
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: docker/setup-qemu-action@v3
+        if: steps.mirror_config.outputs.enabled == 'true'
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.mirror_config.outputs.enabled == 'true'
+
+      - uses: docker/login-action@v3
+        if: steps.mirror_config.outputs.enabled == 'true'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Compute Docker Hub tags
+        id: tags
+        if: steps.mirror_config.outputs.enabled == 'true'
+        env:
+          REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
+          SOURCE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          SOURCE_BRANCH: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          git fetch --force --tags origin
+
+          declare -a image_tags
+          image_tags+=("${REPOSITORY}:sha-${SOURCE_SHA}")
+
+          if [[ -n "${SOURCE_BRANCH}" ]]; then
+            safe_branch="${SOURCE_BRANCH//\//-}"
+            image_tags+=("${REPOSITORY}:${safe_branch}")
+          fi
+
+          if [[ "${SOURCE_BRANCH}" == "main" ]]; then
+            image_tags+=("${REPOSITORY}:latest")
+          fi
+
+          while IFS= read -r tag; do
+            [[ -z "${tag}" ]] && continue
+            image_tags+=("${REPOSITORY}:${tag}")
+          done < <(git tag --points-at "${SOURCE_SHA}" | grep '^v' || true)
+
+          {
+            echo "list<<EOF"
+            printf '%s\n' "${image_tags[@]}" | awk '!seen[$0]++'
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push mirror image
+        if: steps.mirror_config.outputs.enabled == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.list }}
