@@ -39,7 +39,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 
 ## 🛠️ Quick Start
 
-**Requires**: Node.js ≥ 18, [pnpm](https://pnpm.io)
+**Requires**: Node.js ≥ 20, [pnpm](https://pnpm.io)
 
 ```sh
 git clone https://github.com/metafab/otel-gui
