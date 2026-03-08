@@ -65,7 +65,20 @@ Open [http://localhost:4318](http://localhost:4318) — the OTLP endpoint is liv
 
 ### Docker 🐳
 
-Build and run with Docker:
+Pull and run the published GHCR image:
+
+```sh
+docker pull ghcr.io/metafab/otel-gui:latest
+docker run --rm -p 4318:4318 ghcr.io/metafab/otel-gui:latest
+```
+
+Container tags are published from Git refs:
+
+- `latest` for the default branch
+- `v*` tags (for example, `v1.1.0`)
+- `sha-<commit>` immutable tags
+
+Build and run locally with Docker:
 
 ```sh
 docker build -t otel-gui .
