@@ -69,7 +69,7 @@ Pull and run the published GHCR image:
 
 ```sh
 docker pull ghcr.io/metafab/otel-gui:latest
-docker run --rm -p 4318:4318 ghcr.io/metafab/otel-gui:latest
+docker run --rm --name otel-gui -p 4318:4318 ghcr.io/metafab/otel-gui:latest
 ```
 
 Container tags are published from Git refs:
