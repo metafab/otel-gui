@@ -37,6 +37,14 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 
 ![Trace detail](docs/screenshots/trace-detail.png)
 
+### Search highlighting
+
+![Search highlighting](docs/screenshots/search-highlighting.png)
+
+### Correlated logs
+
+![Correlated logs](docs/screenshots/correlated-logs.png)
+
 ## 🛠️ Quick Start
 
 **Requires**: Node.js ≥ 20, [pnpm](https://pnpm.io)
