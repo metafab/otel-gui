@@ -151,6 +151,7 @@ Shortcuts implemented:
 4. **No gzip yet** — Request body decompression deferred to v2
 5. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1-10 000, default 1000). FIFO eviction. Read via `$env/dynamic/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000.
 6. **Persistence is optional** — OSS always has `memory`; `pglite` requires a registered backend (usually via `OTEL_GUI_PERSISTENCE_BACKEND_MODULE`). If unavailable, runtime falls back to memory with `persistence.unavailableReason` in `GET /api/config`.
+7. **Update availability check** — On mount, the page fetches `https://api.github.com/repos/metafab/otel-gui/releases/latest` (GitHub API) and compares `tag_name` to `import.meta.env.PACKAGE_VERSION` (embedded at build time from `package.json` via Vite `define`). If a newer semver is found, a non-intrusive notice is shown in the bottom-left of the trace list, next to the retention notice. The notice links to `https://github.com/metafab/otel-gui/releases` and can be dismissed per-version via `localStorage`. The result is cached in `localStorage` (`update-check-cache`) for 1 hour to avoid hitting the GitHub rate limit (60 unauthenticated req/h). Network failures are silent and do not affect the UI.
 
 ## Reference Files
 
@@ -170,6 +171,7 @@ Shortcuts implemented:
 - [stream/+server.ts](src/routes/api/traces/stream/+server.ts) — SSE endpoint (debounced, heartbeat)
 - [service-map/+server.ts](src/routes/api/service-map/+server.ts) — `GET /api/service-map?traceId=` endpoint
 - [config/+server.ts](src/routes/api/config/+server.ts) — `GET /api/config` endpoint (`maxTraces` + persistence status)
+- [vite.config.ts](vite.config.ts) — Embeds `PACKAGE_VERSION` from `package.json` at build time via `define: { 'import.meta.env.PACKAGE_VERSION': ... }`
 - [enterprise-persistence-module.md](docs/enterprise-persistence-module.md) — External backend registration contract for optional persistence modules
 - [docs/research.md](docs/research.md) — OTLP protocol details, data model, Honeycomb UI reference, gotchas
 - [docs/plan.md](docs/plan.md) — Full implementation plan (16 steps), architecture diagram, deferred v2 features

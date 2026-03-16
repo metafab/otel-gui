@@ -10,6 +10,83 @@
   // Connect to SSE stream for real-time trace updates
   traceStore.connectSSE()
 
+  // Update availability check
+  const CURRENT_VERSION = import.meta.env.PACKAGE_VERSION
+
+  function parseVersion(v: string): [number, number, number] {
+    const parts = v.replace(/^v/, '').split('.').map(Number)
+    return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0]
+  }
+
+  function isNewer(a: [number, number, number], b: [number, number, number]) {
+    for (let i = 0; i < 3; i++) {
+      if (a[i] > b[i]) return true
+      if (a[i] < b[i]) return false
+    }
+    return false
+  }
+
+  let latestVersion = $state<string | null>(null)
+  let updateDismissed = $state(false)
+
+  function dismissUpdate() {
+    if (latestVersion) {
+      localStorage.setItem(`update-dismissed-v${latestVersion}`, '1')
+    }
+    updateDismissed = true
+  }
+
+  const UPDATE_CHECK_KEY = 'update-check-cache'
+  const UPDATE_CHECK_TTL = 60 * 60 * 1000 // 1 hour
+
+  $effect(() => {
+    // Return cached result if checked within the last hour
+    try {
+      const raw = localStorage.getItem(UPDATE_CHECK_KEY)
+      if (raw) {
+        const { ts, tag } = JSON.parse(raw) as { ts: number; tag: string }
+        if (Date.now() - ts < UPDATE_CHECK_TTL) {
+          const dismissed =
+            localStorage.getItem(`update-dismissed-v${tag}`) === '1'
+          if (
+            !dismissed &&
+            isNewer(parseVersion(tag), parseVersion(CURRENT_VERSION))
+          ) {
+            latestVersion = tag
+          }
+          return
+        }
+      }
+    } catch {
+      /* malformed cache — fall through to fetch */
+    }
+
+    fetch('https://api.github.com/repos/metafab/otel-gui/releases/latest', {
+      headers: { Accept: 'application/vnd.github+json' },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data?.tag_name) return
+        const latest = data.tag_name.replace(/^v/, '')
+        localStorage.setItem(
+          UPDATE_CHECK_KEY,
+          JSON.stringify({ ts: Date.now(), tag: latest }),
+        )
+        const dismissed =
+          localStorage.getItem(`update-dismissed-v${latest}`) === '1'
+        if (
+          !dismissed &&
+          isNewer(parseVersion(latest), parseVersion(CURRENT_VERSION))
+        ) {
+          latestVersion = latest
+          updateDismissed = false
+        }
+      })
+      .catch(() => {
+        /* silent fail — offline or rate-limited */
+      })
+  })
+
   // Reactive state from store
   const traces = $derived(traceStore.traces)
   const error = $derived(traceStore.error)
@@ -208,77 +285,100 @@
   </header>
 
   {#if activeTab === 'traces'}
-    {#if error}
-      <div class="error">{error}</div>
-    {/if}
+    <div class="traces-tab">
+      {#if error}
+        <div class="error">{error}</div>
+      {/if}
 
-    {#if traces.length === 0}
-      <div class="empty">
-        <p>No traces received yet.</p>
-        <p class="hint">
-          Send OTLP traces to <code>http://localhost:4318/v1/traces</code>
-        </p>
-      </div>
-    {:else}
-      <TraceFilters
-        {services}
-        bind:searchQuery
-        bind:selectedService
-        bind:showErrorsOnly
-        bind:minDuration
-        bind:maxDuration
-        bind:searchInputEl
-        filteredCount={filteredTraces.length}
-        totalCount={traces.length}
-      />
-
-      {#if filteredTraces.length === 0}
+      {#if traces.length === 0}
         <div class="empty">
-          <p>No traces match the current filters.</p>
-          <button onclick={handleClearFilters} class="clear-filters-btn">
-            Clear Filters
-          </button>
+          <p>No traces received yet.</p>
+          <p class="hint">
+            Send OTLP traces to <code>http://localhost:4318/v1/traces</code>
+          </p>
         </div>
       {:else}
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Root Service</th>
-                <th>Root Name</th>
-                <th>Root Duration</th>
-                <th>Spans</th>
-                <th>Time</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each filteredTraces as trace (trace.traceId)}
-                <tr
-                  onclick={() => handleRowClick(trace.traceId)}
-                  class:error={trace.hasError}
-                >
-                  <td><ServiceBadge serviceName={trace.serviceName} /></td>
-                  <td class="operation" title={trace.rootSpanName}
-                    >{trace.rootSpanName}</td
-                  >
-                  <td class="duration">{trace.durationMs.toFixed(2)}ms</td>
-                  <td class="span-count">{trace.spanCount}</td>
-                  <td class="timestamp" title={trace.startTime}>
-                    {new Date(trace.startTime).toLocaleString()}
-                  </td>
-                  <td class="status">
-                    {#if trace.hasError}
-                      <span class="error-badge">ERROR</span>
-                    {:else}
-                      <span class="ok-badge">OK</span>
-                    {/if}
-                  </td>
+        <TraceFilters
+          {services}
+          bind:searchQuery
+          bind:selectedService
+          bind:showErrorsOnly
+          bind:minDuration
+          bind:maxDuration
+          bind:searchInputEl
+          filteredCount={filteredTraces.length}
+          totalCount={traces.length}
+        />
+
+        {#if filteredTraces.length === 0}
+          <div class="empty">
+            <p>No traces match the current filters.</p>
+            <button onclick={handleClearFilters} class="clear-filters-btn">
+              Clear Filters
+            </button>
+          </div>
+        {:else}
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Root Service</th>
+                  <th>Root Name</th>
+                  <th>Root Duration</th>
+                  <th>Spans</th>
+                  <th>Time</th>
+                  <th>Status</th>
                 </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {#each filteredTraces as trace (trace.traceId)}
+                  <tr
+                    onclick={() => handleRowClick(trace.traceId)}
+                    class:error={trace.hasError}
+                  >
+                    <td><ServiceBadge serviceName={trace.serviceName} /></td>
+                    <td class="operation" title={trace.rootSpanName}
+                      >{trace.rootSpanName}</td
+                    >
+                    <td class="duration">{trace.durationMs.toFixed(2)}ms</td>
+                    <td class="span-count">{trace.spanCount}</td>
+                    <td class="timestamp" title={trace.startTime}>
+                      {new Date(trace.startTime).toLocaleString()}
+                    </td>
+                    <td class="status">
+                      {#if trace.hasError}
+                        <span class="error-badge">ERROR</span>
+                      {:else}
+                        <span class="ok-badge">OK</span>
+                      {/if}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {/if}
+      {/if}
+      <div class="bottom-bar">
+        <span class="update-notice" role="status">
+          <span class="current-version">v{CURRENT_VERSION}</span>
+          {#if latestVersion && !updateDismissed}
+            <span class="update-available">
+              → v{latestVersion} available —
+              <a
+                href="https://github.com/metafab/otel-gui/releases"
+                target="_blank"
+                rel="noopener noreferrer">release notes</a
+              >
+              <button
+                class="update-dismiss"
+                onclick={dismissUpdate}
+                aria-label="Dismiss update notice"
+                title="Dismiss">[×]</button
+              >
+            </span>
+          {/if}
+        </span>
         <p class="retention-notice">
           Keeping last
           <span
@@ -311,8 +411,8 @@
             </span>
           {/if}
         </p>
-      {/if}
-    {/if}
+      </div>
+    </div>
   {:else}
     <!-- Service Map tab -->
     <div class="map-content">
@@ -493,8 +593,79 @@
   .retention-notice {
     font-size: 0.75rem;
     color: var(--text-muted);
-    text-align: right;
-    margin: 0.25rem 0 0.75rem;
+    margin: 0;
+  }
+
+  .traces-tab {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .bottom-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin: auto 0 0.75rem;
+  }
+
+  @keyframes update-blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.25;
+    }
+  }
+
+  .update-notice {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .current-version {
+    color: var(--text-muted);
+  }
+
+  .update-available {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    animation: update-blink 1.2s ease-in-out 1;
+  }
+
+  .update-notice a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .update-notice a:hover {
+    text-decoration: underline;
+  }
+
+  .update-dismiss {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    font-size: 0.75rem;
+    line-height: 1;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: color 0.15s;
+  }
+
+  .update-dismiss:hover {
+    color: var(--text-secondary);
   }
 
   .retention-limit {
