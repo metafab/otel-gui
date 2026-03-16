@@ -6,17 +6,17 @@ It optimizes the shortest path from "app emits telemetry" to "developer understa
 
 ## Tech Stack
 
-| Layer         | Choice                             | Rationale                                                       |
-| ------------- | ---------------------------------- | --------------------------------------------------------------- |
-| Framework     | SvelteKit 5 (Svelte 5 runes)       | User preference. Full-stack TypeScript. Fast, lightweight.      |
-| Adapter       | `@sveltejs/adapter-node`           | Required for persistent in-memory state and SSE support.        |
-| Language      | TypeScript                         | Full-stack type safety.                                         |
-| Storage       | In-memory (`Map`) behind interface | Simplest for v1. Swappable to SQLite via same interface.        |
-| OTLP format   | JSON and Protobuf                  | Both `application/json` and `application/x-protobuf` supported. |
-| OTLP transport | HTTP first (`:4318`)              | Lowest-friction local setup; gRPC can be added later if demand is proven. |
-| Real-time     | SSE (`EventSource`)                | Single persistent connection, instant push on ingest.           |
-| Port          | 4318                               | Standard OTLP/HTTP port — zero config on exporter side.         |
-| Visualization | Custom HTML/CSS waterfall          | Industry standard approach (Honeycomb, Jaeger all do this).     |
+| Layer          | Choice                             | Rationale                                                                 |
+| -------------- | ---------------------------------- | ------------------------------------------------------------------------- |
+| Framework      | SvelteKit 5 (Svelte 5 runes)       | User preference. Full-stack TypeScript. Fast, lightweight.                |
+| Adapter        | `@sveltejs/adapter-node`           | Required for persistent in-memory state and SSE support.                  |
+| Language       | TypeScript                         | Full-stack type safety.                                                   |
+| Storage        | In-memory (`Map`) behind interface | Simplest for v1. Swappable to SQLite via same interface.                  |
+| OTLP format    | JSON and Protobuf                  | Both `application/json` and `application/x-protobuf` supported.           |
+| OTLP transport | HTTP first (`:4318`)               | Lowest-friction local setup; gRPC can be added later if demand is proven. |
+| Real-time      | SSE (`EventSource`)                | Single persistent connection, instant push on ingest.                     |
+| Port           | 4318                               | Standard OTLP/HTTP port — zero config on exporter side.                   |
+| Visualization  | Custom HTML/CSS waterfall          | Industry standard approach (Honeycomb, Jaeger all do this).               |
 
 ## Architecture
 
