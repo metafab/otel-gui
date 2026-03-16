@@ -13,6 +13,7 @@ It optimizes the shortest path from "app emits telemetry" to "developer understa
 | Language      | TypeScript                         | Full-stack type safety.                                         |
 | Storage       | In-memory (`Map`) behind interface | Simplest for v1. Swappable to SQLite via same interface.        |
 | OTLP format   | JSON and Protobuf                  | Both `application/json` and `application/x-protobuf` supported. |
+| OTLP transport | HTTP first (`:4318`)              | Lowest-friction local setup; gRPC can be added later if demand is proven. |
 | Real-time     | SSE (`EventSource`)                | Single persistent connection, instant push on ingest.           |
 | Port          | 4318                               | Standard OTLP/HTTP port — zero config on exporter side.         |
 | Visualization | Custom HTML/CSS waterfall          | Industry standard approach (Honeycomb, Jaeger all do this).     |
@@ -127,7 +128,45 @@ These metrics are the acceptance criteria for v2 usability and performance.
 - Publish machine profile (CPU/RAM/OS/Node version) with each benchmark run.
 - Track trends across releases; regressions beyond 10% require explicit sign-off.
 
+## OTLP/gRPC Positioning
+
+### Current Decision (v2)
+
+- Keep OTLP/HTTP (`/v1/traces` on `:4318`) as the default and primary ingestion path.
+- Do not include OTLP/gRPC (`:4317`) in baseline v2 scope.
+- Optimize for local debugging speed, minimal configuration, and low runtime complexity.
+
+### Why HTTP-first remains the default
+
+- **Developer experience**: `:4318` aligns with standard OTLP/HTTP and preserves the zero-config local path.
+- **Operational simplicity**: avoids HTTP/2 server lifecycle and additional transport-specific failure modes.
+- **Maintenance cost**: keeps implementation, testing, and support surface focused on core trace-debugging UX.
+- **Product fit**: current contract is local-first debugging, not broad collector/backend replacement.
+
+### When gRPC becomes justified
+
+Add OTLP/gRPC support once there is repeated, validated demand from users who cannot reasonably switch exporters to HTTP, for example:
+
+- frequent setup failures caused by gRPC-only defaults in target environments,
+- enterprise constraints that mandate gRPC transport,
+- measurable onboarding friction attributable to missing `:4317` support.
+
+### Proposed rollout approach
+
+1. **Phase 1 (default)**: HTTP-only remains canonical.
+2. **Phase 2 (optional)**: Add gRPC receiver behind a feature flag / optional module.
+3. **Phase 3 (stabilize)**: Expand interoperability and reliability tests before considering broader default usage.
+
 ## Maybe Later
+
+### OTLP/gRPC Receiver (`:4317`)
+
+If implemented, keep this explicitly optional and additive:
+
+- Preserve OTLP/HTTP (`:4318`) as the default path.
+- Add gRPC only when demand thresholds in **When gRPC becomes justified** are met.
+- Isolate implementation behind a transport boundary so store/API/UI remain unchanged.
+- Gate with a runtime flag or optional module to avoid increasing baseline complexity.
 
 ### Docker Hub Mirroring
 
@@ -168,3 +207,5 @@ Optional Docker Hub mirroring is available via GitHub Actions and is disabled by
 8. **Store interface for swappable storage**: The `TraceStore` interface allows dropping in SQLite later without touching API routes or frontend code.
 
 9. **Keyboard shortcuts follow web conventions**: `/` to focus search (GitHub/YouTube pattern), `n`/`Shift+N` for next/previous match (browser devtools pattern), `e`/`Shift+E` for error navigation, `Esc` for contextual dismiss/back, `Alt/⌥+Delete` for destructive clear (no browser conflicts, hard to hit accidentally), `?` for help overlay. All shortcuts guard against firing when focus is inside an input. The `?` overlay uses the same modal pattern as the attribute fullscreen viewer.
+
+10. **gRPC is demand-driven, not baseline**: OTLP/gRPC (`:4317`) is intentionally deferred from baseline v2 to protect local-first simplicity and maintain velocity. It remains a candidate as an optional transport when user demand justifies the extra complexity.
