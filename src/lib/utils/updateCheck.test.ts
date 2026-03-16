@@ -73,7 +73,9 @@ describe(isNewer, () => {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeStorage(initial: Record<string, string> = {}): UpdateCheckStorage & {
+function makeStorage(
+  initial: Record<string, string> = {},
+): UpdateCheckStorage & {
   data: Record<string, string>
 } {
   const data: Record<string, string> = { ...initial }

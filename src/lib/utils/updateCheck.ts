@@ -64,7 +64,10 @@ export async function checkForUpdate(
       const { ts, tag } = JSON.parse(raw) as { ts: number; tag: string }
       if (now() - ts < cacheTtl) {
         const dismissed = storage.getItem(`update-dismissed-v${tag}`) === '1'
-        if (!dismissed && isNewer(parseVersion(tag), parseVersion(currentVersion))) {
+        if (
+          !dismissed &&
+          isNewer(parseVersion(tag), parseVersion(currentVersion))
+        ) {
           return tag
         }
         return null
@@ -88,7 +91,10 @@ export async function checkForUpdate(
     storage.setItem(cacheKey, JSON.stringify({ ts: now(), tag }))
 
     const dismissed = storage.getItem(`update-dismissed-v${tag}`) === '1'
-    if (!dismissed && isNewer(parseVersion(tag), parseVersion(currentVersion))) {
+    if (
+      !dismissed &&
+      isNewer(parseVersion(tag), parseVersion(currentVersion))
+    ) {
       return tag
     }
     return null
