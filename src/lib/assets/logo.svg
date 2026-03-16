@@ -1,12 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <!-- Trace spans visualization with connections -->
-  <rect x="2" y="4" width="14" height="2.5" rx="1.25" fill="#6366F1" opacity="0.9"/>
-  <rect x="5" y="8" width="12" height="2.5" rx="1.25" fill="#8B5CF6" opacity="0.85"/>
-  <rect x="8" y="12" width="10" height="2.5" rx="1.25" fill="#3B82F6" opacity="0.8"/>
-  <rect x="5" y="16" width="8" height="2.5" rx="1.25" fill="#10B981" opacity="0.85"/>
-  
-  <!-- Connection lines showing parent-child relationships -->
-  <path d="M 3.5 6.5 L 3.5 8 L 6.5 8" stroke="#6366F1" stroke-width="1.2" fill="none" opacity="0.6"/>
-  <path d="M 6.5 10.5 L 6.5 12 L 9.5 12" stroke="#8B5CF6" stroke-width="1.2" fill="none" opacity="0.6"/>
-  <path d="M 6.5 10.5 L 6.5 16" stroke="#8B5CF6" stroke-width="1.2" fill="none" opacity="0.5"/>
+  <defs>
+    <linearGradient id="a" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#818CF8"/>
+    </linearGradient>
+    <linearGradient id="b" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#A78BFA"/>
+    </linearGradient>
+    <linearGradient id="c" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#60A5FA"/>
+    </linearGradient>
+    <linearGradient id="d" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Root → Child1: L-shape down to child1 center-y, then right to child1 left edge -->
+  <path d="M3.25,6.5 V9.5 H5.5" stroke="#6366F1" stroke-width="0.75" stroke-linejoin="round" stroke-linecap="round" fill="none" opacity="0.45"/>
+  <!-- Root spine continues → Child2: from child1 branch point down to child2 center-y, then right -->
+  <path d="M3.25,9.5 V18.5 H5.5" stroke="#6366F1" stroke-width="0.75" stroke-linejoin="round" stroke-linecap="round" fill="none" opacity="0.45"/>
+  <!-- Child1 → Grandchild: L-shape down from child1 bottom, then right to grandchild left edge -->
+  <path d="M6.25,11 V14 H8.5" stroke="#8B5CF6" stroke-width="0.75" stroke-linejoin="round" stroke-linecap="round" fill="none" opacity="0.45"/>
+
+  <!-- Span bars -->
+  <rect x="2" y="3.5" width="20" height="3" rx="1.5" fill="url(#a)"/>
+  <rect x="5.5" y="8" width="15" height="3" rx="1.5" fill="url(#b)"/>
+  <rect x="8.5" y="12.5" width="11" height="3" rx="1.5" fill="url(#c)"/>
+  <rect x="5.5" y="17" width="10" height="3" rx="1.5" fill="url(#d)"/>
 </svg>

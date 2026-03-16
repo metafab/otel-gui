@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src/lib/assets/logo.svg" alt="otel-gui logo" width="80" />
+</p>
+
 # otel-gui
 
 A lightweight, zero-config OpenTelemetry trace viewer for local development.
