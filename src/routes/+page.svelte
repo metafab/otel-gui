@@ -5,6 +5,7 @@
   import { isInputFocused, isMac } from '$lib/utils/keyboard'
   import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
   import TraceFilters from '$lib/components/TraceFilters.svelte'
+  import { checkForUpdate, dismissUpdate } from '$lib/utils/updateCheck'
   import type { ServiceMapData } from '$lib/types'
 
   // Connect to SSE stream for real-time trace updates
@@ -13,78 +14,23 @@
   // Update availability check
   const CURRENT_VERSION = import.meta.env.PACKAGE_VERSION
 
-  function parseVersion(v: string): [number, number, number] {
-    const parts = v.replace(/^v/, '').split('.').map(Number)
-    return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0]
-  }
-
-  function isNewer(a: [number, number, number], b: [number, number, number]) {
-    for (let i = 0; i < 3; i++) {
-      if (a[i] > b[i]) return true
-      if (a[i] < b[i]) return false
-    }
-    return false
-  }
-
   let latestVersion = $state<string | null>(null)
   let updateDismissed = $state(false)
 
-  function dismissUpdate() {
+  function handleDismissUpdate() {
     if (latestVersion) {
-      localStorage.setItem(`update-dismissed-v${latestVersion}`, '1')
+      dismissUpdate(latestVersion)
     }
     updateDismissed = true
   }
 
-  const UPDATE_CHECK_KEY = 'update-check-cache'
-  const UPDATE_CHECK_TTL = 60 * 60 * 1000 // 1 hour
-
   $effect(() => {
-    // Return cached result if checked within the last hour
-    try {
-      const raw = localStorage.getItem(UPDATE_CHECK_KEY)
-      if (raw) {
-        const { ts, tag } = JSON.parse(raw) as { ts: number; tag: string }
-        if (Date.now() - ts < UPDATE_CHECK_TTL) {
-          const dismissed =
-            localStorage.getItem(`update-dismissed-v${tag}`) === '1'
-          if (
-            !dismissed &&
-            isNewer(parseVersion(tag), parseVersion(CURRENT_VERSION))
-          ) {
-            latestVersion = tag
-          }
-          return
-        }
+    checkForUpdate(CURRENT_VERSION).then((tag) => {
+      if (tag) {
+        latestVersion = tag
+        updateDismissed = false
       }
-    } catch {
-      /* malformed cache — fall through to fetch */
-    }
-
-    fetch('https://api.github.com/repos/metafab/otel-gui/releases/latest', {
-      headers: { Accept: 'application/vnd.github+json' },
     })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!data?.tag_name) return
-        const latest = data.tag_name.replace(/^v/, '')
-        localStorage.setItem(
-          UPDATE_CHECK_KEY,
-          JSON.stringify({ ts: Date.now(), tag: latest }),
-        )
-        const dismissed =
-          localStorage.getItem(`update-dismissed-v${latest}`) === '1'
-        if (
-          !dismissed &&
-          isNewer(parseVersion(latest), parseVersion(CURRENT_VERSION))
-        ) {
-          latestVersion = latest
-          updateDismissed = false
-        }
-      })
-      .catch(() => {
-        /* silent fail — offline or rate-limited */
-      })
   })
 
   // Reactive state from store
@@ -372,7 +318,7 @@
               >
               <button
                 class="update-dismiss"
-                onclick={dismissUpdate}
+                onclick={handleDismissUpdate}
                 aria-label="Dismiss update notice"
                 title="Dismiss">[×]</button
               >
