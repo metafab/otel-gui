@@ -23,7 +23,10 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "benchmark:contract": "node scripts/benchmark-contract.mjs"
+    "benchmark:contract": "node scripts/benchmark-contract.mjs",
+    "sea:bundle": "node scripts/sea-bundle.mjs",
+    "sea:package:binary": "node scripts/sea-package.mjs",
+    "sea:package": "pnpm run sea:bundle && pnpm run sea:package:binary"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -46,6 +49,7 @@
     "svelte-check": "^4.3.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1",
+    "postject": "^1.0.0-alpha.6",
     "vite": "^7.3.1",
     "vitest": "^4.0.18"
   },

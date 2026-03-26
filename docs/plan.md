@@ -18,6 +18,22 @@ It optimizes the shortest path from "app emits telemetry" to "developer understa
 | Port           | 4318                               | Standard OTLP/HTTP port — zero config on exporter side.                   |
 | Visualization  | Custom HTML/CSS waterfall          | Industry standard approach (Honeycomb, Jaeger all do this).               |
 
+## Executable Packaging Strategy
+
+`otel-gui` OSS executable distribution uses Node 22 SEA (Single Executable Applications).
+
+- `pnpm run sea:bundle`: generate `dist/sea-launcher.cjs`
+- `pnpm run sea:package:binary`: generate SEA binary for current OS/arch
+- `pnpm run sea:package`: run both steps
+
+Distribution unit per platform:
+
+- `otel-gui[.exe]`
+- `build/` (SvelteKit adapter-node output)
+- `proto/` (protobuf definitions loaded at runtime)
+
+These three items must be shipped together.
+
 ## Architecture
 
 ```mermaid

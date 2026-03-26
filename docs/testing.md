@@ -176,6 +176,40 @@ describe('OTLP E2E', () => {
 - Covers waterfall tree keyboard navigation on trace detail (`↑↓←→`, `Enter`).
 - Covers sidebar section flows on trace detail (Events, Links, and Attributes filtering).
 
+
+### 5. SEA Binary Smoke Test (Release Validation)
+
+When validating executable artifacts, run this quick check on each target platform:
+
+1. Build and package:
+
+```sh
+pnpm run build
+pnpm run sea:package
+```
+
+2. Start the generated binary from inside its output directory:
+
+```sh
+cd dist/binaries/otel-gui-<platform>
+PORT=4318 ./otel-gui
+```
+
+3. In another terminal, validate core endpoints:
+
+```sh
+curl -s -o /dev/null -w "GET /: %{http_code}\n" http://localhost:4318/
+curl -s -o /dev/null -w "POST /v1/traces: %{http_code}\n" \
+  -X POST http://localhost:4318/v1/traces \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-trace.json
+curl -s http://localhost:4318/api/traces
+```
+
+Expected: UI returns 200, OTLP ingest returns 200, and `/api/traces` includes at least one trace.
+
+Important: keep `otel-gui[.exe]`, `build/`, and `proto/` in the same folder when testing or distributing executables.
+
 ## Test Data
 
 ### Sample OTLP Payloads

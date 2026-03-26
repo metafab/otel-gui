@@ -1,0 +1,102 @@
+name: Release Binaries
+
+on:
+    push:
+        tags: [v*]
+    workflow_dispatch:
+
+permissions:
+    contents: write
+
+concurrency:
+    group: release-binaries-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    build:
+        name: Build ${{ matrix.platform }}
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - os: ubuntu-latest
+                      platform: linux-x64
+                    - os: ubuntu-24.04-arm
+                      platform: linux-arm64
+                    - os: macos-13
+                      platform: macos-x64
+                    - os: macos-latest
+                      platform: macos-arm64
+                    - os: windows-latest
+                      platform: win-x64
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 10
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: pnpm
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Build SvelteKit app
+              run: pnpm run build
+
+            - name: Generate SEA launcher
+              run: pnpm run sea:bundle
+
+            - name: Build SEA binary
+              run: pnpm run sea:package:binary
+
+            - name: Create archive (Linux / macOS)
+              if: runner.os != 'Windows'
+              run: |
+                  cd dist/binaries
+                  tar -czf otel-gui-${{ matrix.platform }}.tar.gz otel-gui-${{ matrix.platform }}/
+                  shasum -a 256 otel-gui-${{ matrix.platform }}.tar.gz \
+                    > otel-gui-${{ matrix.platform }}.tar.gz.sha256
+
+            - name: Create archive (Windows)
+              if: runner.os == 'Windows'
+              shell: pwsh
+              run: |
+                  cd dist/binaries
+                  Compress-Archive -Path otel-gui-${{ matrix.platform }}/ `
+                    -DestinationPath otel-gui-${{ matrix.platform }}.zip
+                  (Get-FileHash otel-gui-${{ matrix.platform }}.zip -Algorithm SHA256).Hash + `
+                    "  otel-gui-${{ matrix.platform }}.zip" | `
+                    Out-File -Encoding ascii otel-gui-${{ matrix.platform }}.zip.sha256
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: otel-gui-${{ matrix.platform }}
+                  path: |
+                      dist/binaries/otel-gui-${{ matrix.platform }}.tar.gz
+                      dist/binaries/otel-gui-${{ matrix.platform }}.tar.gz.sha256
+                      dist/binaries/otel-gui-${{ matrix.platform }}.zip
+                      dist/binaries/otel-gui-${{ matrix.platform }}.zip.sha256
+                  if-no-files-found: ignore
+
+    release:
+        name: Publish Release Assets
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/download-artifact@v4
+              with:
+                  path: artifacts
+                  merge-multiple: true
+
+            - name: Publish release assets
+              uses: softprops/action-gh-release@v2
+              with:
+                  fail_on_unmatched_files: false
+                  files: artifacts/*

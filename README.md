@@ -252,6 +252,51 @@ The production build uses `@sveltejs/adapter-node`. In-memory state is kept aliv
 
 In Docker, traces are still in-memory only and are lost when the container stops.
 
+### Self-contained executable (SEA)
+
+`otel-gui` can be packaged as a self-contained executable using Node 22 SEA (Single Executable Applications).
+
+Requirements:
+
+- Node.js 22.x (for SEA blob generation)
+- `pnpm`
+
+Build for your current OS/arch:
+
+```sh
+pnpm run build
+pnpm run sea:package
+```
+
+Or run steps individually:
+
+```sh
+pnpm run sea:bundle
+pnpm run sea:package:binary
+```
+
+Output directory:
+
+```text
+dist/binaries/otel-gui-<platform>/
+  otel-gui[.exe]
+  build/
+  proto/
+```
+
+Run from that directory:
+
+```sh
+./otel-gui
+# or override port
+PORT=4318 ./otel-gui
+```
+
+Notes:
+
+- Keep `otel-gui[.exe]`, `build/`, and `proto/` together in the same output folder.
+- Current OSS executable packaging targets memory mode. Optional enterprise persistence remains an external module workflow.
+
 ## ⌨️ Keyboard Shortcuts
 
 | Key              | Where        | Action                          |
