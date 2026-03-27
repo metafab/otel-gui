@@ -40,6 +40,15 @@
   const maxTraces = $derived(traceStore.maxTraces)
   const persistence = $derived(traceStore.persistence)
 
+  // Compute the OTLP endpoint URL dynamically
+  const otlpEndpoint = $derived.by(() => {
+    if (typeof window !== 'undefined') {
+      const { protocol, hostname, port } = window.location
+      return `${protocol}//${hostname}${port ? ':' + port : ''}/v1/traces`
+    }
+    return 'http://localhost:4318/v1/traces'
+  })
+
   // Tab navigation
   let activeTab = $state<'traces' | 'map'>('traces')
 
@@ -240,7 +249,7 @@
         <div class="empty">
           <p>No traces received yet.</p>
           <p class="hint">
-            Send OTLP traces to <code>http://localhost:4318/v1/traces</code>
+            Send OTLP traces to <code>{otlpEndpoint}</code>
           </p>
         </div>
       {:else}
