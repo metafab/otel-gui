@@ -60,6 +60,26 @@ const persistenceBackendModule = resolvePersistenceBackendModule()
 let externalBackendLoadError: string | null = null
 let backendInitError: string | null = null
 
+function isMissingBackendModuleError(error: unknown): boolean {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof (error as { code?: unknown }).code === 'string'
+  ) {
+    const code = (error as { code: string }).code
+    if (code === 'ERR_MODULE_NOT_FOUND' || code === 'MODULE_NOT_FOUND') {
+      return true
+    }
+  }
+
+  if (error instanceof Error) {
+    return /Cannot find module|Cannot find package/i.test(error.message)
+  }
+
+  return false
+}
+
 function resolveBackendInitErrorCode(error: unknown): string {
   if (
     typeof error === 'object' &&
@@ -81,6 +101,30 @@ function resolveBackendInitErrorCode(error: unknown): string {
   }
 
   return 'backend-initialization-failed'
+}
+
+function isExpectedBackendInitFallback(error: unknown): boolean {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof (error as { code?: unknown }).code === 'string'
+  ) {
+    const code = (error as { code: string }).code
+    if (code.startsWith('license-')) return true
+  }
+
+  if (error instanceof Error) {
+    if (error.message.startsWith('license-check-failed:')) return true
+    if (
+      error.name === 'RuntimeError' &&
+      /Aborted\(\)\. Build with -sASSERTIONS/i.test(error.message)
+    ) {
+      return true
+    }
+  }
+
+  return false
 }
 
 function resolvePersistenceBackendModule(): string | null {
@@ -132,6 +176,13 @@ async function loadExternalBackends(): Promise<void> {
     )
   } catch (error) {
     externalBackendLoadError = 'backend-module-load-failed'
+    if (isMissingBackendModuleError(error)) {
+      console.info(
+        `[otel-gui] Optional persistence backend module "${persistenceBackendModule}" was not found. Using built-in backends (memory mode in OSS).`,
+      )
+      return
+    }
+
     console.error(
       `[otel-gui] Failed to load persistence backend module "${persistenceBackendModule}". Falling back to built-in backends.`,
       error,
@@ -185,10 +236,16 @@ async function createTraceStore(): Promise<TraceStoreWithPersistenceStatus> {
       return store
     } catch (error) {
       backendInitError = resolveBackendInitErrorCode(error)
-      console.error(
-        `[otel-gui] Failed to initialize ${persistenceMode} persistence, using in-memory mode instead.`,
-        error,
-      )
+      if (isExpectedBackendInitFallback(error)) {
+        console.info(
+          `[otel-gui] ${persistenceMode} persistence is unavailable (${backendInitError}); using in-memory mode.`,
+        )
+      } else {
+        console.error(
+          `[otel-gui] Failed to initialize ${persistenceMode} persistence, using in-memory mode instead.`,
+          error,
+        )
+      }
     }
   } else if (persistenceMode !== 'memory') {
     console.warn(
