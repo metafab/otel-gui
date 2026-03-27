@@ -268,11 +268,30 @@ pnpm run build
 pnpm run sea:package
 ```
 
-Or run steps individually:
+Generate for a specific target platform:
 
 ```sh
 pnpm run sea:bundle
-pnpm run sea:package:binary
+pnpm run sea:package:target -- --target linux-x64
+```
+
+Supported targets:
+
+- `linux-x64`
+- `linux-arm64`
+- `macos-x64`
+- `macos-arm64`
+- `win-x64`
+- `win-arm64`
+
+Cross-target note:
+
+- If target differs from your host (for example building `linux-x64` on macOS), provide a matching Node 22 target binary:
+
+```sh
+pnpm run sea:package:target -- \
+  --target linux-x64 \
+  --node-binary /absolute/path/to/node-linux-x64
 ```
 
 Output directory:

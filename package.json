@@ -26,6 +26,7 @@
     "benchmark:contract": "node scripts/benchmark-contract.mjs",
     "sea:bundle": "node scripts/sea-bundle.mjs",
     "sea:package:binary": "node scripts/sea-package.mjs",
+    "sea:package:target": "node scripts/sea-package.mjs",
     "sea:package": "pnpm run sea:bundle && pnpm run sea:package:binary"
   },
   "devDependencies": {
