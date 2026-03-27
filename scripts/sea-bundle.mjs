@@ -30,6 +30,8 @@ mkdirSync(join(root, 'dist'), { recursive: true })
 const launcher = `\
 'use strict';
 const path = require('node:path');
+// Default port to 4318 (OTLP/HTTP standard) if not already set
+process.env.PORT ??= '4318';
 // Load the ESM SvelteKit server next to this binary via the ESM loader.
 import(path.join(__dirname, 'build', 'index.js')).catch((err) => {
   process.stderr.write('[otel-gui] Fatal startup error: ' + err.message + '\\n');

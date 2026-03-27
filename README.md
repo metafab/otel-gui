@@ -307,8 +307,8 @@ Run from that directory:
 
 ```sh
 ./otel-gui
-# or override port
-PORT=4318 ./otel-gui
+# or override default port (4318)
+PORT=55681 ./otel-gui
 ```
 
 Notes:
