@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import js from '@eslint/js'
 import prettier from 'eslint-config-prettier'
 import svelte from 'eslint-plugin-svelte'
@@ -5,16 +6,16 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 import svelteConfig from './svelte.config.js'
 
+const gitignorePatterns = fs
+  .readFileSync(new URL('./.gitignore', import.meta.url), 'utf8')
+  .split(/\r?\n/)
+  .map((line) => line.trim())
+  .filter((line) => line && !line.startsWith('#') && !line.startsWith('!'))
+  .map((line) => line.replace(/^\//, ''))
+
 export default tseslint.config(
   {
-    ignores: [
-      'build/**',
-      '.svelte-kit/**',
-      'node_modules/**',
-      'playwright-report/**',
-      'test-results/**',
-      'coverage/**',
-    ],
+    ignores: gitignorePatterns,
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
