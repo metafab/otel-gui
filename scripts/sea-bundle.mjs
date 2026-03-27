@@ -5,8 +5,6 @@
  * filesystem at runtime — no bundling, no TLA transformation needed.
  * Node 22 guarantee: __dirname in the injected CJS = directory of the binary.
  *
- * When Vite 8 ships with Rolldown, this step remains unchanged.
- *
  * Usage:  pnpm run sea:bundle   (run `pnpm run build` first)
  * Output: dist/sea-launcher.cjs
  */
