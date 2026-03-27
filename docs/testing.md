@@ -176,7 +176,6 @@ describe('OTLP E2E', () => {
 - Covers waterfall tree keyboard navigation on trace detail (`↑↓←→`, `Enter`).
 - Covers sidebar section flows on trace detail (Events, Links, and Attributes filtering).
 
-
 ### 5. SEA Binary Smoke Test (Release Validation)
 
 When validating executable artifacts, run this quick check on each target platform:

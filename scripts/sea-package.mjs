@@ -20,7 +20,15 @@
  * Output: dist/binaries/otel-gui-<platform>/
  */
 import { createRequire } from 'node:module'
-import { readFileSync, copyFileSync, cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  readFileSync,
+  copyFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execSync, execFileSync } from 'node:child_process'
@@ -31,7 +39,9 @@ const root = join(__dirname, '..')
 
 const launcher = join(root, 'dist', 'sea-launcher.cjs')
 if (!existsSync(launcher)) {
-  console.error('dist/sea-launcher.cjs not found. Run `pnpm run sea:bundle` first.')
+  console.error(
+    'dist/sea-launcher.cjs not found. Run `pnpm run sea:bundle` first.',
+  )
   process.exit(1)
 }
 
@@ -91,12 +101,11 @@ function parseTarget(rawTarget) {
   }
 
   if (!['x64', 'arm64'].includes(cpu)) {
-    throw new Error(
-      `Unsupported target arch "${cpu}". Use one of: x64, arm64.`,
-    )
+    throw new Error(`Unsupported target arch "${cpu}". Use one of: x64, arm64.`)
   }
 
-  const osName = label === 'macos' ? 'darwin' : label === 'win' ? 'win32' : 'linux'
+  const osName =
+    label === 'macos' ? 'darwin' : label === 'win' ? 'win32' : 'linux'
   return { os: osName, cpu, label }
 }
 
@@ -132,7 +141,11 @@ mkdirSync(outDir, { recursive: true })
 // 1. Write SEA config
 writeFileSync(
   seaConfigPath,
-  JSON.stringify({ main: launcher, output: blobPath, disableExperimentalSEAWarning: true }, null, 2),
+  JSON.stringify(
+    { main: launcher, output: blobPath, disableExperimentalSEAWarning: true },
+    null,
+    2,
+  ),
 )
 
 // 2. Generate blob
@@ -153,13 +166,15 @@ if (platform() !== 'win32') {
 if (target.os === 'darwin' && platform() === 'darwin') {
   try {
     execSync(`codesign --remove-signature "${binaryOut}"`, { stdio: 'pipe' })
-  } catch { /* unsigned builds are fine */ }
+  } catch {
+    /* unsigned builds are fine */
+  }
 }
 
 // 5. Inject blob using the postject JS API (avoids .bin shim compatibility issues)
 console.log('→ Injecting SEA blob with postject...')
 const req = createRequire(import.meta.url)
-const postjectApiPath = req.resolve('postject')  // resolves to dist/api.js via package "main"
+const postjectApiPath = req.resolve('postject') // resolves to dist/api.js via package "main"
 const { inject } = await import(postjectApiPath)
 const blobBuffer = readFileSync(blobPath)
 await inject(binaryOut, 'NODE_SEA_BLOB', blobBuffer, {
@@ -171,7 +186,9 @@ await inject(binaryOut, 'NODE_SEA_BLOB', blobBuffer, {
 if (target.os === 'darwin' && platform() === 'darwin') {
   try {
     execSync(`codesign --sign - "${binaryOut}"`, { stdio: 'pipe' })
-  } catch { /* ad-hoc signing may fail on older systems, binary still runs */ }
+  } catch {
+    /* ad-hoc signing may fail on older systems, binary still runs */
+  }
 }
 
 // 7. Copy runtime assets (must remain next to the binary)
@@ -185,7 +202,9 @@ for (const [src, dest] of [
 }
 
 console.log(`\n✓ ${outDir}/`)
-console.log(`  otel-gui${ext}  — ${platformName} SEA binary (Node ${process.version})`)
+console.log(
+  `  otel-gui${ext}  — ${platformName} SEA binary (Node ${process.version})`,
+)
 console.log(`  build/          — SvelteKit server + pre-built UI`)
 console.log(`  proto/          — OTLP proto definitions`)
 console.log(`\nFrom that directory: PORT=4318 ./otel-gui${ext}`)
