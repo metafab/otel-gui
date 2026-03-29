@@ -2,7 +2,7 @@ name: Mirror Image to Docker Hub
 
 on:
   workflow_run:
-    workflows: ["Publish Container Image"]
+    workflows: ['Publish Container Image']
     types: [completed]
   workflow_dispatch:
 
