@@ -23,13 +23,13 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-tags: true
       - name: Check tag exists
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
         run: |
-          if ! git tag --list | grep -qx "${{ inputs.tag }}"; then
-            echo "::error::Tag '${{ inputs.tag }}' does not exist in this repository."
+          if ! git ls-remote --exit-code --refs --tags "https://github.com/${REPO}.git" "refs/tags/${TAG}" >/dev/null; then
+            echo "::error::Tag '${TAG}' does not exist in this repository."
             exit 1
           fi
 
