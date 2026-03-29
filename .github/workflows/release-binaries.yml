@@ -4,6 +4,11 @@ on:
   push:
     tags: [v*]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v1.2.3)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -13,8 +18,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  validate:
+    name: Validate tag
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-tags: true
+      - name: Check tag exists
+        run: |
+          if ! git tag --list | grep -qx "${{ inputs.tag }}"; then
+            echo "::error::Tag '${{ inputs.tag }}' does not exist in this repository."
+            exit 1
+          fi
+
   build:
     name: Build ${{ matrix.platform }}
+    needs: [validate]
+    if: always() && (needs.validate.result == 'success' || needs.validate.result == 'skipped')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -34,6 +56,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: pnpm/action-setup@v5
         with:
@@ -91,7 +115,7 @@ jobs:
             Out-File -Encoding ascii otel-gui-${{ matrix.platform }}.zip.sha256
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: otel-gui-${{ matrix.platform }}
           path: |
@@ -106,7 +130,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
@@ -114,5 +138,6 @@ jobs:
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
           fail_on_unmatched_files: false
           files: artifacts/*
