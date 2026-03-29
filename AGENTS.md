@@ -11,6 +11,21 @@ pnpm run test       # Run unit tests (Vitest)
 pnpm run test:watch # Tests in watch mode
 ```
 
+## Formatting Workflow
+
+Before submitting changes (including agent-generated edits), run:
+
+```sh
+pnpm run format:changed
+pnpm run lint:fix
+```
+
+Then validate with:
+
+```sh
+pnpm run format:check
+```
+
 **Required**: `pnpm` (not npm/yarn), Node.js 20+, `@sveltejs/adapter-node` (persistent server process state)
 
 ## Architecture
