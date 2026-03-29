@@ -30,7 +30,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execSync, execFileSync } from 'node:child_process'
 import { platform, arch } from 'node:os'
 
@@ -175,7 +175,7 @@ if (target.os === 'darwin' && platform() === 'darwin') {
 console.log('→ Injecting SEA blob with postject...')
 const req = createRequire(import.meta.url)
 const postjectApiPath = req.resolve('postject') // resolves to dist/api.js via package "main"
-const { inject } = await import(postjectApiPath)
+const { inject } = await import(pathToFileURL(postjectApiPath).href)
 const blobBuffer = readFileSync(blobPath)
 await inject(binaryOut, 'NODE_SEA_BLOB', blobBuffer, {
   sentinelFuse: fuse,
