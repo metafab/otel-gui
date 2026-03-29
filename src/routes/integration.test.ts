@@ -5,6 +5,9 @@ import {
   DELETE as deleteTraces,
 } from './api/traces/+server'
 import { GET as getTrace } from './api/traces/[traceId]/+server'
+import { GET as exportTrace } from './api/traces/[traceId]/export/+server'
+import { POST as previewTraceImport } from './api/traces/import/preview/+server'
+import { POST as importTraces } from './api/traces/import/+server'
 import { GET as getTraceLogs } from './api/traces/[traceId]/logs/+server'
 import { GET as getTraceLog } from './api/traces/[traceId]/logs/[logId]/+server'
 import { GET as getServiceMap } from './api/service-map/+server'
@@ -49,6 +52,14 @@ function makeUrl(path: string, params: Record<string, string> = {}): URL {
     url.searchParams.set(k, v)
   }
   return url
+}
+
+function makeJsonRequest(path: string, body: unknown): Request {
+  return new Request(`http://localhost${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
 }
 
 beforeEach(() => {
@@ -341,6 +352,185 @@ describe('GET /api/traces/:traceId', () => {
     const response = await getTrace({ params: { traceId } } as any)
     const trace = await response.json()
     expect(trace.rootSpanName).toBe('GET /')
+  })
+})
+
+describe('GET /api/traces/:traceId/export', () => {
+  it('exports a trace as a downloadable otel-gui JSON envelope', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const [{ traceId }] = await listResponse.json()
+
+    const response = await exportTrace({ params: { traceId } } as any)
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-disposition')).toContain(traceId)
+    expect(payload.format).toBe('otel-gui-trace-export')
+    expect(payload.traceCount).toBe(1)
+    expect(payload.spanCount).toBe(1)
+    expect(payload.traces).toHaveLength(1)
+    expect(payload.traces[0].traceId).toBe(traceId)
+    expect(payload.traces[0].resourceSpans).toHaveLength(1)
+  })
+})
+
+describe('POST /api/traces/import/preview', () => {
+  it('previews otel-gui export metadata before import', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const [{ traceId }] = await listResponse.json()
+    const exportResponse = await exportTrace({ params: { traceId } } as any)
+    const exportedPayload = await exportResponse.json()
+
+    traceStore.clear()
+
+    const previewResponse = await previewTraceImport({
+      request: makeJsonRequest('/api/traces/import/preview', {
+        fileName: 'trace.json',
+        content: JSON.stringify(exportedPayload),
+      }),
+    } as any)
+    const preview = await previewResponse.json()
+
+    expect(previewResponse.status).toBe(200)
+    expect(preview.format).toBe('otel-gui-trace-export')
+    expect(preview.fileName).toBe('trace.json')
+    expect(preview.traceCount).toBe(1)
+    expect(preview.spanCount).toBe(1)
+    expect(preview.services).toEqual(['frontend'])
+  })
+
+  it('returns 400 for malformed JSON content', async () => {
+    const previewResponse = await previewTraceImport({
+      request: makeJsonRequest('/api/traces/import/preview', {
+        fileName: 'bad.json',
+        content: '{',
+      }),
+    } as any)
+
+    const preview = await previewResponse.json()
+    expect(previewResponse.status).toBe(400)
+    expect(preview.error).toMatch(/malformed json/i)
+  })
+})
+
+describe('POST /api/traces/import', () => {
+  it('imports an exported trace and restores it in the trace list', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const [{ traceId }] = await listResponse.json()
+    const exportResponse = await exportTrace({ params: { traceId } } as any)
+    const exportedPayload = await exportResponse.json()
+
+    traceStore.clear()
+
+    const importResponse = await importTraces({
+      request: makeJsonRequest('/api/traces/import', {
+        fileName: 'trace.json',
+        content: JSON.stringify(exportedPayload),
+      }),
+    } as any)
+    const imported = await importResponse.json()
+
+    expect(importResponse.status).toBe(200)
+    expect(imported.importedTraceCount).toBe(1)
+    expect(imported.importedSpanCount).toBe(1)
+
+    const restoredListResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const restoredTraces = await restoredListResponse.json()
+
+    expect(restoredTraces).toHaveLength(1)
+    expect(restoredTraces[0].traceId).toBe(traceId)
+    expect(restoredTraces[0].rootSpanName).toBe('GET /')
+  })
+
+  it('imports raw OTLP JSON payloads directly', async () => {
+    const importResponse = await importTraces({
+      request: makeJsonRequest('/api/traces/import', {
+        fileName: 'simple-trace.json',
+        content: JSON.stringify(simpleTrace),
+      }),
+    } as any)
+    const imported = await importResponse.json()
+
+    expect(importResponse.status).toBe(200)
+    expect(imported.importedTraceCount).toBe(1)
+    expect(imported.importedSpanCount).toBe(1)
+  })
+
+  it('imports a multi-trace export envelope and restores both traces', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+    await POST({ request: makePostRequest(errorTrace) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const traces = await listResponse.json()
+    expect(traces).toHaveLength(2)
+
+    const exportedTraces = await Promise.all(
+      traces.map(async (trace: { traceId: string }) => {
+        const response = await exportTrace({
+          params: { traceId: trace.traceId },
+        } as any)
+        expect(response.status).toBe(200)
+        return response.json()
+      }),
+    )
+
+    const combinedEnvelope = {
+      format: 'otel-gui-trace-export',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      traceCount: exportedTraces.reduce(
+        (total, exported) => total + exported.traceCount,
+        0,
+      ),
+      spanCount: exportedTraces.reduce(
+        (total, exported) => total + exported.spanCount,
+        0,
+      ),
+      traces: exportedTraces.flatMap((exported) => exported.traces),
+    }
+
+    traceStore.clear()
+
+    const importResponse = await importTraces({
+      request: makeJsonRequest('/api/traces/import', {
+        fileName: 'multi-trace-export.json',
+        content: JSON.stringify(combinedEnvelope),
+      }),
+    } as any)
+    const imported = await importResponse.json()
+
+    expect(importResponse.status).toBe(200)
+    expect(imported.importedTraceCount).toBe(2)
+
+    const restoredListResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const restoredTraces = await restoredListResponse.json()
+
+    expect(restoredTraces).toHaveLength(2)
+
+    const restoredIds = restoredTraces.map(
+      (trace: { traceId: string }) => trace.traceId,
+    )
+    for (const trace of traces) {
+      expect(restoredIds).toContain(trace.traceId)
+    }
   })
 })
 

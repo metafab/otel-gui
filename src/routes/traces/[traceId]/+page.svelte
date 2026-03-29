@@ -66,6 +66,8 @@
   let miniMapLoading = $state(false)
   let spanSearchInputEl = $state<HTMLInputElement | null>(null)
   let showShortcuts = $state(false)
+  let isExporting = $state(false)
+  let exportError = $state<string | null>(null)
 
   const liveTraceSummary = $derived(
     traceStore.traces.find((item) => item.traceId === traceId) || null,
@@ -530,6 +532,37 @@
     await loadTrace()
   }
 
+  async function handleExportTrace() {
+    if (!traceId) {
+      return
+    }
+
+    isExporting = true
+    exportError = null
+
+    try {
+      const response = await fetch(`/api/traces/${traceId}/export`)
+      if (!response.ok) {
+        throw new Error(`Failed to export trace: ${response.statusText}`)
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `trace-${traceId}.json`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      exportError =
+        err instanceof Error ? err.message : 'Could not export trace'
+    } finally {
+      isExporting = false
+    }
+  }
+
   function handleNextMatch() {
     if (matchCount === 0) return
     currentMatchIndex = (currentMatchIndex + 1) % matchCount
@@ -779,6 +812,14 @@
     {#if trace}
       <div class="view-controls">
         <button
+          class="toggle-button"
+          onclick={handleExportTrace}
+          disabled={isExporting}
+          title="Export this trace as JSON"
+        >
+          {isExporting ? 'Exporting...' : 'Export Trace'}
+        </button>
+        <button
           class="toggle-button refresh-button"
           class:refresh-needed={needsRefresh}
           class:refresh-alert={needsRefresh && !isLoading}
@@ -966,6 +1007,9 @@
   {:else if error}
     <div class="error">{error}</div>
   {:else if trace}
+    {#if exportError}
+      <div class="error export-error">{exportError}</div>
+    {/if}
     <div class="trace-container">
       <!-- Trace Identification Section -->
       {#if showTraceDetails}

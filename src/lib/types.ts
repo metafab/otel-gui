@@ -91,6 +91,31 @@ export interface TraceListItem {
   updatedAt: number // epoch ms, copied from StoredTrace
 }
 
+export interface TraceExportItem {
+  traceId: string
+  resourceSpans: any[]
+}
+
+export interface TraceExportEnvelope {
+  format: 'otel-gui-trace-export'
+  version: 1
+  exportedAt: string
+  traceCount: number
+  spanCount: number
+  traces: TraceExportItem[]
+}
+
+export interface TraceImportPreview {
+  format: 'otlp-json' | 'otel-gui-trace-export'
+  fileName: string | null
+  exportedAt: string | null
+  sizeBytes: number
+  traceCount: number
+  spanCount: number
+  services: string[]
+  warnings: string[]
+}
+
 // Service map types
 export interface ServiceMapNode {
   serviceName: string

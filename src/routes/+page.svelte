@@ -4,6 +4,7 @@
   import ServiceMap from '$lib/components/ServiceMap.svelte'
   import { isInputFocused, isMac } from '$lib/utils/keyboard'
   import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
+  import TraceImportModal from '$lib/components/TraceImportModal.svelte'
   import TraceFilters from '$lib/components/TraceFilters.svelte'
   import { checkForUpdate, dismissUpdate } from '$lib/utils/updateCheck'
   import type { ServiceMapData } from '$lib/types'
@@ -90,6 +91,8 @@
   let selectedService = $state<string>('all')
   let searchInputEl = $state<HTMLInputElement | null>(null)
   let showShortcuts = $state(false)
+  let showImportModal = $state(false)
+  let importSuccessMessage = $state<string | null>(null)
   let showErrorsOnly = $state(false)
   let minDuration = $state<number | null>(null)
   let maxDuration = $state<number | null>(null)
@@ -153,6 +156,17 @@
     if (confirm('Clear all traces? This cannot be undone.')) {
       await traceStore.clearAllTraces()
     }
+  }
+
+  function handleImportCompleted(result: {
+    importedTraceCount: number
+    importedSpanCount: number
+  }) {
+    importSuccessMessage = `Imported ${result.importedTraceCount} trace${result.importedTraceCount === 1 ? '' : 's'} and ${result.importedSpanCount} span${result.importedSpanCount === 1 ? '' : 's'}.`
+  }
+
+  function handleDismissImportSuccess() {
+    importSuccessMessage = null
   }
 
   function handleGlobalKeydown(e: KeyboardEvent) {
@@ -231,6 +245,16 @@
         aria-label="Keyboard shortcuts">?</button
       >
       <button
+        class="secondary-action"
+        onclick={() => {
+          importSuccessMessage = null
+          showImportModal = true
+        }}
+      >
+        Import Traces
+      </button>
+      <button
+        class="danger-action"
         onclick={handleClearAll}
         disabled={isLoading || traces.length === 0}
       >
@@ -243,6 +267,20 @@
     <div class="traces-tab">
       {#if error}
         <div class="error">{error}</div>
+      {/if}
+
+      {#if importSuccessMessage}
+        <div class="success" role="status" aria-live="polite">
+          <span>{importSuccessMessage}</span>
+          <button
+            class="success-dismiss"
+            onclick={handleDismissImportSuccess}
+            aria-label="Dismiss import success message"
+            title="Dismiss"
+          >
+            ×
+          </button>
+        </div>
       {/if}
 
       {#if traces.length === 0}
@@ -404,6 +442,13 @@
   />
 {/if}
 
+{#if showImportModal}
+  <TraceImportModal
+    onclose={() => (showImportModal = false)}
+    onimported={handleImportCompleted}
+  />
+{/if}
+
 <style>
   .container {
     max-width: 1400px;
@@ -490,18 +535,33 @@
     font-size: 0.875rem;
   }
 
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
   .actions button:not(.shortcut-help-btn) {
     padding: 0.5rem 1rem;
-    background: var(--error-border);
-    color: white;
-    border: none;
+    border: 1px solid var(--border);
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.875rem;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    transition:
+      background 0.12s ease,
+      border-color 0.12s ease,
+      color 0.12s ease;
   }
 
   .actions button:not(.shortcut-help-btn):hover:not(:disabled) {
-    background: var(--error-text);
+    background: var(--bg-muted);
+    border-color: var(--border-strong, var(--border));
+  }
+
+  .danger-action {
+    color: var(--text-secondary);
   }
 
   .actions button:not(.shortcut-help-btn):disabled {
@@ -516,6 +576,39 @@
     border-radius: 4px;
     color: var(--error-text);
     margin-bottom: 1rem;
+  }
+
+  .success {
+    padding: 0.8rem 1rem;
+    background: var(--ok-bg);
+    border: 1px solid var(--ok-border);
+    border-radius: 4px;
+    color: var(--ok-text);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .success-dismiss {
+    border: 1px solid var(--ok-border);
+    background: transparent;
+    color: var(--ok-text);
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    line-height: 1;
+    cursor: pointer;
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .success-dismiss:hover {
+    background: color-mix(in srgb, var(--ok-border) 20%, transparent);
   }
 
   .empty {
