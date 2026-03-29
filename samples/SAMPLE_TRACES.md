@@ -12,6 +12,19 @@ The easiest way to see all features is to run the automated demo:
 ./demo-ecommerce-trace.sh
 ```
 
+On Windows (PowerShell):
+
+```powershell
+.\demo-ecommerce-trace.ps1
+```
+
+If script execution is blocked, run it for the current shell session only:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\demo-ecommerce-trace.ps1
+```
+
 This sends a realistic multi-service trace in two parts (simulating incremental span arrival) and shows you what to explore in the UI.
 
 ## Sample Traces Overview
