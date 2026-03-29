@@ -32,13 +32,13 @@ jobs:
             platform: win-x64
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           version: 10
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
@@ -75,7 +75,7 @@ jobs:
             Out-File -Encoding ascii otel-gui-${{ matrix.platform }}.zip.sha256
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: otel-gui-${{ matrix.platform }}
           path: |
