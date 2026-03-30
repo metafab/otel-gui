@@ -1,6 +1,7 @@
 import type {
   StoredSpan,
   StoredTrace,
+  TraceExportItem,
   TraceExportEnvelope,
   TraceImportPreview,
 } from '$lib/types'
@@ -97,7 +98,7 @@ function toOtlpSpan(span: StoredSpan): any {
   }
 }
 
-export function serializeTraceExport(trace: StoredTrace): TraceExportEnvelope {
+function serializeTraceExportItem(trace: StoredTrace): TraceExportItem {
   const groups = new Map<
     string,
     {
@@ -156,18 +157,32 @@ export function serializeTraceExport(trace: StoredTrace): TraceExportEnvelope {
   }))
 
   return {
+    traceId: trace.traceId,
+    resourceSpans,
+  }
+}
+
+export function serializeTracesExport(
+  traces: StoredTrace[],
+): TraceExportEnvelope {
+  const exportItems = traces.map((trace) => serializeTraceExportItem(trace))
+  const totalSpanCount = traces.reduce(
+    (total, trace) => total + trace.spanCount,
+    0,
+  )
+
+  return {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
-    traceCount: 1,
-    spanCount: trace.spanCount,
-    traces: [
-      {
-        traceId: trace.traceId,
-        resourceSpans,
-      },
-    ],
+    traceCount: traces.length,
+    spanCount: totalSpanCount,
+    traces: exportItems,
   }
+}
+
+export function serializeTraceExport(trace: StoredTrace): TraceExportEnvelope {
+  return serializeTracesExport([trace])
 }
 
 function isExportEnvelope(value: unknown): value is TraceExportEnvelope {
@@ -217,6 +232,8 @@ function collectPreview(
   resourceSpans: any[],
   fileName: string | null,
   exportedAt: string | null,
+  envelopeTraceCount: number | null,
+  envelopeTracesWithoutSpans: number,
   sizeBytes: number,
   format: TraceImportPreview['format'],
   existingTraceIds: Set<string>,
@@ -265,12 +282,25 @@ function collectPreview(
     )
   }
 
+  if (envelopeTracesWithoutSpans > 0) {
+    warnings.push(
+      `Envelope contains ${envelopeTracesWithoutSpans} trace entr${envelopeTracesWithoutSpans === 1 ? 'y' : 'ies'} without spans; trace import ingests only traces that include spans.`,
+    )
+  } else if (
+    envelopeTraceCount !== null &&
+    envelopeTraceCount !== traceIds.size
+  ) {
+    warnings.push(
+      `Envelope metadata declares ${envelopeTraceCount} trace${envelopeTraceCount === 1 ? '' : 's'}, while span analysis found ${traceIds.size} unique traceId values.`,
+    )
+  }
+
   return {
     format,
     fileName,
     exportedAt,
     sizeBytes,
-    traceCount: traceIds.size,
+    traceCount: envelopeTraceCount ?? traceIds.size,
     spanCount,
     services: Array.from(services).sort(),
     warnings,
@@ -289,6 +319,8 @@ export function parseTraceImportPayload(
   let resourceSpans: any[]
   let format: TraceImportPreview['format']
   let exportedAt: string | null = null
+  let envelopeTraceCount: number | null = null
+  let envelopeTracesWithoutSpans = 0
 
   if (
     payload &&
@@ -303,6 +335,26 @@ export function parseTraceImportPayload(
     format = 'otel-gui-trace-export'
     exportedAt =
       typeof payload.exportedAt === 'string' ? payload.exportedAt : null
+    envelopeTraceCount =
+      typeof payload.traceCount === 'number' ? payload.traceCount : null
+    envelopeTracesWithoutSpans = payload.traces.filter((trace) => {
+      const resourceSpans = Array.isArray(trace.resourceSpans)
+        ? trace.resourceSpans
+        : []
+
+      for (const resourceSpan of resourceSpans) {
+        const scopeSpans = Array.isArray(resourceSpan.scopeSpans)
+          ? resourceSpan.scopeSpans
+          : []
+        for (const scopeSpan of scopeSpans) {
+          if (Array.isArray(scopeSpan.spans) && scopeSpan.spans.length > 0) {
+            return false
+          }
+        }
+      }
+
+      return true
+    }).length
   } else {
     throw new Error(
       'Unsupported import payload: expected OTLP JSON or otel-gui export',
@@ -319,6 +371,8 @@ export function parseTraceImportPayload(
       resourceSpans,
       options.fileName ?? null,
       exportedAt,
+      envelopeTraceCount,
+      envelopeTracesWithoutSpans,
       options.sizeBytes,
       format,
       options.existingTraceIds,

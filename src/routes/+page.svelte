@@ -93,6 +93,8 @@
   let showShortcuts = $state(false)
   let showImportModal = $state(false)
   let importSuccessMessage = $state<string | null>(null)
+  let exportError = $state<string | null>(null)
+  let isExportingFiltered = $state(false)
   let showErrorsOnly = $state(false)
   let minDuration = $state<number | null>(null)
   let maxDuration = $state<number | null>(null)
@@ -155,6 +157,68 @@
   async function handleClearAll() {
     if (confirm('Clear all traces? This cannot be undone.')) {
       await traceStore.clearAllTraces()
+    }
+  }
+
+  function pad2(value: number): string {
+    return String(value).padStart(2, '0')
+  }
+
+  function localFileTimestamp(date: Date): string {
+    const year = date.getFullYear()
+    const month = pad2(date.getMonth() + 1)
+    const day = pad2(date.getDate())
+    const hours = pad2(date.getHours())
+    const minutes = pad2(date.getMinutes())
+    const seconds = pad2(date.getSeconds())
+    return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`
+  }
+
+  async function handleExportFiltered() {
+    if (filteredTraces.length === 0) {
+      return
+    }
+
+    isExportingFiltered = true
+    exportError = null
+
+    try {
+      const traceIds = filteredTraces.map((trace) => trace.traceId)
+      const response = await fetch('/api/traces/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ traceIds }),
+      })
+
+      const payload = await response.json()
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not export filtered traces')
+      }
+
+      const fileName =
+        response.headers
+          .get('content-disposition')
+          ?.match(/filename="?([^";]+)"?/)?.[1] ||
+        `traces-filtered-${localFileTimestamp(new Date())}.json`
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: 'application/json',
+      })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      exportError =
+        err instanceof Error ? err.message : 'Could not export filtered traces'
+    } finally {
+      isExportingFiltered = false
     }
   }
 
@@ -247,11 +311,19 @@
       <button
         class="secondary-action"
         onclick={() => {
+          exportError = null
           importSuccessMessage = null
           showImportModal = true
         }}
       >
         Import Traces
+      </button>
+      <button
+        class="secondary-action"
+        onclick={handleExportFiltered}
+        disabled={filteredTraces.length === 0 || isExportingFiltered}
+      >
+        {isExportingFiltered ? 'Exporting...' : 'Export Filtered'}
       </button>
       <button
         class="danger-action"
@@ -267,6 +339,10 @@
     <div class="traces-tab">
       {#if error}
         <div class="error">{error}</div>
+      {/if}
+
+      {#if exportError}
+        <div class="error">{exportError}</div>
       {/if}
 
       {#if importSuccessMessage}

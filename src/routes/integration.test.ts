@@ -6,6 +6,7 @@ import {
 } from './api/traces/+server'
 import { GET as getTrace } from './api/traces/[traceId]/+server'
 import { GET as exportTrace } from './api/traces/[traceId]/export/+server'
+import { POST as exportFilteredTraces } from './api/traces/export/+server'
 import { POST as previewTraceImport } from './api/traces/import/preview/+server'
 import { POST as importTraces } from './api/traces/import/+server'
 import { GET as getTraceLogs } from './api/traces/[traceId]/logs/+server'
@@ -378,6 +379,46 @@ describe('GET /api/traces/:traceId/export', () => {
   })
 })
 
+describe('POST /api/traces/export', () => {
+  it('exports only the requested trace IDs in one envelope', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+    await POST({ request: makePostRequest(errorTrace) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const traces = await listResponse.json()
+    expect(traces).toHaveLength(2)
+
+    const targetTraceId = traces.find(
+      (trace: { hasError: boolean }) => trace.hasError,
+    )?.traceId
+    expect(targetTraceId).toBeDefined()
+
+    const response = await exportFilteredTraces({
+      request: makeJsonRequest('/api/traces/export', {
+        traceIds: [targetTraceId],
+      }),
+    } as any)
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(payload.traceCount).toBe(1)
+    expect(payload.traces).toHaveLength(1)
+    expect(payload.traces[0].traceId).toBe(targetTraceId)
+  })
+
+  it('returns 400 when traceIds payload is missing or invalid', async () => {
+    const response = await exportFilteredTraces({
+      request: makeJsonRequest('/api/traces/export', {}),
+    } as any)
+    const payload = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(payload.error).toMatch(/traceIds/i)
+  })
+})
+
 describe('POST /api/traces/import/preview', () => {
   it('previews otel-gui export metadata before import', async () => {
     await POST({ request: makePostRequest(simpleTrace) } as any)
@@ -418,6 +459,67 @@ describe('POST /api/traces/import/preview', () => {
     const preview = await previewResponse.json()
     expect(previewResponse.status).toBe(400)
     expect(preview.error).toMatch(/malformed json/i)
+  })
+
+  it('uses envelope traceCount metadata in preview', async () => {
+    const syntheticEnvelope = {
+      format: 'otel-gui-trace-export',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      traceCount: 2,
+      spanCount: 1,
+      traces: [
+        {
+          traceId: 'SINGLETRACE0000000000000000000001',
+          resourceSpans: (simpleTrace as any).resourceSpans,
+        },
+      ],
+    }
+
+    const previewResponse = await previewTraceImport({
+      request: makeJsonRequest('/api/traces/import/preview', {
+        fileName: 'multi-trace-meta.json',
+        content: JSON.stringify(syntheticEnvelope),
+      }),
+    } as any)
+    const preview = await previewResponse.json()
+
+    expect(previewResponse.status).toBe(200)
+    expect(preview.traceCount).toBe(2)
+    expect(preview.warnings.join(' ')).toMatch(/declares 2 trace/i)
+  })
+
+  it('explains envelope traces without spans instead of traceId mismatch warning', async () => {
+    const envelopeWithEmptyTrace = {
+      format: 'otel-gui-trace-export',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      traceCount: 2,
+      spanCount: 1,
+      traces: [
+        {
+          traceId: 'TRACE_WITH_SPAN',
+          resourceSpans: (simpleTrace as any).resourceSpans,
+        },
+        {
+          traceId: 'TRACE_WITHOUT_SPANS',
+          resourceSpans: [],
+        },
+      ],
+    }
+
+    const previewResponse = await previewTraceImport({
+      request: makeJsonRequest('/api/traces/import/preview', {
+        fileName: 'envelope-with-empty-trace.json',
+        content: JSON.stringify(envelopeWithEmptyTrace),
+      }),
+    } as any)
+    const preview = await previewResponse.json()
+
+    expect(previewResponse.status).toBe(200)
+    expect(preview.traceCount).toBe(2)
+    expect(preview.warnings.join(' ')).toMatch(/without spans/i)
+    expect(preview.warnings.join(' ')).not.toMatch(/span analysis found/i)
   })
 })
 
