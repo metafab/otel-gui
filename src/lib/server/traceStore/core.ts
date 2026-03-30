@@ -310,6 +310,25 @@ export function createInternalTraceStore(
     notifyListeners()
   }
 
+  function deleteTraces(traceIds: string[]): number {
+    if (!Array.isArray(traceIds) || traceIds.length === 0) {
+      return 0
+    }
+
+    let deletedCount = 0
+    for (const traceId of traceIds) {
+      if (traces.delete(traceId)) {
+        deletedCount++
+      }
+    }
+
+    if (deletedCount > 0) {
+      notifyListeners()
+    }
+
+    return deletedCount
+  }
+
   function subscribe(fn: () => void): () => void {
     listeners.add(fn)
     return () => {
@@ -337,6 +356,7 @@ export function createInternalTraceStore(
     getTrace,
     getServiceMap,
     clear,
+    deleteTraces,
     subscribe,
     listAllTraces,
     replaceAllTraces,

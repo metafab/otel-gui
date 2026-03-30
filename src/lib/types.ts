@@ -151,6 +151,7 @@ export interface TraceStore {
   getTrace(traceId: string): StoredTrace | undefined
   getServiceMap(traceId?: string): ServiceMapData
   clear(): void
+  deleteTraces(traceIds: string[]): number
   subscribe(fn: () => void): () => void
   readonly maxTraces: number
 }

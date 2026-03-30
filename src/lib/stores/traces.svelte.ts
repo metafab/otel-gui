@@ -190,6 +190,48 @@ async function clearAllTraces() {
   }
 }
 
+async function deleteSelectedTraces(traceIds: string[]) {
+  if (!Array.isArray(traceIds) || traceIds.length === 0) {
+    return 0
+  }
+
+  try {
+    isLoading = true
+    error = null
+    const response = await fetch('/api/traces', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ traceIds }),
+    })
+    if (!response.ok) {
+      throw new Error(
+        `Failed to delete selected traces: ${response.statusText}`,
+      )
+    }
+
+    const payload = await response.json()
+    const deletedCount =
+      typeof payload.deletedCount === 'number' ? payload.deletedCount : 0
+
+    if (deletedCount > 0) {
+      traces = traces.filter((trace) => !traceIds.includes(trace.traceId))
+      if (selectedId && traceIds.includes(selectedId)) {
+        selectedId = null
+      }
+    }
+
+    return deletedCount
+  } catch (err) {
+    error = err instanceof Error ? err.message : 'Unknown error deleting traces'
+    console.error('Error deleting selected traces:', err)
+    return 0
+  } finally {
+    isLoading = false
+  }
+}
+
 // Export reactive getters and actions
 export const traceStore = {
   get traces() {
@@ -218,5 +260,6 @@ export const traceStore = {
   fetchTraceLog,
   selectTrace,
   clearAllTraces,
+  deleteSelectedTraces,
   connectSSE,
 }

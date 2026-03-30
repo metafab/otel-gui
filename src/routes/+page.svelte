@@ -96,6 +96,8 @@
   let exportError = $state<string | null>(null)
   let isExporting = $state(false)
   let selectedTraceIds = $state<string[]>([])
+  let showClearMenu = $state(false)
+  let clearSplitContainer = $state<HTMLElement | null>(null)
   let showErrorsOnly = $state(false)
   let minDuration = $state<number | null>(null)
   let maxDuration = $state<number | null>(null)
@@ -178,11 +180,69 @@
     window.location.href = `/traces/${traceId}`
   }
 
+  $effect(() => {
+    if (typeof document === 'undefined') return
+
+    function handleDocumentPointerDown(event: MouseEvent) {
+      if (!showClearMenu) return
+      const target = event.target as Node | null
+      if (
+        clearSplitContainer &&
+        target &&
+        !clearSplitContainer.contains(target)
+      ) {
+        showClearMenu = false
+      }
+    }
+
+    function handleDocumentEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        showClearMenu = false
+      }
+    }
+
+    document.addEventListener('mousedown', handleDocumentPointerDown)
+    document.addEventListener('keydown', handleDocumentEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentPointerDown)
+      document.removeEventListener('keydown', handleDocumentEscape)
+    }
+  })
+
   async function handleClearAll() {
     if (confirm('Clear all traces? This cannot be undone.')) {
       await traceStore.clearAllTraces()
       selectedTraceIds = []
     }
+    showClearMenu = false
+  }
+
+  async function handleDeleteSelected() {
+    if (selectedTraceIds.length === 0) {
+      return
+    }
+
+    const targetCount = selectedTraceIds.length
+    const confirmed = confirm(
+      `Delete ${targetCount} selected trace${targetCount === 1 ? '' : 's'}? This cannot be undone.`,
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    const deletedCount = await traceStore.deleteSelectedTraces(selectedTraceIds)
+    if (deletedCount > 0) {
+      selectedTraceIds = []
+    }
+
+    showClearMenu = false
+  }
+
+  function toggleClearMenu(event: MouseEvent) {
+    event.stopPropagation()
+    showClearMenu = !showClearMenu
   }
 
   function pad2(value: number): string {
@@ -389,13 +449,45 @@
               selectedTraceIds.length > 0 ? ` (${selectedTraceIds.length})` : ''
             }`}
       </button>
-      <button
-        class="danger-action"
-        onclick={handleClearAll}
-        disabled={isLoading || traces.length === 0}
+      <div
+        class="split-action"
+        role="group"
+        aria-label="Trace deletion actions"
+        bind:this={clearSplitContainer}
       >
-        Clear All
-      </button>
+        <button
+          class="split-primary"
+          onclick={handleClearAll}
+          disabled={isLoading || traces.length === 0}
+        >
+          Clear All
+        </button>
+        <button
+          class="split-toggle"
+          onclick={toggleClearMenu}
+          disabled={isLoading || traces.length === 0}
+          aria-label="More clear actions"
+          aria-expanded={showClearMenu}
+          title="More clear actions"
+        >
+          ▼
+        </button>
+
+        {#if showClearMenu}
+          <div class="split-menu" role="menu" aria-label="Clear actions menu">
+            <button
+              class="split-menu-item"
+              role="menuitem"
+              onclick={handleDeleteSelected}
+              disabled={isLoading || selectedTraceIds.length === 0}
+            >
+              Delete Selected{selectedTraceIds.length > 0
+                ? ` (${selectedTraceIds.length})`
+                : ''}
+            </button>
+          </div>
+        {/if}
+      </div>
     </div>
   </header>
 
@@ -723,8 +815,84 @@
     border-color: var(--border-strong, var(--border));
   }
 
-  .danger-action {
-    color: var(--text-secondary);
+  .split-action {
+    position: relative;
+    display: inline-flex;
+    align-items: stretch;
+    box-shadow: 0 1px 2px var(--shadow-sm);
+  }
+
+  .split-action .split-primary,
+  .split-action .split-toggle {
+    border: 1px solid color-mix(in srgb, var(--accent) 80%, black);
+    background: var(--accent);
+    color: white;
+  }
+
+  .split-action .split-primary {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .split-action .split-toggle {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: none;
+    width: 34px;
+    min-width: 34px;
+    padding: 0;
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .split-action .split-primary:hover:not(:disabled),
+  .split-action .split-toggle:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent) 86%, black);
+  }
+
+  .split-action .split-primary:disabled,
+  .split-action .split-toggle:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .split-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 180px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow:
+      0 8px 20px var(--shadow),
+      0 1px 3px var(--shadow-sm);
+    z-index: 40;
+    overflow: hidden;
+  }
+
+  .split-menu-item {
+    width: 100%;
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .split-menu-item:hover:not(:disabled) {
+    background: var(--bg-muted);
+  }
+
+  .split-menu-item:disabled {
+    color: var(--text-muted);
+    cursor: not-allowed;
   }
 
   .actions button:not(.shortcut-help-btn):disabled {

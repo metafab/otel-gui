@@ -315,6 +315,44 @@ describe('DELETE /api/traces', () => {
     const traces = await listResponse.json()
     expect(traces).toHaveLength(0)
   })
+
+  it('deletes only selected trace IDs when traceIds are provided', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+    await POST({ request: makePostRequest(errorTrace) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const traces = await listResponse.json()
+    expect(traces).toHaveLength(2)
+
+    const traceToDelete = traces.find(
+      (trace: { hasError: boolean }) => trace.hasError,
+    )
+    expect(traceToDelete).toBeDefined()
+
+    const deleteRequest = new Request('http://localhost/api/traces', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ traceIds: [traceToDelete.traceId] }),
+    })
+
+    const deleteResponse = await deleteTraces({ request: deleteRequest } as any)
+    const body = await deleteResponse.json()
+
+    expect(deleteResponse.status).toBe(200)
+    expect(body.success).toBe(true)
+    expect(body.mode).toBe('selected')
+    expect(body.deletedCount).toBe(1)
+
+    const afterDeleteResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const remainingTraces = await afterDeleteResponse.json()
+
+    expect(remainingTraces).toHaveLength(1)
+    expect(remainingTraces[0].traceId).not.toBe(traceToDelete.traceId)
+  })
 })
 
 // ─── GET /api/traces/:traceId ─────────────────────────────────────────────────
