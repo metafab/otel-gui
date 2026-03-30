@@ -30,7 +30,7 @@ pnpm run format:check
 
 ## Architecture
 
-- **Routes**: `/v1/traces` + `/v1/logs` (OTLP receivers), `/api/traces` (frontend API), `/api/service-map` (service graph), `/api/config` (runtime config + persistence status)
+- **Routes**: `/v1/traces` + `/v1/logs` (OTLP receivers), `/api/traces` (list + clear/delete-selected), `/api/traces/:id` (detail), `/api/traces/:id/export` (single export), `/api/traces/export` (bulk export), `/api/traces/import/preview` + `/api/traces/import` (import flow), `/api/service-map` (service graph), `/api/config` (runtime config + persistence status)
 - **Server-only code**: `$lib/server/` — never bundled for client
 - **Utilities**: `$lib/utils/` — shared helpers for OTLP data transformation
 - **Types**: `$lib/types.ts` — all interfaces (use `import type`)
@@ -103,21 +103,29 @@ $effect(() => {
 
 ## Testing
 
-**Current status**: 129 unit + integration tests, all passing. Run with `pnpm run test`.
+**Current status**: 284 unit + integration/component tests, all passing. Run with `pnpm run test`.
 
 **Test files**:
 
-| File                                                                              | What's covered                                                                                                             |
-| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| [attributes.test.ts](src/lib/utils/attributes.test.ts)                            | All 7 AnyValue variants, null/edge cases                                                                                   |
-| [time.test.ts](src/lib/utils/time.test.ts)                                        | Duration formatting, negative/zero, timestamps, relative time                                                              |
-| [spans.test.ts](src/lib/utils/spans.test.ts)                                      | Tree building, orphans, circular refs, child sort order                                                                    |
-| [traceStore.test.ts](src/lib/server/traceStore.test.ts)                           | Ingestion, span merging, FIFO eviction, subscribe/unsubscribe, `resolveRootSpanName`                                       |
-| [integration.test.ts](src/routes/integration.test.ts)                             | Full POST→store→GET round-trip for all route handlers (`/v1/traces`, `/api/traces`, `/api/traces/:id`, `/api/service-map`) |
-| [ChevronIcon.test.ts](src/lib/components/ChevronIcon.test.ts)                     | SVG render, rotation transform, size prop, aria-hidden                                                                     |
-| [ServiceBadge.test.ts](src/lib/components/ServiceBadge.test.ts)                   | Service name text, element/attribute structure, background color                                                           |
-| [AttributeItem.test.ts](src/lib/components/AttributeItem.test.ts)                 | Key/value rendering, all 8 type labels, copy button, truncation, onFullscreen callback                                     |
-| [KeyboardShortcutsHelp.test.ts](src/lib/components/KeyboardShortcutsHelp.test.ts) | Shortcuts table, dialog role, close via button/backdrop/Escape key                                                         |
+| File                                                                              | What's covered                                                                                                           |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| [attributes.test.ts](src/lib/utils/attributes.test.ts)                            | All 7 AnyValue variants, null/edge cases                                                                                 |
+| [time.test.ts](src/lib/utils/time.test.ts)                                        | Duration formatting, negative/zero, timestamps, relative time                                                            |
+| [spans.test.ts](src/lib/utils/spans.test.ts)                                      | Tree building, orphans, circular refs, child sort order                                                                  |
+| [traceStore.test.ts](src/lib/server/traceStore.test.ts)                           | Ingestion, span merging, FIFO eviction, subscribe/unsubscribe, `resolveRootSpanName`, selected trace deletion            |
+| [integration.test.ts](src/routes/integration.test.ts)                             | Full route coverage including import preview/import, single+bulk export, selected deletion, service map, correlated logs |
+| [ChevronIcon.test.ts](src/lib/components/ChevronIcon.test.ts)                     | SVG render, rotation transform, size prop, aria-hidden                                                                   |
+| [ServiceBadge.test.ts](src/lib/components/ServiceBadge.test.ts)                   | Service name text, element/attribute structure, background color                                                         |
+| [AttributeItem.test.ts](src/lib/components/AttributeItem.test.ts)                 | Key/value rendering, all 8 type labels, copy button, truncation, onFullscreen callback                                   |
+| [KeyboardShortcutsHelp.test.ts](src/lib/components/KeyboardShortcutsHelp.test.ts) | Shortcuts table, dialog role, close via button/backdrop/Escape key                                                       |
+| [FullscreenValueModal.test.ts](src/lib/components/FullscreenValueModal.test.ts)   | Fullscreen value rendering, interactions, close behavior                                                                 |
+| [CopyButton.test.ts](src/lib/components/CopyButton.test.ts)                       | Clipboard interactions, fallback/error handling                                                                          |
+| [SpanDetailsSidebar.test.ts](src/lib/components/SpanDetailsSidebar.test.ts)       | Sidebar rendering, filters, events/links/resources/scope/logs flows                                                      |
+| [spanSearch.test.ts](src/lib/utils/spanSearch.test.ts)                            | Span search tokenization/matching, rank/ordering behaviors                                                               |
+| [updateCheck.test.ts](src/lib/utils/updateCheck.test.ts)                          | Release check caching/dismiss semantics                                                                                  |
+| [moduleImport.test.ts](src/lib/server/traceStore/moduleImport.test.ts)            | Dynamic backend module resolution and import behavior                                                                    |
+| [server.test.ts](src/routes/api/config/server.test.ts)                            | Config endpoint metadata (maxTraces + persistence fields)                                                                |
+| [page.test.ts](src/routes/traces/[traceId]/page.test.ts)                          | Trace detail page matching behavior with collapsed descendants                                                           |
 
 **Fixtures** live in `tests/fixtures/` (simple, multi-service, error, out-of-order batches).
 
@@ -163,10 +171,11 @@ Shortcuts implemented:
 1. **Port 4318 non-negotiable** — OTLP/HTTP standard (zero config for exporters)
 2. **adapter-node required** — In-memory `Map` must persist across requests
 3. **Protobuf and JSON supported** — Both `application/json` and `application/x-protobuf` content types accepted
-4. **No gzip yet** — Request body decompression deferred to v2
+4. **Gzip request bodies supported** — OTLP receivers accept gzip-compressed payloads
 5. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1-10 000, default 1000). FIFO eviction. Read via `$env/dynamic/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000.
 6. **Persistence is optional** — OSS always has `memory`; `pglite` requires a registered backend (usually via `OTEL_GUI_PERSISTENCE_BACKEND_MODULE`). If unavailable, runtime falls back to memory with `persistence.unavailableReason` in `GET /api/config`.
 7. **Update availability check** — On mount, the page fetches `https://api.github.com/repos/metafab/otel-gui/releases/latest` (GitHub API) and compares `tag_name` to `import.meta.env.PACKAGE_VERSION` (embedded at build time from `package.json` via Vite `define`). If a newer semver is found, a non-intrusive notice is shown in the bottom-left of the trace list, next to the retention notice. The notice links to `https://github.com/metafab/otel-gui/releases` and can be dismissed per-version via `localStorage`. The result is cached in `localStorage` (`update-check-cache`) for 1 hour to avoid hitting the GitHub rate limit (60 unauthenticated req/h). Network failures are silent and do not affect the UI.
+8. **Import/export UX contract** — list page provides Import, Export Filtered, Export Selected, and split delete actions (`Clear All` + dropdown `Delete Selected (n)`); import always previews metadata before confirmation.
 
 ## Reference Files
 
@@ -184,6 +193,10 @@ Shortcuts implemented:
 - [ServiceMap.svelte](src/lib/components/ServiceMap.svelte) — SVG service map component (full + mini mode); nodes are service/database/messaging shapes; edges show call count, error rate, p50/p99 latency
 - [types.ts](src/lib/types.ts) — Complete OTLP data model + `ServiceMapNode`, `ServiceMapEdge`, `ServiceMapData`
 - [stream/+server.ts](src/routes/api/traces/stream/+server.ts) — SSE endpoint (debounced, heartbeat)
+- [export/+server.ts](src/routes/api/traces/export/+server.ts) — `POST /api/traces/export` bulk export endpoint
+- [[traceId]/export/+server.ts](src/routes/api/traces/[traceId]/export/+server.ts) — `GET /api/traces/:traceId/export` endpoint
+- [import/preview/+server.ts](src/routes/api/traces/import/preview/+server.ts) — import metadata preview endpoint
+- [import/+server.ts](src/routes/api/traces/import/+server.ts) — import execution endpoint
 - [service-map/+server.ts](src/routes/api/service-map/+server.ts) — `GET /api/service-map?traceId=` endpoint
 - [config/+server.ts](src/routes/api/config/+server.ts) — `GET /api/config` endpoint (`maxTraces` + persistence status)
 - [vite.config.ts](vite.config.ts) — Embeds `PACKAGE_VERSION` from `package.json` at build time via `define: { 'import.meta.env.PACKAGE_VERSION': ... }`

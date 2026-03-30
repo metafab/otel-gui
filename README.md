@@ -18,6 +18,8 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Waterfall timeline** — Honeycomb-style span waterfall with resizable name column and sidebar
 - **Service map** — auto-generated graph of cross-service calls with error rates and latency (p50/p99)
 - **Search & filter** — filter trace list by text, service, status, and duration range; search spans inside a trace based on attributes, events, and span name and id
+- **Import/export traces** — export one trace, filtered traces, or selected traces as OTLP JSON envelope; import from OTLP JSON or otel-gui export files with metadata preview before confirmation
+- **Bulk list actions** — trace list supports multi-select export and split delete actions (`Clear All` + `Delete Selected (n)`)
 - **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `m` to toggle service map, escape key to clear search and go back to the trace list, `?` for shortcuts help
 - **Error navigation** — jump between error spans with one key
 - **Span details** — attributes, events with timeline markers, resource attributes, instrumentation scope, span links, correlated logs
@@ -348,8 +350,13 @@ Notes:
 POST /v1/traces          ← OTLP receiver (JSON + Protobuf)
 POST /v1/logs            ← OTLP logs receiver (JSON + Protobuf)
 GET  /api/traces         ← trace list for the UI
+DELETE /api/traces       ← clear all traces or delete selected traceIds
 GET  /api/traces/:id     ← single trace
 GET  /api/traces/:id/logs ← trace-scoped correlated logs
+GET  /api/traces/:id/export ← export a single trace envelope
+POST /api/traces/export  ← export filtered/selected traceIds
+POST /api/traces/import/preview ← validate + preview import metadata
+POST /api/traces/import  ← import otel-gui envelope or raw OTLP JSON
 GET  /api/traces/stream  ← SSE stream (real-time push)
 GET  /api/service-map    ← aggregated service graph
 ```

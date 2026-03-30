@@ -2,7 +2,7 @@
 
 ## Philosophy
 
-**Test what matters**: Focus on critical OTLP data transformations and business logic. UI component testing deferred until v2 when the interface stabilizes.
+**Test what matters**: Focus on critical OTLP data transformations, backend route contracts, and high-value UI behaviors.
 
 **Type safety first**: TypeScript strict mode + `pnpm run check` catches most errors. Tests supplement, not replace, type checking.
 
@@ -95,6 +95,8 @@ describe('formatDuration', () => {
 - OTLP endpoint E2E flow: POST → ingestion → storage → API retrieval
 - Multi-service trace reconstruction
 - Incremental span arrival (root span last)
+- Trace transfer workflows: export single/multi traces, preview import metadata, import envelopes and raw OTLP JSON
+- Deletion workflows: clear-all and selected trace deletion (`DELETE /api/traces` with `traceIds` payload)
 
 **Approach**: Use SvelteKit's built-in testing utilities
 
@@ -355,19 +357,27 @@ jobs:
 
 ## Current Status
 
-**129 tests passing** — run with `pnpm run test`.
+**284 tests passing** — run with `pnpm run test`.
 
 | File                                               | Tests |
 | -------------------------------------------------- | ----- |
 | `src/lib/utils/attributes.test.ts`                 | 17    |
 | `src/lib/utils/time.test.ts`                       | 18    |
 | `src/lib/utils/spans.test.ts`                      | 19    |
-| `src/lib/server/traceStore.test.ts`                | 22    |
-| `src/routes/integration.test.ts`                   | 20    |
+| `src/lib/server/traceStore.test.ts`                | 28    |
+| `src/routes/integration.test.ts`                   | 47    |
+| `src/lib/utils/spanSearch.test.ts`                 | 28    |
+| `src/lib/utils/updateCheck.test.ts`                | 28    |
 | `src/lib/components/ChevronIcon.test.ts`           | 6     |
 | `src/lib/components/ServiceBadge.test.ts`          | 5     |
-| `src/lib/components/AttributeItem.test.ts`         | 13    |
+| `src/lib/components/AttributeItem.test.ts`         | 15    |
 | `src/lib/components/KeyboardShortcutsHelp.test.ts` | 9     |
+| `src/lib/components/FullscreenValueModal.test.ts`  | 10    |
+| `src/lib/components/CopyButton.test.ts`            | 10    |
+| `src/lib/components/SpanDetailsSidebar.test.ts`    | 37    |
+| `src/lib/server/traceStore/moduleImport.test.ts`   | 4     |
+| `src/routes/api/config/server.test.ts`             | 2     |
+| `src/routes/traces/[traceId]/page.test.ts`         | 1     |
 
 Fixtures live in `tests/fixtures/` (simple-trace, multi-service-trace, error-trace, out-of-order-spans).
 
@@ -376,9 +386,8 @@ Fixtures live in `tests/fixtures/` (simple-trace, multi-service-trace, error-tra
 **Next steps**:
 
 1. Add tests for WaterfallRow
-2. Add E2E coverage for fullscreen attribute modal flow (open/copy/close)
-3. Add E2E coverage for linked-trace navigation from sidebar links
-4. Add E2E coverage for parent-span jump action in sidebar
+2. Add E2E coverage for linked-trace navigation from sidebar links
+3. Add E2E coverage for parent-span jump action in sidebar
 
 ## v2 Benchmark Checklist
 
