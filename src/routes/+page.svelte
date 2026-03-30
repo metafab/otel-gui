@@ -94,7 +94,8 @@
   let showImportModal = $state(false)
   let importSuccessMessage = $state<string | null>(null)
   let exportError = $state<string | null>(null)
-  let isExportingFiltered = $state(false)
+  let isExporting = $state(false)
+  let selectedTraceIds = $state<string[]>([])
   let showErrorsOnly = $state(false)
   let minDuration = $state<number | null>(null)
   let maxDuration = $state<number | null>(null)
@@ -142,12 +143,35 @@
     return result
   })
 
+  const selectedTraceIdSet = $derived(new Set(selectedTraceIds))
+  const selectedFilteredCount = $derived(
+    filteredTraces.filter((trace) => selectedTraceIdSet.has(trace.traceId))
+      .length,
+  )
+  const allFilteredSelected = $derived(
+    filteredTraces.length > 0 &&
+      selectedFilteredCount === filteredTraces.length,
+  )
+
+  $effect(() => {
+    const visibleIds = new Set(filteredTraces.map((trace) => trace.traceId))
+    const next = selectedTraceIds.filter((id) => visibleIds.has(id))
+    const changed =
+      next.length !== selectedTraceIds.length ||
+      next.some((id, index) => id !== selectedTraceIds[index])
+
+    if (changed) {
+      selectedTraceIds = next
+    }
+  })
+
   function handleClearFilters() {
     searchQuery = ''
     selectedService = 'all'
     showErrorsOnly = false
     minDuration = null
     maxDuration = null
+    selectedTraceIds = []
   }
 
   function handleRowClick(traceId: string) {
@@ -157,6 +181,7 @@
   async function handleClearAll() {
     if (confirm('Clear all traces? This cannot be undone.')) {
       await traceStore.clearAllTraces()
+      selectedTraceIds = []
     }
   }
 
@@ -174,16 +199,18 @@
     return `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`
   }
 
-  async function handleExportFiltered() {
-    if (filteredTraces.length === 0) {
+  async function exportTracesByIds(
+    traceIds: string[],
+    fallbackPrefix: 'filtered' | 'selected',
+  ) {
+    if (traceIds.length === 0) {
       return
     }
 
-    isExportingFiltered = true
+    isExporting = true
     exportError = null
 
     try {
-      const traceIds = filteredTraces.map((trace) => trace.traceId)
       const response = await fetch('/api/traces/export', {
         method: 'POST',
         headers: {
@@ -201,7 +228,7 @@
         response.headers
           .get('content-disposition')
           ?.match(/filename="?([^";]+)"?/)?.[1] ||
-        `traces-filtered-${localFileTimestamp(new Date())}.json`
+        `traces-${fallbackPrefix}-${localFileTimestamp(new Date())}.json`
 
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: 'application/json',
@@ -218,8 +245,34 @@
       exportError =
         err instanceof Error ? err.message : 'Could not export filtered traces'
     } finally {
-      isExportingFiltered = false
+      isExporting = false
     }
+  }
+
+  async function handleExportFiltered() {
+    await exportTracesByIds(
+      filteredTraces.map((trace) => trace.traceId),
+      'filtered',
+    )
+  }
+
+  async function handleExportSelected() {
+    await exportTracesByIds(selectedTraceIds, 'selected')
+  }
+
+  function toggleTraceSelection(traceId: string) {
+    if (selectedTraceIdSet.has(traceId)) {
+      selectedTraceIds = selectedTraceIds.filter((id) => id !== traceId)
+      return
+    }
+
+    selectedTraceIds = [...selectedTraceIds, traceId]
+  }
+
+  function toggleSelectAllFiltered() {
+    selectedTraceIds = filteredTraces
+      .filter((trace) => !selectedTraceIdSet.has(trace.traceId))
+      .map((trace) => trace.traceId)
   }
 
   function handleImportCompleted(result: {
@@ -321,9 +374,20 @@
       <button
         class="secondary-action"
         onclick={handleExportFiltered}
-        disabled={filteredTraces.length === 0 || isExportingFiltered}
+        disabled={filteredTraces.length === 0 || isExporting}
       >
-        {isExportingFiltered ? 'Exporting...' : 'Export Filtered'}
+        {isExporting ? 'Exporting...' : 'Export Filtered'}
+      </button>
+      <button
+        class="secondary-action"
+        onclick={handleExportSelected}
+        disabled={selectedTraceIds.length === 0 || isExporting}
+      >
+        {isExporting
+          ? 'Exporting...'
+          : `Export Selected${
+              selectedTraceIds.length > 0 ? ` (${selectedTraceIds.length})` : ''
+            }`}
       </button>
       <button
         class="danger-action"
@@ -391,6 +455,16 @@
             <table>
               <thead>
                 <tr>
+                  <th class="select-col">
+                    <input
+                      type="checkbox"
+                      class="row-checkbox"
+                      checked={allFilteredSelected}
+                      onchange={toggleSelectAllFiltered}
+                      aria-label="Invert filtered trace selection"
+                      title="Invert filtered trace selection"
+                    />
+                  </th>
                   <th>Root Service</th>
                   <th>Root Name</th>
                   <th>Root Duration</th>
@@ -404,7 +478,20 @@
                   <tr
                     onclick={() => handleRowClick(trace.traceId)}
                     class:error={trace.hasError}
+                    class:selected={selectedTraceIdSet.has(trace.traceId)}
                   >
+                    <td
+                      class="select-col"
+                      onclick={(event) => event.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        class="row-checkbox"
+                        checked={selectedTraceIdSet.has(trace.traceId)}
+                        onchange={() => toggleTraceSelection(trace.traceId)}
+                        aria-label={`Select trace ${trace.traceId}`}
+                      />
+                    </td>
                     <td><ServiceBadge serviceName={trace.serviceName} /></td>
                     <td class="operation" title={trace.rootSpanName}
                       >{trace.rootSpanName}</td
@@ -834,27 +921,42 @@
     border-spacing: 0;
     background: var(--bg-surface);
     table-layout: fixed;
-    min-width: 875px;
+    min-width: 940px;
   }
 
-  /* Fixed-width columns; Root Name (col 2) gets the remaining space with a min-width */
+  /* Fixed-width columns; Root Name gets the remaining space with a min-width */
   th:nth-child(1) {
-    width: 150px;
+    width: 22px;
   }
   th:nth-child(2) {
-    min-width: 200px;
+    width: 150px;
   }
   th:nth-child(3) {
-    width: 165px;
+    min-width: 200px;
   }
   th:nth-child(4) {
-    width: 90px;
+    width: 165px;
   }
   th:nth-child(5) {
-    width: 175px;
+    width: 90px;
   }
   th:nth-child(6) {
+    width: 175px;
+  }
+  th:nth-child(7) {
     width: 95px;
+  }
+
+  .select-col {
+    text-align: center;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+
+  .row-checkbox {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
   }
 
   thead {
@@ -882,6 +984,10 @@
 
   tbody tr:hover {
     background: var(--bg-surface-hover);
+  }
+
+  tbody tr.selected {
+    background: var(--selected-bg);
   }
 
   td {
