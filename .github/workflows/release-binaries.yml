@@ -142,3 +142,103 @@ jobs:
           tag_name: ${{ inputs.tag || github.ref_name }}
           fail_on_unmatched_files: false
           files: artifacts/**
+
+  update-homebrew-tap:
+    name: Update Homebrew tap formula
+    needs: [release]
+    if: always() && needs.release.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Build formula content
+        id: formula
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          VERSION="${TAG#v}"
+          OWNER_REPO="${{ github.repository }}"
+
+          sha_linux_x64=$(awk '{print $1}' artifacts/otel-gui-linux-x64.tar.gz.sha256)
+          sha_linux_arm64=$(awk '{print $1}' artifacts/otel-gui-linux-arm64.tar.gz.sha256)
+          sha_macos_x64=$(awk '{print $1}' artifacts/otel-gui-macos-x64.tar.gz.sha256)
+          sha_macos_arm64=$(awk '{print $1}' artifacts/otel-gui-macos-arm64.tar.gz.sha256)
+
+          cat > /tmp/otel-gui.rb <<EOF
+          class OtelGui < Formula
+            desc "Lightweight OpenTelemetry trace viewer"
+            homepage "https://github.com/${OWNER_REPO}"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/${OWNER_REPO}/releases/download/${TAG}/otel-gui-macos-arm64.tar.gz"
+                sha256 "${sha_macos_arm64}"
+              else
+                url "https://github.com/${OWNER_REPO}/releases/download/${TAG}/otel-gui-macos-x64.tar.gz"
+                sha256 "${sha_macos_x64}"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.arm?
+                url "https://github.com/${OWNER_REPO}/releases/download/${TAG}/otel-gui-linux-arm64.tar.gz"
+                sha256 "${sha_linux_arm64}"
+              else
+                url "https://github.com/${OWNER_REPO}/releases/download/${TAG}/otel-gui-linux-x64.tar.gz"
+                sha256 "${sha_linux_x64}"
+              end
+            end
+
+            def install
+              libexec.install "otel-gui", "build", "proto"
+              (bin/"otel-gui").write <<~EOS
+                #!/bin/bash
+                exec "#{libexec}/otel-gui" "$@"
+              EOS
+            end
+
+            test do
+              assert_path_exist libexec/"otel-gui"
+            end
+          end
+          EOF
+
+      - name: Checkout Homebrew tap repository
+        uses: actions/checkout@v5
+        with:
+          repository: metafab/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update formula file
+        run: |
+          mkdir -p homebrew-tap/Formula
+          cp /tmp/otel-gui.rb homebrew-tap/Formula/otel-gui.rb
+
+      - name: Commit and push formula update
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet -- Formula/otel-gui.rb; then
+            echo "No formula changes detected"
+            exit 0
+          fi
+
+          git add Formula/otel-gui.rb
+          git commit -m "Update otel-gui formula for ${TAG}"
+          git push

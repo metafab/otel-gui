@@ -77,6 +77,26 @@ pnpm run build      # Production build
 
 Open [http://localhost:4318](http://localhost:4318) — the OTLP endpoint is live at the same address.
 
+### Install with Homebrew
+
+`otel-gui` can be installed from a custom Homebrew tap:
+
+```sh
+brew install metafab/tap/otel-gui
+```
+
+Then run:
+
+```sh
+otel-gui
+# or override default port (4318)
+PORT=55681 otel-gui
+```
+
+Notes:
+
+- Homebrew formula updates are automated from tagged releases (`v*`) by the release workflow.
+
 ### Docker 🐳
 
 Pull and run the published GHCR image:
