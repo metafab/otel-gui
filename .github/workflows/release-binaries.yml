@@ -240,11 +240,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if git diff --quiet -- Formula/otel-gui.rb; then
+          git add Formula/otel-gui.rb
+
+          if git diff --cached --quiet -- Formula/otel-gui.rb; then
             echo "No formula changes detected"
             exit 0
           fi
 
-          git add Formula/otel-gui.rb
           git commit -m "Update otel-gui formula for ${TAG}"
           git push
