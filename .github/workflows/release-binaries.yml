@@ -77,6 +77,9 @@ jobs:
       - name: Generate SEA launcher
         run: pnpm run sea:bundle
 
+      - name: Prune dev dependencies
+        run: pnpm prune --prod
+
       - name: Download Node x64 binary (macOS cross-compilation)
         if: matrix.cross_arch == true
         run: |
@@ -207,7 +210,7 @@ jobs:
             end
 
             def install
-              libexec.install "otel-gui", "build", "proto"
+              libexec.install "otel-gui", "build", "proto", "node_modules"
               (bin/"otel-gui").write <<~EOS
                 #!/bin/bash
                 exec "#{libexec}/otel-gui" "$@"

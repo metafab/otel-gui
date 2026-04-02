@@ -8,10 +8,11 @@
  *   from the filesystem at runtime. In a Node 22 SEA binary __dirname = the
  *   binary's directory, and import() uses the standard ESM loader (unrestricted).
  *
- * Distribution layout (keep all three items together):
+ * Distribution layout (keep all items together):
  *   otel-gui[.exe]  — SEA binary (Node 22 runtime + injected CJS launcher)
  *   build/          — SvelteKit adapter-node output (server + pre-built UI)
  *   proto/          — OTLP proto definitions loaded by protobufjs at runtime
+ *   node_modules/   — Production dependencies (pruned of dev deps)
  *
  * Usage:
  *   pnpm run sea:package:binary
