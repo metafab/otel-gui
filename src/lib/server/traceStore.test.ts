@@ -78,7 +78,9 @@ describe('traceStore.ingest / getTraceList', () => {
         ],
       },
     ])
-    const trace = traceStore.getTrace('aaaa000000000000000000000000000000000001')!
+    const trace = traceStore.getTrace(
+      'aaaa000000000000000000000000000000000001',
+    )!
     const span = Array.from(trace.spans.values())[0]
     expect(span.kind).toBe(2)
   })
@@ -111,7 +113,9 @@ describe('traceStore.ingest / getTraceList', () => {
         ],
       },
     ])
-    const trace = traceStore.getTrace('aaaa000000000000000000000000000000000002')!
+    const trace = traceStore.getTrace(
+      'aaaa000000000000000000000000000000000002',
+    )!
     const span = Array.from(trace.spans.values())[0]
     expect(span.status.code).toBe(2)
     const [item] = traceStore.getTraceList()

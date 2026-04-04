@@ -451,9 +451,7 @@ describe('GET /api/traces/:traceId/export', () => {
 
     traceStore.clear()
     await POST({
-      request: makePostRequest(
-        exportedPayload.traces[0],
-      ),
+      request: makePostRequest(exportedPayload.traces[0]),
     } as any)
 
     const reimportedList = await getTraceList({
