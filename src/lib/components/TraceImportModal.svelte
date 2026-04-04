@@ -44,14 +44,11 @@
     const input = event.currentTarget as HTMLInputElement
     const file = input.files?.[0] ?? null
 
+    if (!file) return
+
     selectedFile = file
     preview = null
     error = null
-
-    if (!file) {
-      fileContent = null
-      return
-    }
 
     try {
       fileContent = await file.text()
@@ -154,7 +151,9 @@
     <div class="modal-body">
       <label class="file-picker">
         <span class="file-picker-label">JSON file</span>
+        <span class="choose-file-btn">Choose file</span>
         <input
+          class="file-input-hidden"
           type="file"
           accept="application/json,.json"
           onchange={handleFileChange}
@@ -355,6 +354,27 @@
   .file-picker-label {
     font-weight: 600;
     color: var(--text-primary);
+  }
+
+  .file-input-hidden {
+    display: none;
+  }
+
+  .choose-file-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.75rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .file-picker:hover .choose-file-btn {
+    background: var(--bg-muted);
   }
 
   .selected-file,
