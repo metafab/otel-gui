@@ -9,7 +9,7 @@
     trace: StoredTrace
     serviceCount: number
     maxDepth: number
-    traceDuration: string
+    traceDuration: { simple: string; detailed: string }
     miniMapData: ServiceMapData | null
     miniMapLoading: boolean
     showMiniMap: boolean
@@ -74,7 +74,9 @@
     </div>
     <div class="timestamp-item">
       <span class="timestamp-label">Duration:</span>
-      <span class="timestamp-value">{traceDuration}</span>
+      <span class="timestamp-value" title={traceDuration.detailed}
+        >{traceDuration.simple}</span
+      >
     </div>
   </div>
 

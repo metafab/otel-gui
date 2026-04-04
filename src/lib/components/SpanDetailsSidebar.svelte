@@ -329,6 +329,10 @@
       Object.keys(span.scopeAttributes).length > 0
     ),
   )
+
+  const formattedSpanDuration = $derived(
+    formatDuration(span.startTimeUnixNano, span.endTimeUnixNano),
+  )
 </script>
 
 <div class="span-details">
@@ -353,8 +357,8 @@
   </div>
   <div class="detail-row">
     <span class="label">Duration:</span>
-    <span class="value">
-      {formatDuration(span.startTimeUnixNano, span.endTimeUnixNano)}
+    <span class="value" title={formattedSpanDuration.detailed}>
+      {formattedSpanDuration.simple}
     </span>
   </div>
   <div class="detail-row">

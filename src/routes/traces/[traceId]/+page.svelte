@@ -92,8 +92,10 @@
       ? BigInt(trace.endTimeUnixNano) - BigInt(trace.startTimeUnixNano)
       : 0n,
   )
-  const traceDuration = $derived(
-    trace ? formatDuration(trace.startTimeUnixNano, trace.endTimeUnixNano) : '',
+  const formattedTraceDuration = $derived(
+    trace
+      ? formatDuration(trace.startTimeUnixNano, trace.endTimeUnixNano)
+      : null,
   )
 
   // Derived: unique service count and max tree depth
@@ -1017,7 +1019,7 @@
           {trace}
           {serviceCount}
           {maxDepth}
-          {traceDuration}
+          traceDuration={formattedTraceDuration!}
           {miniMapData}
           {miniMapLoading}
           bind:showMiniMap
@@ -1104,9 +1106,6 @@
                 {/if}
               </div>
             </div>
-            <div class="trace-duration">
-              Total: <strong>{traceDuration}</strong>
-            </div>
           </div>
           <div
             bind:this={waterfallContainer}
@@ -1140,7 +1139,9 @@
                   <span class="ruler-mark">25%</span>
                   <span class="ruler-mark">50%</span>
                   <span class="ruler-mark">75%</span>
-                  <span class="ruler-mark">{traceDuration}</span>
+                  <span class="ruler-mark"
+                    >{formattedTraceDuration?.simple}</span
+                  >
                 </div>
               </div>
             </div>
@@ -1602,16 +1603,6 @@
     font-size: 0.75rem;
     color: var(--text-secondary);
     white-space: nowrap;
-  }
-
-  .trace-duration {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-  }
-
-  .trace-duration strong {
-    color: var(--accent);
-    font-family: monospace;
   }
 
   .sidebar-section h3 {

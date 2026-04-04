@@ -1,13 +1,14 @@
 <script lang="ts">
-  import { traceStore } from '$lib/stores/traces.svelte'
+  import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import ServiceMap from '$lib/components/ServiceMap.svelte'
-  import { isInputFocused, isMac } from '$lib/utils/keyboard'
-  import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
-  import TraceImportModal from '$lib/components/TraceImportModal.svelte'
   import TraceFilters from '$lib/components/TraceFilters.svelte'
-  import { checkForUpdate, dismissUpdate } from '$lib/utils/updateCheck'
+  import TraceImportModal from '$lib/components/TraceImportModal.svelte'
+  import { traceStore } from '$lib/stores/traces.svelte'
   import type { ServiceMapData } from '$lib/types'
+  import { isInputFocused, isMac } from '$lib/utils/keyboard'
+  import { formatDurationFromMs } from '$lib/utils/time'
+  import { checkForUpdate, dismissUpdate } from '$lib/utils/updateCheck'
 
   // Connect to SSE stream for real-time trace updates
   traceStore.connectSSE()
@@ -567,6 +568,9 @@
               </thead>
               <tbody>
                 {#each filteredTraces as trace (trace.traceId)}
+                  {@const formattedDuration = formatDurationFromMs(
+                    trace.durationMs,
+                  )}
                   <tr
                     onclick={() => handleRowClick(trace.traceId)}
                     class:error={trace.hasError}
@@ -588,7 +592,9 @@
                     <td class="operation" title={trace.rootSpanName}
                       >{trace.rootSpanName}</td
                     >
-                    <td class="duration">{trace.durationMs.toFixed(2)}ms</td>
+                    <td class="duration" title={formattedDuration.detailed}
+                      >{formattedDuration.simple}</td
+                    >
                     <td class="span-count">{trace.spanCount}</td>
                     <td class="timestamp" title={trace.startTime}>
                       {new Date(trace.startTime).toLocaleString()}

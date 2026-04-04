@@ -77,6 +77,10 @@
     })(),
   )
 
+  const formattedSpanDuration = $derived(
+    formatDuration(span.startTimeUnixNano, span.endTimeUnixNano),
+  )
+
   const nonZeroSpanDurationNs = $derived(
     spanDurationNs > 0n ? spanDurationNs : 1n,
   )
@@ -303,10 +307,10 @@
         widthPercent,
         0.5,
       )}%; background: {serviceColor}"
-      title={formatDuration(span.startTimeUnixNano, span.endTimeUnixNano)}
+      title={formattedSpanDuration.detailed}
     >
       <span class="duration-label">
-        {formatDuration(span.startTimeUnixNano, span.endTimeUnixNano)}
+        {formattedSpanDuration.simple}
       </span>
 
       <!-- Event markers -->

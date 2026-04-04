@@ -1,8 +1,40 @@
 // Time formatting utilities for OTLP nanosecond timestamps
 
-export function formatDuration(startNano: string, endNano: string): string {
+export function formatDuration(
+  startNano: string,
+  endNano: string,
+): {
+  simple: string
+  detailed: string
+} {
   // Convert nanosecond strings to BigInt for precision
-  let durationNs = BigInt(endNano) - BigInt(startNano)
+  const durationNs = BigInt(endNano) - BigInt(startNano)
+
+  return formatDurationFromNs(durationNs)
+}
+
+export function formatDurationFromMs(durationMs: number): {
+  simple: string
+  detailed: string
+} {
+  const durationNs = BigInt(durationMs * 1_000_000)
+
+  return formatDurationFromNs(durationNs)
+}
+
+/**
+ *  Formats a duration given in nanoseconds into human-readable simple and detailed forms.
+ *  - Simple: concise unit with up to 2 decimals (e.g. "1.5s", "500ms", "200µs"), or compound for minutes (e.g. "1m 30s")
+ *  - Detailed: more precise unit (e.g. "1,500ms" instead of "1.5s"), always in a single unit for easier comparison
+ *  Handles negative durations by prefixing with "⚠" to indicate potential clock skew or out-of-order timestamps.
+ */
+export function formatDurationFromNs(durationNs: bigint): {
+  simple: string
+  detailed: string
+} {
+  if (durationNs === 0n) {
+    return { simple: '0', detailed: '0' }
+  }
 
   // Handle negative durations (clock skew, out-of-order timestamps)
   const isNegative = durationNs < 0n
@@ -10,25 +42,103 @@ export function formatDuration(startNano: string, endNano: string): string {
     durationNs = -durationNs // Use absolute value
   }
 
-  if (durationNs < 1_000_000n) {
-    // Sub-millisecond: show microseconds
-    const durationUs = Number(durationNs / 1_000n)
-    return `${isNegative ? '⚠ ' : ''}${durationUs}µs`
+  let result: { simple: string; detailed: string }
+
+  if (durationNs < 1_000n) {
+    // Sub-microsecond: show nanoseconds
+    result = {
+      simple: Number(durationNs).toLocaleString(undefined, {
+        unit: 'nanosecond',
+        style: 'unit',
+        unitDisplay: 'narrow',
+      }),
+      detailed: durationNs.toLocaleString(undefined, {
+        unit: 'nanosecond',
+        style: 'unit',
+        unitDisplay: 'narrow',
+      }),
+    }
+  } else if (durationNs < 1_000_000n) {
+    // Microseconds (integer)
+    result = {
+      simple: Number(durationNs / 1_000n).toLocaleString(undefined, {
+        unit: 'microsecond',
+        style: 'unit',
+        unitDisplay: 'narrow',
+      }),
+      detailed: durationNs.toLocaleString(undefined, {
+        unit: 'nanosecond',
+        style: 'unit',
+        unitDisplay: 'narrow',
+      }),
+    }
   } else if (durationNs < 1_000_000_000n) {
-    // Milliseconds with 1 decimal (preserve precision via remainder)
-    const ms = Number(durationNs / 1_000_000n)
-    const fractionalNs = Number(durationNs % 1_000_000n)
-    const tenths = Math.floor(fractionalNs / 100_000)
-    return `${isNegative ? '⚠ ' : ''}${ms}.${tenths}ms`
+    // Milliseconds: up to 2 decimals, trailing zeros trimmed
+    const ms = Number(durationNs) / 1_000_000
+    result = {
+      simple: ms.toLocaleString(undefined, {
+        style: 'unit',
+        unit: 'millisecond',
+        unitDisplay: 'narrow',
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 0,
+      }),
+      detailed: Number(durationNs / 1_000n).toLocaleString(undefined, {
+        unit: 'microsecond',
+        style: 'unit',
+        unitDisplay: 'narrow',
+      }),
+    }
   } else if (durationNs < 60_000_000_000n) {
-    // Seconds with 2 decimals
-    const durationMs = Number(durationNs) / 1_000_000
-    return `${isNegative ? '⚠ ' : ''}${(durationMs / 1000).toFixed(2)}s`
+    // Seconds: up to 2 decimals, trailing zeros trimmed
+    const ms = Number(durationNs) / 1_000_000
+    result = {
+      simple: (ms / 1000).toLocaleString(undefined, {
+        style: 'unit',
+        unit: 'second',
+        unitDisplay: 'narrow',
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 0,
+      }),
+      detailed: ms.toLocaleString(undefined, {
+        unit: 'millisecond',
+        style: 'unit',
+        unitDisplay: 'narrow',
+      }),
+    }
   } else {
-    // Minutes with 1 decimal
-    const durationMs = Number(durationNs) / 1_000_000
-    return `${isNegative ? '⚠ ' : ''}${(durationMs / 60_000).toFixed(1)}m`
+    // Minutes: compound Xm Ys
+    const totalSeconds = Math.floor(Number(durationNs) / 1_000_000_000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    let simple = minutes.toLocaleString(undefined, {
+      unit: 'minute',
+      style: 'unit',
+      unitDisplay: 'narrow',
+    })
+    if (seconds > 0) {
+      simple += ` ${seconds.toLocaleString(undefined, {
+        unit: 'second',
+        style: 'unit',
+        unitDisplay: 'narrow',
+      })}`
+    }
+    result = {
+      simple,
+      detailed: totalSeconds.toLocaleString(undefined, {
+        unit: 'second',
+        style: 'unit',
+        unitDisplay: 'narrow',
+      }),
+    }
   }
+
+  if (isNegative) {
+    result.simple = `⚠ ${result.simple}`
+    result.detailed = `⚠ ${result.detailed}`
+  }
+
+  return result
 }
 
 /**
