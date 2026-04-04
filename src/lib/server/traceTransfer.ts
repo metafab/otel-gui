@@ -6,10 +6,19 @@ import type {
   TraceImportPreview,
 } from '$lib/types'
 import { flattenAttributes } from '$lib/utils/attributes'
+import { SPAN_KIND_NAMES, STATUS_CODE_NAMES } from '$lib/utils/otlpEnums'
 
 const EXPORT_FORMAT = 'otel-gui-trace-export'
 const EXPORT_VERSION = 1
 const NANO_REGEX = /^\d+$/
+
+const SPAN_KIND_BY_NUMBER = Object.fromEntries(
+  Object.entries(SPAN_KIND_NAMES).map(([k, v]) => [v, k]),
+) as Record<number, string>
+
+const STATUS_CODE_BY_NUMBER = Object.fromEntries(
+  Object.entries(STATUS_CODE_NAMES).map(([k, v]) => [v, k]),
+) as Record<number, string>
 
 type AnyValue =
   | { stringValue: string }
@@ -76,7 +85,7 @@ function toOtlpSpan(span: StoredSpan): any {
     spanId: span.spanId,
     parentSpanId: span.parentSpanId,
     name: span.name,
-    kind: span.kind,
+    kind: SPAN_KIND_BY_NUMBER[span.kind] ?? 'SPAN_KIND_UNSPECIFIED',
     startTimeUnixNano: span.startTimeUnixNano,
     endTimeUnixNano: span.endTimeUnixNano,
     attributes: toKeyValues(span.attributes),
@@ -92,7 +101,7 @@ function toOtlpSpan(span: StoredSpan): any {
       attributes: toKeyValues(link.attributes),
     })),
     status: {
-      code: span.status.code,
+      code: STATUS_CODE_BY_NUMBER[span.status.code] ?? 'STATUS_CODE_UNSET',
       message: span.status.message,
     },
   }

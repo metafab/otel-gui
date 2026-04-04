@@ -1,0 +1,14 @@
+export const SPAN_KIND_NAMES: Record<string, number> = {
+  SPAN_KIND_UNSPECIFIED: 0,
+  SPAN_KIND_INTERNAL: 1,
+  SPAN_KIND_SERVER: 2,
+  SPAN_KIND_CLIENT: 3,
+  SPAN_KIND_PRODUCER: 4,
+  SPAN_KIND_CONSUMER: 5,
+}
+
+export const STATUS_CODE_NAMES: Record<string, number> = {
+  STATUS_CODE_UNSET: 0,
+  STATUS_CODE_OK: 1,
+  STATUS_CODE_ERROR: 2,
+}

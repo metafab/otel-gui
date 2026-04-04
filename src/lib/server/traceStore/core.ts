@@ -9,6 +9,7 @@ import type {
 import { buildServiceMap } from '$lib/server/serviceMap'
 import { extractAnyValue, flattenAttributes } from '$lib/utils/attributes'
 import { formatTimestamp, getDurationMs } from '$lib/utils/time'
+import { SPAN_KIND_NAMES, STATUS_CODE_NAMES } from '$lib/utils/otlpEnums'
 
 export interface InternalTraceStore extends TraceStore {
   listAllTraces(): StoredTrace[]
@@ -21,6 +22,20 @@ function isBeforeNano(a: string, b: string): boolean {
 
 function isAfterNano(a: string, b: string): boolean {
   return BigInt(a) > BigInt(b)
+}
+
+function normalizeSpanKind(kind: unknown): number {
+  if (typeof kind === 'number') return kind
+  if (typeof kind === 'string' && kind in SPAN_KIND_NAMES)
+    return SPAN_KIND_NAMES[kind]
+  return 0
+}
+
+function normalizeStatusCode(code: unknown): number {
+  if (typeof code === 'number') return code
+  if (typeof code === 'string' && code in STATUS_CODE_NAMES)
+    return STATUS_CODE_NAMES[code]
+  return 0
 }
 
 function getLogTimestamp(logRecord: any): string {
@@ -128,7 +143,7 @@ export function createInternalTraceStore(
             spanId: span.spanId,
             parentSpanId: span.parentSpanId || '',
             name: span.name || '',
-            kind: span.kind || 0,
+            kind: normalizeSpanKind(span.kind),
             startTimeUnixNano: span.startTimeUnixNano,
             endTimeUnixNano: span.endTimeUnixNano,
             attributes: flattenAttributes(span.attributes),
@@ -144,7 +159,7 @@ export function createInternalTraceStore(
               attributes: flattenAttributes(l.attributes),
             })),
             status: {
-              code: span.status?.code || 0,
+              code: normalizeStatusCode(span.status?.code),
               message: span.status?.message || '',
             },
             resource: resourceAttrs,
