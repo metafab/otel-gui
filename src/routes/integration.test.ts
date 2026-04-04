@@ -415,6 +415,55 @@ describe('GET /api/traces/:traceId/export', () => {
     expect(payload.traces[0].traceId).toBe(traceId)
     expect(payload.traces[0].resourceSpans).toHaveLength(1)
   })
+
+  it('exports span kind and status code as ProtoJSON string enum names', async () => {
+    await POST({ request: makePostRequest(errorTrace) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const [{ traceId }] = await listResponse.json()
+
+    const response = await exportTrace({ params: { traceId } } as any)
+    const payload = await response.json()
+
+    const spans = payload.traces[0].resourceSpans.flatMap((rs: any) =>
+      rs.scopeSpans.flatMap((ss: any) => ss.spans),
+    )
+    for (const span of spans) {
+      expect(typeof span.kind).toBe('string')
+      expect(span.kind).toMatch(/^SPAN_KIND_/)
+      expect(typeof span.status.code).toBe('string')
+      expect(span.status.code).toMatch(/^STATUS_CODE_/)
+    }
+  })
+
+  it('round-trips string enum kinds through export then re-ingest', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const [{ traceId }] = await listResponse.json()
+
+    const exportResponse = await exportTrace({ params: { traceId } } as any)
+    const exportedPayload = await exportResponse.json()
+
+    traceStore.clear()
+    await POST({
+      request: makePostRequest(
+        exportedPayload.traces[0],
+      ),
+    } as any)
+
+    const reimportedList = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const reimported = await reimportedList.json()
+    expect(reimported).toHaveLength(1)
+    expect(reimported[0].traceId).toBe(traceId)
+    expect(reimported[0].spanCount).toBe(1)
+  })
 })
 
 describe('POST /api/traces/export', () => {

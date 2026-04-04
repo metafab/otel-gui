@@ -50,6 +50,74 @@ describe('traceStore.ingest / getTraceList', () => {
     expect(item.hasError).toBe(true)
   })
 
+  it('normalizes string enum kind ("SPAN_KIND_SERVER") to numeric 2', () => {
+    traceStore.ingest([
+      {
+        resource: {
+          attributes: [{ key: 'service.name', value: { stringValue: 'svc' } }],
+        },
+        scopeSpans: [
+          {
+            scope: {},
+            spans: [
+              {
+                traceId: 'aaaa000000000000000000000000000000000001',
+                spanId: 'bbbb000000000001',
+                parentSpanId: '',
+                name: 'root',
+                kind: 'SPAN_KIND_SERVER',
+                startTimeUnixNano: '1000000000000000000',
+                endTimeUnixNano: '1000000000100000000',
+                attributes: [],
+                events: [],
+                links: [],
+                status: { code: 0, message: '' },
+              },
+            ],
+          },
+        ],
+      },
+    ])
+    const trace = traceStore.getTrace('aaaa000000000000000000000000000000000001')!
+    const span = Array.from(trace.spans.values())[0]
+    expect(span.kind).toBe(2)
+  })
+
+  it('normalizes string enum status code ("STATUS_CODE_ERROR") to numeric 2 and sets hasError', () => {
+    traceStore.ingest([
+      {
+        resource: {
+          attributes: [{ key: 'service.name', value: { stringValue: 'svc' } }],
+        },
+        scopeSpans: [
+          {
+            scope: {},
+            spans: [
+              {
+                traceId: 'aaaa000000000000000000000000000000000002',
+                spanId: 'bbbb000000000002',
+                parentSpanId: '',
+                name: 'root',
+                kind: 1,
+                startTimeUnixNano: '1000000000000000000',
+                endTimeUnixNano: '1000000000100000000',
+                attributes: [],
+                events: [],
+                links: [],
+                status: { code: 'STATUS_CODE_ERROR', message: 'boom' },
+              },
+            ],
+          },
+        ],
+      },
+    ])
+    const trace = traceStore.getTrace('aaaa000000000000000000000000000000000002')!
+    const span = Array.from(trace.spans.values())[0]
+    expect(span.status.code).toBe(2)
+    const [item] = traceStore.getTraceList()
+    expect(item.hasError).toBe(true)
+  })
+
   it('counts spans correctly', () => {
     traceStore.ingest(simpleTrace.resourceSpans)
     const [item] = traceStore.getTraceList()
