@@ -307,7 +307,7 @@
         widthPercent,
         0.5,
       )}%; background: {serviceColor}"
-      title={formattedSpanDuration.detailed}
+      title={`${formattedSpanDuration.simple} • ${formattedSpanDuration.detailed}`}
     >
       <span class="duration-label">
         {formattedSpanDuration.simple}
