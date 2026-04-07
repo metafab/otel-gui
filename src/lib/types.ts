@@ -83,6 +83,7 @@ export interface StoredTrace {
 export interface TraceListItem {
   traceId: string
   rootSpanName: string
+  rootSpanTentative: boolean // true while no true root span (parentSpanId == '') has arrived yet
   serviceName: string
   durationMs: number
   spanCount: number

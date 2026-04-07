@@ -171,10 +171,7 @@ export function createInternalTraceStore(
           trace.spans.set(span.spanId, storedSpan)
           trace.updatedAt = now
           trace.spanCount = trace.spans.size
-
-          if (!storedSpan.parentSpanId || storedSpan.parentSpanId === '') {
-            trace.rootSpanName = storedSpan.name
-          }
+          trace.rootSpanName = resolveRootSpanName(trace)
 
           if (isBeforeNano(span.startTimeUnixNano, trace.startTimeUnixNano)) {
             trace.startTimeUnixNano = span.startTimeUnixNano
@@ -300,6 +297,9 @@ export function createInternalTraceStore(
     return traceArray.slice(0, limit).map((trace) => ({
       traceId: trace.traceId,
       rootSpanName: resolveRootSpanName(trace),
+      rootSpanTentative: !Array.from(trace.spans.values()).some(
+        (s) => !s.parentSpanId || s.parentSpanId === '',
+      ),
       serviceName: trace.serviceName,
       durationMs: getDurationMs(trace.startTimeUnixNano, trace.endTimeUnixNano),
       spanCount: trace.spanCount,

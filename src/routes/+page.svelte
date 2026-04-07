@@ -589,8 +589,18 @@
                       />
                     </td>
                     <td><ServiceBadge serviceName={trace.serviceName} /></td>
-                    <td class="operation" title={trace.rootSpanName}
-                      >{trace.rootSpanName}</td
+                    <td
+                      class="operation"
+                      title={trace.rootSpanTentative
+                        ? `${trace.rootSpanName} (root span not yet received)`
+                        : trace.rootSpanName}
+                    >
+                      {#if trace.rootSpanTentative}
+                        <span
+                          class="tentative-icon"
+                          aria-label="Root span pending">⏳</span
+                        >
+                      {/if}{trace.rootSpanName}</td
                     >
                     <td class="duration" title={formattedDuration.detailed}
                       >{formattedDuration.simple}</td
@@ -1203,6 +1213,13 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .tentative-icon {
+    font-style: normal;
+    margin-right: 0.25rem;
+    opacity: 0.6;
+    font-size: 0.8em;
   }
 
   .duration {
