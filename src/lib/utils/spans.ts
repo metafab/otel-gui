@@ -45,6 +45,8 @@ export function buildSpanTree(spans: StoredSpan[]): SpanTreeNode[] {
   // Build parent -> children map
   const childrenMap = new Map<string, StoredSpan[]>()
   const rootSpans: StoredSpan[] = []
+  // Orphan spans grouped by their missing parentSpanId
+  const orphansByParent = new Map<string, StoredSpan[]>()
 
   for (const span of spans) {
     if (!span.parentSpanId || span.parentSpanId === '') {
@@ -56,8 +58,10 @@ export function buildSpanTree(spans: StoredSpan[]): SpanTreeNode[] {
       children.push(span)
       childrenMap.set(span.parentSpanId, children)
     } else {
-      // Orphan span (parent not in this batch) - treat as root
-      rootSpans.push(span)
+      // Orphan span: parent not found — group under a phantom placeholder
+      const orphans = orphansByParent.get(span.parentSpanId) || []
+      orphans.push(span)
+      orphansByParent.set(span.parentSpanId, orphans)
     }
   }
 
@@ -110,7 +114,56 @@ export function buildSpanTree(spans: StoredSpan[]): SpanTreeNode[] {
     a.startTimeUnixNano.localeCompare(b.startTimeUnixNano),
   )
 
-  return rootSpans.map((span) => buildNode(span, 0))
+  const result: SpanTreeNode[] = rootSpans.map((span) => buildNode(span, 0))
+
+  // Build phantom placeholder nodes for each missing parent
+  for (const [missingParentId, orphans] of orphansByParent) {
+    orphans.sort((a, b) =>
+      a.startTimeUnixNano.localeCompare(b.startTimeUnixNano),
+    )
+    const startTimeUnixNano = orphans.reduce(
+      (min, s) => (s.startTimeUnixNano < min ? s.startTimeUnixNano : min),
+      orphans[0].startTimeUnixNano,
+    )
+    const endTimeUnixNano = orphans.reduce(
+      (max, s) => (s.endTimeUnixNano > max ? s.endTimeUnixNano : max),
+      orphans[0].endTimeUnixNano,
+    )
+    const phantomSpan: StoredSpan = {
+      traceId: orphans[0].traceId,
+      spanId: missingParentId,
+      parentSpanId: '',
+      name: '(missing)',
+      kind: 0,
+      startTimeUnixNano,
+      endTimeUnixNano,
+      attributes: {},
+      events: [],
+      links: [],
+      status: { code: 0, message: '' },
+      resource: {},
+      scopeName: '',
+      scopeVersion: '',
+      scopeAttributes: {},
+    }
+    const childNodes = orphans.map((orphan) => buildNode(orphan, 1))
+    const subtreeSize = childNodes.reduce((sum, c) => sum + 1 + c.subtreeSize, 0)
+    result.push({
+      span: phantomSpan,
+      depth: 0,
+      children: childNodes,
+      collapsed: false,
+      subtreeSize,
+      isPhantom: true,
+    })
+  }
+
+  // Sort all root-level nodes (real roots + phantoms) by start time
+  result.sort((a, b) =>
+    a.span.startTimeUnixNano.localeCompare(b.span.startTimeUnixNano),
+  )
+
+  return result
 }
 
 // Flatten tree to ordered list for rendering

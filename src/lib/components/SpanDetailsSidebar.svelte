@@ -34,6 +34,8 @@
     highlightedEventIndex?: number | null
     /** Global span search query from trace page. */
     searchQuery?: string
+    /** All span IDs in the current trace, used to detect orphan spans. */
+    allSpanIds?: Map<string, StoredSpan>
   }
 
   let {
@@ -49,6 +51,7 @@
     logDetailErrorsById = {},
     highlightedEventIndex = null,
     searchQuery = '',
+    allSpanIds,
   }: Props = $props()
 
   const normalizedSearchQuery = $derived(searchQuery.trim().toLowerCase())
@@ -389,16 +392,27 @@
     >
   </div>
   {#if span.parentSpanId}
+    {@const parentExists = !allSpanIds || allSpanIds.has(span.parentSpanId)}
     <div class="detail-row">
       <span class="label">Parent ID:</span>
-      <button
-        class="value mono parent-link"
-        class:search-match={textMatchesSearch(span.parentSpanId)}
-        onclick={() => onSelectSpan?.(span.parentSpanId)}
-        title="Jump to parent span"
-      >
-        {span.parentSpanId}
-      </button>
+      {#if parentExists}
+        <button
+          class="value mono parent-link"
+          class:search-match={textMatchesSearch(span.parentSpanId)}
+          onclick={() => onSelectSpan?.(span.parentSpanId)}
+          title="Jump to parent span"
+        >
+          {span.parentSpanId}
+        </button>
+      {:else}
+        <span
+          class="value mono parent-missing"
+          class:search-match={textMatchesSearch(span.parentSpanId)}
+          title="⚠️ Parent span not found in this trace"
+        >
+          {span.parentSpanId}<span class="missing-badge">⚠️</span>
+        </span>
+      {/if}
     </div>
   {/if}
   <div class="detail-row">
@@ -958,6 +972,17 @@
   .parent-link:hover {
     color: var(--accent-hover);
     text-decoration: underline;
+  }
+
+  .parent-missing {
+    color: var(--error-text);
+    cursor: default;
+  }
+
+  .missing-badge {
+    margin-left: 0.5rem;
+    font-size: 0.6rem;
+    vertical-align: text-bottom;
   }
 
   .mono {

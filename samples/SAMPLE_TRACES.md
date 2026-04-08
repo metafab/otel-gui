@@ -107,6 +107,32 @@ curl -X POST http://localhost:4318/v1/logs \
   -d @samples/sample-log-ecommerce-part2.json
 ```
 
+#### `sample-trace-orphan-span.json`
+
+**Edge-case scenario** demonstrating an orphan span — a span whose `parentSpanId` references a span that never arrived.
+
+- 2 services: `frontend`, `payment-service`
+- 3 spans total
+- `process payment` (payment-service) references `parentSpanId: "2222222222222222"` which does not exist in the trace
+- `GET /checkout` → `render template` form a valid sub-tree for contrast
+
+**Span Hierarchy:**
+
+```
+GET /checkout (frontend) - 500ms
+└── render template (frontend) - 200ms
+
+[orphan] process payment (payment-service) - 400ms  ← parent "2222..." missing
+```
+
+**Usage:**
+
+```bash
+curl -X POST http://localhost:4318/v1/traces \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-trace-orphan-span.json
+```
+
 #### `sample-log.json`
 
 Standalone OTLP logs example correlated with `sample-trace.json`:

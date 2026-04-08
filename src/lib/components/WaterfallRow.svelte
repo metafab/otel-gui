@@ -24,6 +24,8 @@
     spanLogs?: TraceLogListItem[]
     selectedLogId?: string | null
     onLogClick?: (logId: string) => void
+    /** True for synthetic placeholder rows representing a missing parent span. */
+    isPhantom?: boolean
   }
 
   let {
@@ -44,6 +46,7 @@
     spanLogs = [],
     selectedLogId = null,
     onLogClick,
+    isPhantom = false,
   }: Props = $props()
 
   // Calculate span position and width as percentages (reactive)
@@ -256,8 +259,9 @@
   class:selected={isSelected}
   class:highlighted={isHighlighted}
   class:error={hasError}
+  class:phantom={isPhantom}
   style:grid-template-columns="{nameColumnWidth}px 1fr"
-  onclick={onSelect}
+  onclick={isPhantom ? undefined : onSelect}
   onkeydown={() => {
     // Keyboard navigation handled at container level
   }}
@@ -291,14 +295,21 @@
       <span class="span-name-text" title={span.name}>{span.name}</span>
     </div>
     <div class="span-meta">
-      <ServiceBadge {serviceName} />
-      {#if spanKind}
-        <span class="span-kind" title="Span kind">{spanKind}</span>
+      {#if !isPhantom}
+        <ServiceBadge {serviceName} />
+        {#if spanKind}
+          <span class="span-kind" title="Span kind">{spanKind}</span>
+        {/if}
       {/if}
     </div>
   </div>
 
   <!-- Right: Timeline bar -->
+  {#if isPhantom}
+    <div class="timeline phantom-timeline">
+      <span class="phantom-label">- - - - - - - - - - - - - - -</span>
+    </div>
+  {:else}
   <div class="timeline">
     <div
       class="timeline-bar"
@@ -346,6 +357,7 @@
       {/each}
     </div>
   </div>
+  {/if}
 </div>
 
 <style>
@@ -625,5 +637,30 @@
 
   .log-marker.sev-trace {
     background: #94a3b8;
+  }
+
+  /* Phantom (missing parent) row */
+  .waterfall-row.phantom {
+    cursor: default;
+    opacity: 0.55;
+  }
+
+  .waterfall-row.phantom .span-name-text {
+    font-style: italic;
+    color: var(--text-muted);
+  }
+
+  .phantom-timeline {
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+  }
+
+  .phantom-label {
+    font-size: 0.75rem;
+    font-style: italic;
+    color: var(--text-muted);
+    letter-spacing: 3px;
+    user-select: none;
   }
 </style>

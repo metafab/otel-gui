@@ -10,7 +10,6 @@ const gunzipAsync = promisify(gunzip)
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    console.log('Received OTLP trace request')
     const contentType = request.headers.get('content-type') || ''
     const contentEncoding = request.headers.get('content-encoding') || ''
 
@@ -67,7 +66,6 @@ export const POST: RequestHandler = async ({ request }) => {
       )
     }
 
-    console.log(`Ingesting ${body.resourceSpans.length} resource spans from OTLP request`, new Date().toISOString())
     // Ingest spans
     traceStore.ingest(body.resourceSpans)
 

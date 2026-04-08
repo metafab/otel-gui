@@ -1163,6 +1163,7 @@
                   isCollapsed={node.collapsed}
                   childCount={node.children.length}
                   subtreeSize={node.subtreeSize}
+                  isPhantom={node.isPhantom ?? false}
                   onSelect={() => handleSpanSelect(node.span.spanId)}
                   onToggleCollapse={() => toggleNodeCollapse(node.span.spanId)}
                   onEventClick={(eventIndex) =>
@@ -1206,6 +1207,7 @@
                 onFullscreen={openFullscreen}
                 highlightedEventIndex={selectedEventIndex}
                 searchQuery={spanSearchQuery}
+                allSpanIds={trace.spans}
               />
             {:else}
               <div class="no-selection">

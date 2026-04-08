@@ -100,8 +100,8 @@ describe('buildSpanTree', () => {
     expect(tree[0].subtreeSize).toBe(1)
   })
 
-  it('places orphan spans (missing parent) as roots', () => {
-    // child references a parent that's not in the list → treated as root
+  it('places orphan spans under a phantom (missing) parent node', () => {
+    // child references a parent that's not in the list → phantom node wraps it
     const orphan = makeSpan({
       spanId: 'orphan',
       parentSpanId: 'missing-parent',
@@ -110,8 +110,13 @@ describe('buildSpanTree', () => {
     const tree = buildSpanTree([orphan])
 
     expect(tree).toHaveLength(1)
-    expect(tree[0].span.spanId).toBe('orphan')
+    expect(tree[0].isPhantom).toBe(true)
+    expect(tree[0].span.spanId).toBe('missing-parent')
+    expect(tree[0].span.name).toBe('(missing)')
     expect(tree[0].depth).toBe(0)
+    expect(tree[0].children).toHaveLength(1)
+    expect(tree[0].children[0].span.spanId).toBe('orphan')
+    expect(tree[0].children[0].depth).toBe(1)
   })
 
   it('handles multi-level nesting', () => {

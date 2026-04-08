@@ -1,0 +1,105 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "frontend" }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "web-tracer",
+            "version": "1.0.0"
+          },
+          "spans": [
+            {
+              "traceId": "aabbccddeeff00112233445566778899",
+              "spanId": "1111111111111111",
+              "parentSpanId": "",
+              "name": "GET /checkout",
+              "kind": 2,
+              "startTimeUnixNano": "1707785400000000000",
+              "endTimeUnixNano": "1707785400500000000",
+              "attributes": [
+                {
+                  "key": "http.method",
+                  "value": { "stringValue": "GET" }
+                },
+                {
+                  "key": "http.url",
+                  "value": { "stringValue": "/checkout" }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": { "intValue": "200" }
+                }
+              ],
+              "events": [],
+              "links": [],
+              "status": { "code": 1, "message": "" }
+            },
+            {
+              "traceId": "aabbccddeeff00112233445566778899",
+              "spanId": "3333333333333333",
+              "parentSpanId": "1111111111111111",
+              "name": "render template",
+              "kind": 1,
+              "startTimeUnixNano": "1707785400100000000",
+              "endTimeUnixNano": "1707785400300000000",
+              "attributes": [],
+              "events": [],
+              "links": [],
+              "status": { "code": 1, "message": "" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "payment-service" }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "payment-tracer",
+            "version": "1.0.0"
+          },
+          "spans": [
+            {
+              "traceId": "aabbccddeeff00112233445566778899",
+              "spanId": "4444444444444444",
+              "parentSpanId": "2222222222222222",
+              "name": "process payment",
+              "kind": 2,
+              "startTimeUnixNano": "1707785400050000000",
+              "endTimeUnixNano": "1707785400450000000",
+              "attributes": [
+                {
+                  "key": "payment.provider",
+                  "value": { "stringValue": "stripe" }
+                },
+                {
+                  "key": "payment.amount",
+                  "value": { "doubleValue": 99.99 }
+                }
+              ],
+              "events": [],
+              "links": [],
+              "status": { "code": 1, "message": "" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -88,4 +88,6 @@ export interface SpanTreeNode {
   collapsed: boolean
   /** Total number of descendant spans (direct + indirect). 0 for leaf nodes. */
   subtreeSize: number
+  /** True for synthetic placeholder nodes representing a missing parent span. */
+  isPhantom?: boolean
 }

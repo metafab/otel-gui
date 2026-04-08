@@ -82,7 +82,6 @@ export function createInternalTraceStore(
           const traceId = span.traceId
           if (!traceId) continue
           const now = Date.now()
-          console.log(`Processing span ${span.spanId} of trace ${traceId}`, new Date().toISOString())
           let trace = traces.get(traceId)
           if (!trace) {
             trace = {
