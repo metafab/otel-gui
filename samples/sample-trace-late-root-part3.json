@@ -1,0 +1,90 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "payment-gateway" }
+          },
+          { "key": "service.version", "value": { "stringValue": "4.1.0" } }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": { "name": "payment-tracer", "version": "1.0.0" },
+          "spans": [
+            {
+              "traceId": "deadbeef0000000012345678cafebabe",
+              "spanId": "a001a001a001a001",
+              "parentSpanId": "",
+              "name": "POST /payment",
+              "kind": 2,
+              "startTimeUnixNano": "1707826800000000000",
+              "endTimeUnixNano": "1707826801500000000",
+              "attributes": [
+                { "key": "http.method", "value": { "stringValue": "POST" } },
+                { "key": "http.url", "value": { "stringValue": "/payment" } },
+                { "key": "http.status_code", "value": { "intValue": "200" } },
+                {
+                  "key": "payment.provider",
+                  "value": { "stringValue": "internal" }
+                },
+                {
+                  "key": "payment.amount_cents",
+                  "value": { "intValue": "9999" }
+                },
+                { "key": "payment.currency", "value": { "stringValue": "EUR" } }
+              ],
+              "events": [
+                {
+                  "timeUnixNano": "1707826800005000000",
+                  "name": "payment.started",
+                  "attributes": []
+                },
+                {
+                  "timeUnixNano": "1707826801490000000",
+                  "name": "payment.completed",
+                  "attributes": [
+                    {
+                      "key": "payment.transaction_id",
+                      "value": { "stringValue": "txn-2024-0213-9988" }
+                    }
+                  ]
+                }
+              ],
+              "links": [],
+              "status": { "code": 1, "message": "" }
+            },
+            {
+              "traceId": "deadbeef0000000012345678cafebabe",
+              "spanId": "a003a003a003a003",
+              "parentSpanId": "a001a001a001a001",
+              "name": "send receipt email",
+              "kind": 3,
+              "startTimeUnixNano": "1707826801400000000",
+              "endTimeUnixNano": "1707826801480000000",
+              "attributes": [
+                {
+                  "key": "messaging.system",
+                  "value": { "stringValue": "smtp" }
+                },
+                {
+                  "key": "email.recipient",
+                  "value": { "stringValue": "customer@example.com" }
+                },
+                {
+                  "key": "email.template",
+                  "value": { "stringValue": "payment-receipt-v3" }
+                }
+              ],
+              "events": [],
+              "links": [],
+              "status": { "code": 1, "message": "" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

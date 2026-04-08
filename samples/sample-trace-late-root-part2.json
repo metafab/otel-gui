@@ -1,0 +1,78 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "payment-gateway" }
+          },
+          { "key": "service.version", "value": { "stringValue": "4.1.0" } }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": { "name": "payment-tracer", "version": "1.0.0" },
+          "spans": [
+            {
+              "traceId": "deadbeef0000000012345678cafebabe",
+              "spanId": "a002a002a002a002",
+              "parentSpanId": "a001a001a001a001",
+              "name": "validate card",
+              "kind": 1,
+              "startTimeUnixNano": "1707826800010000000",
+              "endTimeUnixNano": "1707826800075000000",
+              "attributes": [
+                { "key": "card.brand", "value": { "stringValue": "visa" } },
+                { "key": "card.last4", "value": { "stringValue": "4242" } },
+                { "key": "card.valid", "value": { "boolValue": true } }
+              ],
+              "events": [],
+              "links": [],
+              "status": { "code": 1, "message": "" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          { "key": "service.name", "value": { "stringValue": "postgres" } }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": { "name": "pg-tracer", "version": "1.0.0" },
+          "spans": [
+            {
+              "traceId": "deadbeef0000000012345678cafebabe",
+              "spanId": "c002c002c002c002",
+              "parentSpanId": "d001d001d001d001",
+              "name": "UPDATE accounts SET balance",
+              "kind": 3,
+              "startTimeUnixNano": "1707826800810000000",
+              "endTimeUnixNano": "1707826801350000000",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": { "stringValue": "postgresql" }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "UPDATE accounts SET balance = balance - $1 WHERE id = $2"
+                  }
+                },
+                { "key": "db.rows_affected", "value": { "intValue": "1" } }
+              ],
+              "events": [],
+              "links": [],
+              "status": { "code": 1, "message": "" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,161 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "fraud-service" }
+          },
+          { "key": "service.version", "value": { "stringValue": "3.2.1" } }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": { "name": "fraud-tracer", "version": "1.0.0" },
+          "spans": [
+            {
+              "traceId": "deadbeef0000000012345678cafebabe",
+              "spanId": "b001b001b001b001",
+              "parentSpanId": "a001a001a001a001",
+              "name": "fraud check",
+              "kind": 2,
+              "startTimeUnixNano": "1707826800080000000",
+              "endTimeUnixNano": "1707826800720000000",
+              "attributes": [
+                {
+                  "key": "fraud.model",
+                  "value": { "stringValue": "v2-realtime" }
+                },
+                { "key": "fraud.score", "value": { "doubleValue": 0.12 } },
+                { "key": "fraud.result", "value": { "stringValue": "pass" } }
+              ],
+              "events": [],
+              "links": [],
+              "status": { "code": 1, "message": "" }
+            },
+            {
+              "traceId": "deadbeef0000000012345678cafebabe",
+              "spanId": "b002b002b002b002",
+              "parentSpanId": "b001b001b001b001",
+              "name": "query fraud history",
+              "kind": 3,
+              "startTimeUnixNano": "1707826800090000000",
+              "endTimeUnixNano": "1707826800680000000",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": { "stringValue": "postgresql" }
+                },
+                { "key": "db.name", "value": { "stringValue": "fraud_db" } },
+                { "key": "db.operation", "value": { "stringValue": "SELECT" } }
+              ],
+              "events": [],
+              "links": [],
+              "status": { "code": 1, "message": "" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          { "key": "service.name", "value": { "stringValue": "postgres" } }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": { "name": "pg-tracer", "version": "1.0.0" },
+          "spans": [
+            {
+              "traceId": "deadbeef0000000012345678cafebabe",
+              "spanId": "c001c001c001c001",
+              "parentSpanId": "b002b002b002b002",
+              "name": "SELECT fraud_history",
+              "kind": 3,
+              "startTimeUnixNano": "1707826800100000000",
+              "endTimeUnixNano": "1707826800650000000",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": { "stringValue": "postgresql" }
+                },
+                {
+                  "key": "db.statement",
+                  "value": {
+                    "stringValue": "SELECT * FROM fraud_history WHERE user_id = $1 LIMIT 100"
+                  }
+                },
+                { "key": "db.rows_returned", "value": { "intValue": "14" } }
+              ],
+              "events": [],
+              "links": [],
+              "status": { "code": 1, "message": "" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "ledger-service" }
+          },
+          { "key": "service.version", "value": { "stringValue": "1.5.0" } }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": { "name": "ledger-tracer", "version": "1.0.0" },
+          "spans": [
+            {
+              "traceId": "deadbeef0000000012345678cafebabe",
+              "spanId": "d001d001d001d001",
+              "parentSpanId": "a001a001a001a001",
+              "name": "debit account",
+              "kind": 2,
+              "startTimeUnixNano": "1707826800730000000",
+              "endTimeUnixNano": "1707826801380000000",
+              "attributes": [
+                {
+                  "key": "account.id",
+                  "value": { "stringValue": "acct-9988" }
+                },
+                {
+                  "key": "payment.amount_cents",
+                  "value": { "intValue": "9999" }
+                },
+                { "key": "payment.currency", "value": { "stringValue": "EUR" } }
+              ],
+              "events": [],
+              "links": [],
+              "status": { "code": 1, "message": "" }
+            },
+            {
+              "traceId": "deadbeef0000000012345678cafebabe",
+              "spanId": "d002d002d002d002",
+              "parentSpanId": "d001d001d001d001",
+              "name": "acquire row lock",
+              "kind": 1,
+              "startTimeUnixNano": "1707826800740000000",
+              "endTimeUnixNano": "1707826800800000000",
+              "attributes": [
+                {
+                  "key": "db.system",
+                  "value": { "stringValue": "postgresql" }
+                },
+                { "key": "lock.timeout_ms", "value": { "intValue": "5000" } }
+              ],
+              "events": [],
+              "links": [],
+              "status": { "code": 1, "message": "" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

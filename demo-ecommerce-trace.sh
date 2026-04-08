@@ -2,7 +2,10 @@
 # Script to demonstrate incremental trace ingestion
 # This simulates a realistic distributed system where spans arrive at different times
 
-echo "=== E-commerce Checkout Trace Demo ==="
+HOST="${OTEL_GUI_HOST:-http://localhost:4318}"
+TRACE_URL="${HOST}/traces/7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c"
+
+echo "=== Demo: E-commerce Checkout Trace ==="
 echo ""
 echo "This demo shows a checkout transaction across multiple services:"
 echo "  - frontend: Web application"
@@ -21,7 +24,7 @@ echo ""
 
 # Send first batch of spans
 echo "📤 Sending initial trace data (frontend + backend-api)..."
-curl -X POST http://localhost:4318/v1/traces \
+curl -X POST "$HOST/v1/traces" \
   -H "Content-Type: application/json" \
   -d @samples/sample-trace-ecommerce-part1.json \
   -s -o /dev/null
@@ -35,13 +38,15 @@ fi
 
 echo ""
 echo "📤 Sending correlated logs for initial spans..."
-curl -X POST http://localhost:4318/v1/logs \
+curl -X POST "$HOST/v1/logs" \
   -H "Content-Type: application/json" \
   -d @samples/sample-log-ecommerce-part1.json \
   -s -o /dev/null
 
 if [ $? -eq 0 ]; then
   echo "✅ Logs part 1 sent successfully"
+  echo ""
+  echo "Open the UI now: ${TRACE_URL}"
 else
   echo "❌ Failed to send logs part 1"
   exit 1
@@ -57,7 +62,7 @@ read -r -p "⏳ Press Enter to send remaining spans..."
 # Send second batch of spans (simulating delayed arrival)
 echo ""
 echo "📤 Sending delayed trace data (auth-service + database)..."
-curl -X POST http://localhost:4318/v1/traces \
+curl -X POST "$HOST/v1/traces" \
   -H "Content-Type: application/json" \
   -d @samples/sample-trace-ecommerce-part2.json \
   -s -o /dev/null
@@ -71,7 +76,7 @@ fi
 
 echo ""
 echo "📤 Sending correlated logs for delayed spans..."
-curl -X POST http://localhost:4318/v1/logs \
+curl -X POST "$HOST/v1/logs" \
   -H "Content-Type: application/json" \
   -d @samples/sample-log-ecommerce-part2.json \
   -s -o /dev/null
@@ -87,7 +92,7 @@ echo ""
 echo "✨ Demo complete!"
 echo ""
 echo "🎯 What to explore in the UI:"
-echo "  1. Navigate to: http://localhost:5173/traces/7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c"
+echo "  1. Navigate to: $TRACE_URL"
 echo "  2. Notice spans from 4 different services (color-coded)"
 echo "  3. Expand/collapse the 'process payment' span to see its children"
 echo "  4. Use error navigation buttons to find the database deadlock"

@@ -27,6 +27,25 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 This sends a realistic multi-service trace in two parts (simulating incremental span arrival) and shows you what to explore in the UI.
 
+### Run the Late Root Span Demo
+
+Demonstrates how otel-gui handles a trace where the root span arrives **after** its children — a common real-world scenario with async exporters or API gateways.
+
+```bash
+./demo-late-root-trace.sh
+```
+
+On Windows (PowerShell):
+
+```powershell
+.\demo-late-root-trace.ps1
+```
+
+The demo sends spans in three interactive steps:
+1. Deep leaf spans (root absent → `(missing)` phantom visible in waterfall)
+2. Mid-level spans (phantom still present)
+3. Root span arrives → tree reconstructs, phantom disappears
+
 ## Sample Traces Overview
 
 ### Basic Examples
@@ -116,13 +135,19 @@ curl -X POST http://localhost:4318/v1/logs \
 - `process payment` (payment-service) references `parentSpanId: "2222222222222222"` which does not exist in the trace
 - `GET /checkout` → `render template` form a valid sub-tree for contrast
 
+**What the UI shows:**
+- A `(missing)` phantom row appears at the top of the waterfall as a placeholder for the absent parent
+- `process payment` renders as a child of that phantom, indented at depth 1
+- In the Span Details sidebar, the **Parent ID** field is displayed with a `⚠️` badge and no clickable link
+
 **Span Hierarchy:**
 
 ```
+(missing)  ← phantom placeholder
+└── process payment (payment-service) - 400ms
+
 GET /checkout (frontend) - 500ms
 └── render template (frontend) - 200ms
-
-[orphan] process payment (payment-service) - 400ms  ← parent "2222..." missing
 ```
 
 **Usage:**
@@ -132,6 +157,51 @@ curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @samples/sample-trace-orphan-span.json
 ```
+
+#### `sample-trace-late-root-part1.json`, `part2.json`, `part3.json`
+
+**Progressive ingestion scenario** demonstrating late root span arrival across 4 services.
+
+- 4 services: `payment-gateway`, `fraud-service`, `ledger-service`, `postgres`
+- 8 spans total across 3 batches
+- Root span (`POST /payment`) is intentionally absent until part 3
+
+**Trace ID:** `deadbeef0000000012345678cafebabe`
+
+**Final Span Hierarchy:**
+
+```
+POST /payment (payment-gateway)          ← arrives in part 3
+├── validate card (payment-gateway)      ← arrives in part 2
+├── fraud check (fraud-service)          ← arrives in part 1
+│   └── query fraud history (fraud-service)
+│       └── SELECT fraud_history (postgres)
+├── debit account (ledger-service)       ← arrives in part 1
+│   ├── acquire row lock (ledger-service)
+│   └── UPDATE accounts SET balance (postgres)  ← arrives in part 2
+└── send receipt email (payment-gateway) ← arrives in part 3
+```
+
+**Manual Usage:**
+
+```bash
+# Part 1: leaf spans — root absent, (missing) phantom visible
+curl -X POST http://localhost:4318/v1/traces \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-trace-late-root-part1.json
+
+# Part 2: more spans — phantom still present
+curl -X POST http://localhost:4318/v1/traces \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-trace-late-root-part2.json
+
+# Part 3: root arrives — tree reconstructs, phantom disappears
+curl -X POST http://localhost:4318/v1/traces \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-trace-late-root-part3.json
+```
+
+Or use the interactive demo script: `./demo-late-root-trace.sh`
 
 #### `sample-log.json`
 
@@ -288,13 +358,14 @@ The viewer handles incremental span arrival automatically:
 
 - Verify `traceId` matches across all spans
 - Check that `parentSpanId` references exist
-- Wait a moment - spans may still be arriving
+- Wait a moment — spans may still be arriving
+- If a parent span is missing, the UI shows a `(missing)` phantom row; the real span may still be in transit
 
 **Can't find a trace?**
 
-- Use the trace list search: `http://localhost:5173`
+- Use the trace list search
 - Filter by service, status, or operation name
-- Traces are stored in memory (max 1000)
+- Traces are stored in memory (max 1000 by default ; oldest traces are evicted when limit is reached)
 
 ## Next Steps
 

@@ -5,6 +5,8 @@
 $ErrorActionPreference = 'Stop'
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$host_ = if ($env:OTEL_GUI_HOST) { $env:OTEL_GUI_HOST } else { 'http://localhost:4318' }
+$traceUrl = "$host_/traces/7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c"
 
 function Send-OtlpJson {
     param(
@@ -19,7 +21,7 @@ function Send-OtlpJson {
     Invoke-RestMethod -Method Post -Uri $Uri -ContentType 'application/json' -Body $payload | Out-Null
 }
 
-Write-Host "=== E-commerce Checkout Trace Demo ==="
+Write-Host "=== Demo: E-commerce Checkout Trace Demo"
 Write-Host ""
 Write-Host "This demo shows a checkout transaction across multiple services:"
 Write-Host "  - frontend: Web application"
@@ -43,7 +45,7 @@ $logPart2 = Join-Path $scriptDir 'samples/sample-log-ecommerce-part2.json'
 
 Write-Host "Sending initial trace data (frontend + backend-api)..."
 try {
-    Send-OtlpJson -Uri 'http://localhost:4318/v1/traces' -JsonFile $tracePart1
+    Send-OtlpJson -Uri "$host_/v1/traces" -JsonFile $tracePart1
     Write-Host "Part 1 sent successfully"
 }
 catch {
@@ -55,7 +57,7 @@ catch {
 Write-Host ""
 Write-Host "Sending correlated logs for initial spans..."
 try {
-    Send-OtlpJson -Uri 'http://localhost:4318/v1/logs' -JsonFile $logPart1
+    Send-OtlpJson -Uri "$host_/v1/logs" -JsonFile $logPart1
     Write-Host "Logs part 1 sent successfully"
 }
 catch {
@@ -74,7 +76,7 @@ Read-Host "Press Enter to send remaining spans"
 Write-Host ""
 Write-Host "Sending delayed trace data (auth-service + database)..."
 try {
-    Send-OtlpJson -Uri 'http://localhost:4318/v1/traces' -JsonFile $tracePart2
+    Send-OtlpJson -Uri "$host_/v1/traces" -JsonFile $tracePart2
     Write-Host "Part 2 sent successfully"
 }
 catch {
@@ -86,7 +88,7 @@ catch {
 Write-Host ""
 Write-Host "Sending correlated logs for delayed spans..."
 try {
-    Send-OtlpJson -Uri 'http://localhost:4318/v1/logs' -JsonFile $logPart2
+    Send-OtlpJson -Uri "$host_/v1/logs" -JsonFile $logPart2
     Write-Host "Logs part 2 sent successfully"
 }
 catch {
@@ -99,7 +101,7 @@ Write-Host ""
 Write-Host "Demo complete!"
 Write-Host ""
 Write-Host "What to explore in the UI:"
-Write-Host "  1. Navigate to: http://localhost:5173/traces/7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c"
+Write-Host "  1. Navigate to: $traceUrl"
 Write-Host "  2. Notice spans from 4 different services (color-coded)"
 Write-Host "  3. Expand/collapse the 'process payment' span to see its children"
 Write-Host "  4. Use error navigation buttons to find the database deadlock"
