@@ -55,6 +55,7 @@
     "vitest": "^4.1.2"
   },
   "dependencies": {
+    "@otel-gui/core": "workspace:*",
     "protobufjs": "^8.0.0"
   }
 }

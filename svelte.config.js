@@ -4,6 +4,9 @@ import adapter from '@sveltejs/adapter-node'
 const config = {
   kit: {
     adapter: adapter(),
+    alias: {
+      '@otel-gui/core': './packages/core/src/index.ts',
+    },
   },
 }
 

@@ -46,7 +46,7 @@ function makeLog(overrides: Partial<TraceLogListItem> = {}): TraceLogListItem {
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
-describe('findMatchingSpanIds', () => {
+describe(findMatchingSpanIds, () => {
   // ── Blank query ────────────────────────────────────────────────────────────
 
   it('returns empty Set for empty query', () => {

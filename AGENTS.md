@@ -56,7 +56,7 @@ See [time.ts](src/lib/utils/time.ts) for all time formatting.
 // →: { "http.method": "GET" }
 ```
 
-Use `flattenAttributes()` from [attributes.ts](src/lib/utils/attributes.ts) — handles all 7 AnyValue variants.
+Use `flattenAttributes()` from `@otel-gui/core` ([packages/core/src/attributes.ts](packages/core/src/attributes.ts)) — handles all 7 AnyValue variants.
 
 **Service name extraction**: Lives in `ResourceSpans.resource.attributes['service.name']`, not in spans. Must propagate during ingestion.
 
@@ -109,10 +109,10 @@ $effect(() => {
 
 | File                                                                              | What's covered                                                                                                           |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| [attributes.test.ts](src/lib/utils/attributes.test.ts)                            | All 7 AnyValue variants, null/edge cases                                                                                 |
+| [attributes.test.ts](packages/core/src/attributes.test.ts)                        | All 7 AnyValue variants, null/edge cases (canonical tests in `@otel-gui/core`)                                           |
 | [time.test.ts](src/lib/utils/time.test.ts)                                        | Duration formatting, negative/zero, timestamps, relative time                                                            |
 | [spans.test.ts](src/lib/utils/spans.test.ts)                                      | Tree building, orphans, circular refs, child sort order                                                                  |
-| [traceStore.test.ts](src/lib/server/traceStore.test.ts)                           | Ingestion, span merging, FIFO eviction, subscribe/unsubscribe, `resolveRootSpanName`, selected trace deletion            |
+| [traceStore.test.ts](src/lib/server/traceStore.test.ts)                           | Ingestion, span merging, FIFO eviction, subscribe/unsubscribe, selected trace deletion (`resolveRootSpanName` from `@otel-gui/core`) |
 | [integration.test.ts](src/routes/integration.test.ts)                             | Full route coverage including import preview/import, single+bulk export, selected deletion, service map, correlated logs |
 | [ChevronIcon.test.ts](src/lib/components/ChevronIcon.test.ts)                     | SVG render, rotation transform, size prop, aria-hidden                                                                   |
 | [ServiceBadge.test.ts](src/lib/components/ServiceBadge.test.ts)                   | Service name text, element/attribute structure, background color                                                         |
@@ -185,7 +185,11 @@ Shortcuts implemented:
 - [memoryTraceStore.ts](src/lib/server/traceStore/memoryTraceStore.ts) — Default in-memory backend implementation
 - [moduleImport.ts](src/lib/server/traceStore/moduleImport.ts) — Dynamic import target resolution for external backend modules
 - [protobuf.ts](src/lib/server/protobuf.ts) — Protobuf decoder for OTLP traces
-- [attributes.ts](src/lib/utils/attributes.ts) — OTLP AnyValue extraction
+- [packages/core/src/attributes.ts](packages/core/src/attributes.ts) — OTLP AnyValue extraction (`flattenAttributes`, `extractAnyValue`)
+- [packages/core/src/traceStore.ts](packages/core/src/traceStore.ts) — Shared pure functions (`createLogId`, `resolveRootSpanName`)
+- [packages/core/src/stats.ts](packages/core/src/stats.ts) — Percentile helpers (`percentile`, `percentileNsToMs`)
+- [packages/core/src/serviceMap.ts](packages/core/src/serviceMap.ts) — Service map builder (`buildServiceMap`)
+- [packages/core/src/types.ts](packages/core/src/types.ts) — Shared store types (`StoredSpan`, `StoredLog`, `StoredTrace`, `ServiceMapNode/Edge/Data`)
 - [time.ts](src/lib/utils/time.ts) — BigInt nanosecond formatting
 - [graph.ts](src/lib/utils/graph.ts) — Layered graph layout (Sugiyama-style): layer assignment, barycenter ordering, coordinate assignment, Bézier edge paths
 - [keyboard.ts](src/lib/utils/keyboard.ts) — `isInputFocused()` guard for global keyboard shortcuts

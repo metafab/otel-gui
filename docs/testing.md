@@ -20,7 +20,7 @@
 
 #### Critical Test Cases
 
-**`flattenAttributes()` ([src/lib/utils/attributes.ts](../src/lib/utils/attributes.ts))**:
+**`flattenAttributes()` ([packages/core/src/attributes.ts](../packages/core/src/attributes.ts))**:
 
 - All 7 AnyValue variants (`stringValue`, `boolValue`, `intValue`, `doubleValue`, `arrayValue`, `kvlistValue`, `bytesValue`)
 - Nested KeyValue lists
@@ -28,9 +28,9 @@
 
 ```typescript
 import { describe, it, expect } from 'vitest'
-import { flattenAttributes } from '$lib/utils/attributes'
+import { flattenAttributes } from '@otel-gui/core'
 
-describe('flattenAttributes', () => {
+describe(flattenAttributes, () => {
   it('handles stringValue', () => {
     expect(
       flattenAttributes([
@@ -63,7 +63,7 @@ describe('flattenAttributes', () => {
 - Timestamp overflow handling
 
 ```typescript
-describe('formatDuration', () => {
+describe(formatDuration, () => {
   it('formats milliseconds with precision', () => {
     expect(formatDuration('1000000000', '1012345678')).toBe('12.3ms')
   })
@@ -310,10 +310,13 @@ export default defineConfig({
 ### Directory structure
 
 ```
+packages/
+  core/
+    src/
+      attributes.test.ts
 src/
   lib/
     utils/
-      attributes.test.ts
       time.test.ts
       spans.test.ts
     server/
@@ -361,7 +364,7 @@ jobs:
 
 | File                                               | Tests |
 | -------------------------------------------------- | ----- |
-| `src/lib/utils/attributes.test.ts`                 | 17    |
+| `packages/core/src/attributes.test.ts`             | 17    |
 | `src/lib/utils/time.test.ts`                       | 18    |
 | `src/lib/utils/spans.test.ts`                      | 19    |
 | `src/lib/server/traceStore.test.ts`                | 28    |

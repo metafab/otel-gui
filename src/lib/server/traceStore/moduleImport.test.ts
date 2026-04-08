@@ -3,7 +3,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { resolveDynamicImportTarget } from './moduleImport'
 
-describe('resolveDynamicImportTarget', () => {
+describe(resolveDynamicImportTarget, () => {
   it('keeps package specifiers unchanged', () => {
     expect(
       resolveDynamicImportTarget('@otel-gui/enterprise-persistence/register'),

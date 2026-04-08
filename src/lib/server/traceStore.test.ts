@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { traceStore, resolveRootSpanName } from '$lib/server/traceStore'
+import { traceStore } from '$lib/server/traceStore'
+import { resolveRootSpanName } from '@otel-gui/core'
 import type { StoredTrace } from '$lib/types'
 import simpleTrace from '../../../tests/fixtures/simple-trace.json'
 import simpleLog from '../../../tests/fixtures/simple-log.json'

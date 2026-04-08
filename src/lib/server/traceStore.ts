@@ -1,6 +1,4 @@
 import { env } from '$env/dynamic/private'
-import { resolveRootSpanName } from '$lib/server/traceStore/core'
-import { resolveDynamicImportTarget } from '$lib/server/traceStore/moduleImport'
 import {
   getTraceStoreBackend,
   registerTraceStoreBackend,
@@ -8,6 +6,7 @@ import {
   type TraceStoreBackendModule,
   type TraceStoreWithPersistenceStatus,
 } from '$lib/server/traceStore/backends'
+import { resolveDynamicImportTarget } from '$lib/server/traceStore/moduleImport'
 
 function resolveMaxTraces(): number {
   const raw = env.OTEL_GUI_MAX_TRACES
@@ -300,5 +299,4 @@ export function getPersistenceStatus(): PersistenceStatus {
   return persistenceStatus
 }
 
-export { resolveRootSpanName }
 export { registerTraceStoreBackend }

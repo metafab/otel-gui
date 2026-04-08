@@ -5,7 +5,7 @@ import type {
   TraceExportEnvelope,
   TraceImportPreview,
 } from '$lib/types'
-import { flattenAttributes } from '$lib/utils/attributes'
+import { flattenAttributes } from '@otel-gui/core'
 import { SPAN_KIND_NAMES, STATUS_CODE_NAMES } from '$lib/utils/otlpEnums'
 
 const EXPORT_FORMAT = 'otel-gui-trace-export'
