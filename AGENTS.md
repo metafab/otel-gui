@@ -107,25 +107,25 @@ $effect(() => {
 
 **Test files**:
 
-| File                                                                              | What's covered                                                                                                           |
-| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| [attributes.test.ts](packages/core/src/attributes.test.ts)                        | All 7 AnyValue variants, null/edge cases (canonical tests in `@otel-gui/core`)                                           |
-| [time.test.ts](src/lib/utils/time.test.ts)                                        | Duration formatting, negative/zero, timestamps, relative time                                                            |
-| [spans.test.ts](src/lib/utils/spans.test.ts)                                      | Tree building, orphans, circular refs, child sort order                                                                  |
+| File                                                                              | What's covered                                                                                                                       |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| [attributes.test.ts](packages/core/src/attributes.test.ts)                        | All 7 AnyValue variants, null/edge cases (canonical tests in `@otel-gui/core`)                                                       |
+| [time.test.ts](src/lib/utils/time.test.ts)                                        | Duration formatting, negative/zero, timestamps, relative time                                                                        |
+| [spans.test.ts](src/lib/utils/spans.test.ts)                                      | Tree building, orphans, circular refs, child sort order                                                                              |
 | [traceStore.test.ts](src/lib/server/traceStore.test.ts)                           | Ingestion, span merging, FIFO eviction, subscribe/unsubscribe, selected trace deletion (`resolveRootSpanName` from `@otel-gui/core`) |
-| [integration.test.ts](src/routes/integration.test.ts)                             | Full route coverage including import preview/import, single+bulk export, selected deletion, service map, correlated logs |
-| [ChevronIcon.test.ts](src/lib/components/ChevronIcon.test.ts)                     | SVG render, rotation transform, size prop, aria-hidden                                                                   |
-| [ServiceBadge.test.ts](src/lib/components/ServiceBadge.test.ts)                   | Service name text, element/attribute structure, background color                                                         |
-| [AttributeItem.test.ts](src/lib/components/AttributeItem.test.ts)                 | Key/value rendering, all 8 type labels, copy button, truncation, onFullscreen callback                                   |
-| [KeyboardShortcutsHelp.test.ts](src/lib/components/KeyboardShortcutsHelp.test.ts) | Shortcuts table, dialog role, close via button/backdrop/Escape key                                                       |
-| [FullscreenValueModal.test.ts](src/lib/components/FullscreenValueModal.test.ts)   | Fullscreen value rendering, interactions, close behavior                                                                 |
-| [CopyButton.test.ts](src/lib/components/CopyButton.test.ts)                       | Clipboard interactions, fallback/error handling                                                                          |
-| [SpanDetailsSidebar.test.ts](src/lib/components/SpanDetailsSidebar.test.ts)       | Sidebar rendering, filters, events/links/resources/scope/logs flows                                                      |
-| [spanSearch.test.ts](src/lib/utils/spanSearch.test.ts)                            | Span search tokenization/matching, rank/ordering behaviors                                                               |
-| [updateCheck.test.ts](src/lib/utils/updateCheck.test.ts)                          | Release check caching/dismiss semantics                                                                                  |
-| [moduleImport.test.ts](src/lib/server/traceStore/moduleImport.test.ts)            | Dynamic backend module resolution and import behavior                                                                    |
-| [server.test.ts](src/routes/api/config/server.test.ts)                            | Config endpoint metadata (maxTraces + persistence fields)                                                                |
-| [page.test.ts](src/routes/traces/[traceId]/page.test.ts)                          | Trace detail page matching behavior with collapsed descendants                                                           |
+| [integration.test.ts](src/routes/integration.test.ts)                             | Full route coverage including import preview/import, single+bulk export, selected deletion, service map, correlated logs             |
+| [ChevronIcon.test.ts](src/lib/components/ChevronIcon.test.ts)                     | SVG render, rotation transform, size prop, aria-hidden                                                                               |
+| [ServiceBadge.test.ts](src/lib/components/ServiceBadge.test.ts)                   | Service name text, element/attribute structure, background color                                                                     |
+| [AttributeItem.test.ts](src/lib/components/AttributeItem.test.ts)                 | Key/value rendering, all 8 type labels, copy button, truncation, onFullscreen callback                                               |
+| [KeyboardShortcutsHelp.test.ts](src/lib/components/KeyboardShortcutsHelp.test.ts) | Shortcuts table, dialog role, close via button/backdrop/Escape key                                                                   |
+| [FullscreenValueModal.test.ts](src/lib/components/FullscreenValueModal.test.ts)   | Fullscreen value rendering, interactions, close behavior                                                                             |
+| [CopyButton.test.ts](src/lib/components/CopyButton.test.ts)                       | Clipboard interactions, fallback/error handling                                                                                      |
+| [SpanDetailsSidebar.test.ts](src/lib/components/SpanDetailsSidebar.test.ts)       | Sidebar rendering, filters, events/links/resources/scope/logs flows                                                                  |
+| [spanSearch.test.ts](src/lib/utils/spanSearch.test.ts)                            | Span search tokenization/matching, rank/ordering behaviors                                                                           |
+| [updateCheck.test.ts](src/lib/utils/updateCheck.test.ts)                          | Release check caching/dismiss semantics                                                                                              |
+| [moduleImport.test.ts](src/lib/server/traceStore/moduleImport.test.ts)            | Dynamic backend module resolution and import behavior                                                                                |
+| [server.test.ts](src/routes/api/config/server.test.ts)                            | Config endpoint metadata (maxTraces + persistence fields)                                                                            |
+| [page.test.ts](src/routes/traces/[traceId]/page.test.ts)                          | Trace detail page matching behavior with collapsed descendants                                                                       |
 
 **Fixtures** live in `tests/fixtures/` (simple, multi-service, error, out-of-order batches).
 

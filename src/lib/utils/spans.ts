@@ -147,7 +147,10 @@ export function buildSpanTree(spans: StoredSpan[]): SpanTreeNode[] {
       scopeAttributes: {},
     }
     const childNodes = orphans.map((orphan) => buildNode(orphan, 1))
-    const subtreeSize = childNodes.reduce((sum, c) => sum + 1 + c.subtreeSize, 0)
+    const subtreeSize = childNodes.reduce(
+      (sum, c) => sum + 1 + c.subtreeSize,
+      0,
+    )
     result.push({
       span: phantomSpan,
       depth: 0,

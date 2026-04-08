@@ -42,6 +42,7 @@ On Windows (PowerShell):
 ```
 
 The demo sends spans in three interactive steps:
+
 1. Deep leaf spans (root absent → `(missing)` phantom visible in waterfall)
 2. Mid-level spans (phantom still present)
 3. Root span arrives → tree reconstructs, phantom disappears
@@ -136,6 +137,7 @@ curl -X POST http://localhost:4318/v1/logs \
 - `GET /checkout` → `render template` form a valid sub-tree for contrast
 
 **What the UI shows:**
+
 - A `(missing)` phantom row appears at the top of the waterfall as a placeholder for the absent parent
 - `process payment` renders as a child of that phantom, indented at depth 1
 - In the Span Details sidebar, the **Parent ID** field is displayed with a `⚠️` badge and no clickable link

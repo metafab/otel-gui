@@ -1,7 +1,12 @@
 // OTLP Trace Data Types
 
 // Shared types — canonical source is @otel-gui/core
-import type { StoredLog, StoredSpan, StoredTrace, ServiceMapData } from '@otel-gui/core'
+import type {
+  StoredLog,
+  StoredSpan,
+  StoredTrace,
+  ServiceMapData,
+} from '@otel-gui/core'
 
 export type {
   SpanEvent,

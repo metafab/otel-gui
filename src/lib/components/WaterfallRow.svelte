@@ -310,53 +310,53 @@
       <span class="phantom-label">- - - - - - - - - - - - - - -</span>
     </div>
   {:else}
-  <div class="timeline">
-    <div
-      class="timeline-bar"
-      class:error-bar={hasError}
-      style="left: {leftPercent}%; width: {Math.max(
-        widthPercent,
-        0.5,
-      )}%; background: {serviceColor}"
-      title={`${formattedSpanDuration.simple} • ${formattedSpanDuration.detailed}`}
-    >
-      <span class="duration-label">
-        {formattedSpanDuration.simple}
-      </span>
+    <div class="timeline">
+      <div
+        class="timeline-bar"
+        class:error-bar={hasError}
+        style="left: {leftPercent}%; width: {Math.max(
+          widthPercent,
+          0.5,
+        )}%; background: {serviceColor}"
+        title={`${formattedSpanDuration.simple} • ${formattedSpanDuration.detailed}`}
+      >
+        <span class="duration-label">
+          {formattedSpanDuration.simple}
+        </span>
 
-      <!-- Event markers -->
-      {#each eventPositions as event, index}
-        <div
-          class="event-marker"
-          style="left: {event.position}%; top: {event.top}%"
-          title={`Event: ${event.name}`}
-          onclick={(e) => handleEventClick(index, e)}
-          onkeydown={(e) => e.key === 'Enter' && handleEventClick(index, e)}
-          role="button"
-          tabindex="0"
-        ></div>
-      {/each}
+        <!-- Event markers -->
+        {#each eventPositions as event, index}
+          <div
+            class="event-marker"
+            style="left: {event.position}%; top: {event.top}%"
+            title={`Event: ${event.name}`}
+            onclick={(e) => handleEventClick(index, e)}
+            onkeydown={(e) => e.key === 'Enter' && handleEventClick(index, e)}
+            role="button"
+            tabindex="0"
+          ></div>
+        {/each}
 
-      <!-- Correlated log markers -->
-      {#each logPositions as log}
-        <div
-          class="log-marker"
-          class:is-selected={selectedLogId === log.id}
-          class:sev-error={log.severityBucket === 'error'}
-          class:sev-warn={log.severityBucket === 'warn'}
-          class:sev-info={log.severityBucket === 'info'}
-          class:sev-debug={log.severityBucket === 'debug'}
-          class:sev-trace={log.severityBucket === 'trace'}
-          style="left: {log.position}%; top: {log.top}%"
-          title={log.title}
-          onclick={(e) => handleLogClick(log.id, e)}
-          onkeydown={(e) => e.key === 'Enter' && handleLogClick(log.id, e)}
-          role="button"
-          tabindex="0"
-        ></div>
-      {/each}
+        <!-- Correlated log markers -->
+        {#each logPositions as log}
+          <div
+            class="log-marker"
+            class:is-selected={selectedLogId === log.id}
+            class:sev-error={log.severityBucket === 'error'}
+            class:sev-warn={log.severityBucket === 'warn'}
+            class:sev-info={log.severityBucket === 'info'}
+            class:sev-debug={log.severityBucket === 'debug'}
+            class:sev-trace={log.severityBucket === 'trace'}
+            style="left: {log.position}%; top: {log.top}%"
+            title={log.title}
+            onclick={(e) => handleLogClick(log.id, e)}
+            onkeydown={(e) => e.key === 'Enter' && handleLogClick(log.id, e)}
+            role="button"
+            tabindex="0"
+          ></div>
+        {/each}
+      </div>
     </div>
-  </div>
   {/if}
 </div>
 

@@ -16,19 +16,25 @@ describe(flattenAttributes, () => {
 
   it('handles stringValue', () => {
     expect(
-      flattenAttributes([{ key: 'http.method', value: { stringValue: 'GET' } }]),
+      flattenAttributes([
+        { key: 'http.method', value: { stringValue: 'GET' } },
+      ]),
     ).toEqual({ 'http.method': 'GET' })
   })
 
   it('handles boolValue', () => {
     expect(
-      flattenAttributes([{ key: 'feature.enabled', value: { boolValue: true } }]),
+      flattenAttributes([
+        { key: 'feature.enabled', value: { boolValue: true } },
+      ]),
     ).toEqual({ 'feature.enabled': true })
   })
 
   it('handles intValue (string-encoded int64)', () => {
     expect(
-      flattenAttributes([{ key: 'http.status_code', value: { intValue: '200' } }]),
+      flattenAttributes([
+        { key: 'http.status_code', value: { intValue: '200' } },
+      ]),
     ).toEqual({ 'http.status_code': 200 })
   })
 
@@ -53,7 +59,9 @@ describe(flattenAttributes, () => {
   })
 
   it('handles empty arrayValue', () => {
-    const result = flattenAttributes([{ key: 'tags', value: { arrayValue: {} } }])
+    const result = flattenAttributes([
+      { key: 'tags', value: { arrayValue: {} } },
+    ])
     expect(result).toEqual({ tags: [] })
   })
 
@@ -75,7 +83,9 @@ describe(flattenAttributes, () => {
   })
 
   it('handles bytesValue', () => {
-    const result = flattenAttributes([{ key: 'raw', value: { bytesValue: 'aGVsbG8=' } }])
+    const result = flattenAttributes([
+      { key: 'raw', value: { bytesValue: 'aGVsbG8=' } },
+    ])
     expect(result).toEqual({ raw: 'aGVsbG8=' })
   })
 

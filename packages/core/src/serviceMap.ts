@@ -1,4 +1,9 @@
-import type { StoredTrace, ServiceMapData, ServiceMapNode, ServiceMapEdge } from './types.js'
+import type {
+  StoredTrace,
+  ServiceMapData,
+  ServiceMapNode,
+  ServiceMapEdge,
+} from './types.js'
 import { percentileNsToMs } from './stats.js'
 
 /**
@@ -12,7 +17,9 @@ import { percentileNsToMs } from './stats.js'
  *
  * @param tracesToProcess - The traces to aggregate.
  */
-export function buildServiceMap(tracesToProcess: StoredTrace[]): ServiceMapData {
+export function buildServiceMap(
+  tracesToProcess: StoredTrace[],
+): ServiceMapData {
   const nodeMap = new Map<string, ServiceMapNode>()
   // edge key: `${source}||${target}`
   const edgeMap = new Map<
@@ -53,7 +60,9 @@ export function buildServiceMap(tracesToProcess: StoredTrace[]): ServiceMapData 
             edge.callCount++
             if (isError) edge.errorCount++
             edge.durations.push(
-              Number(BigInt(span.endTimeUnixNano) - BigInt(span.startTimeUnixNano)),
+              Number(
+                BigInt(span.endTimeUnixNano) - BigInt(span.startTimeUnixNano),
+              ),
             )
           }
         }
@@ -63,7 +72,9 @@ export function buildServiceMap(tracesToProcess: StoredTrace[]): ServiceMapData 
       if (span.kind === 3 /* CLIENT */) {
         const dbSystem = span.attributes['db.system'] as string | undefined
         const dbName = span.attributes['db.name'] as string | undefined
-        const msgSystem = span.attributes['messaging.system'] as string | undefined
+        const msgSystem = span.attributes['messaging.system'] as
+          | string
+          | undefined
         const rpcSystem = span.attributes['rpc.system'] as string | undefined
         const peerService =
           (span.attributes['peer.service'] as string | undefined) ||
@@ -105,7 +116,9 @@ export function buildServiceMap(tracesToProcess: StoredTrace[]): ServiceMapData 
           // Only add attribute-based edge when there's no parent-based edge
           const hasParentEdge =
             span.parentSpanId && trace.spans.has(span.parentSpanId)
-              ? (trace.spans.get(span.parentSpanId)!.resource['service.name'] as string) !== svc
+              ? (trace.spans.get(span.parentSpanId)!.resource[
+                  'service.name'
+                ] as string) !== svc
               : false
 
           if (!hasParentEdge) {
@@ -116,7 +129,9 @@ export function buildServiceMap(tracesToProcess: StoredTrace[]): ServiceMapData 
             edge.callCount++
             if (isError) edge.errorCount++
             edge.durations.push(
-              Number(BigInt(span.endTimeUnixNano) - BigInt(span.startTimeUnixNano)),
+              Number(
+                BigInt(span.endTimeUnixNano) - BigInt(span.startTimeUnixNano),
+              ),
             )
           }
 
