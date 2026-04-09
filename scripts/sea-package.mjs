@@ -193,6 +193,9 @@ if (target.os === 'darwin' && platform() === 'darwin') {
 }
 
 // 7. Copy runtime assets (must remain next to the binary)
+// Note: node_modules/ is intentionally NOT copied here because dev dependencies
+// are still present at this point. The CI workflow runs `pnpm prune --prod` after
+// this script and then copies the pruned node_modules into the platform directory.
 console.log('→ Copying runtime assets...')
 for (const [src, dest] of [
   [join(root, 'build'), join(outDir, 'build')],
@@ -208,4 +211,7 @@ console.log(
 )
 console.log(`  build/          — SvelteKit server + pre-built UI`)
 console.log(`  proto/          — OTLP proto definitions`)
+console.log(
+  `  node_modules/   — added by CI after \`pnpm prune --prod\` (not yet present)`,
+)
 console.log(`\nFrom that directory: PORT=4318 ./otel-gui${ext}`)
