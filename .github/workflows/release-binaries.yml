@@ -100,13 +100,13 @@ jobs:
 
       - name: Copy production node_modules into platform dir (Linux / macOS)
         if: runner.os != 'Windows'
-        run: cp -r node_modules dist/binaries/otel-gui-${{ matrix.platform }}/node_modules
+        run: rsync -a node_modules/ dist/binaries/otel-gui-${{ matrix.platform }}/node_modules/
 
       - name: Copy production node_modules into platform dir (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Copy-Item -Recurse -Force node_modules dist\binaries\otel-gui-${{ matrix.platform }}\node_modules
+          robocopy node_modules dist\binaries\otel-gui-${{ matrix.platform }}\node_modules /E /SL /NJH /NJS /NFL /NDL; if ($LASTEXITCODE -le 7) { exit 0 }
 
       - name: Create archive (Linux / macOS)
         if: runner.os != 'Windows'
