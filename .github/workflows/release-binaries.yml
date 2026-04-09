@@ -77,9 +77,6 @@ jobs:
       - name: Generate SEA launcher
         run: pnpm run sea:bundle
 
-      - name: Prune dev dependencies
-        run: pnpm prune --prod
-
       - name: Download Node x64 binary (macOS cross-compilation)
         if: matrix.cross_arch == true
         run: |
@@ -97,6 +94,9 @@ jobs:
           else
             pnpm run sea:package:binary
           fi
+
+      - name: Prune dev dependencies
+        run: pnpm prune --prod
 
       - name: Create archive (Linux / macOS)
         if: runner.os != 'Windows'
