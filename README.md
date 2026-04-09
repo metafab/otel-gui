@@ -97,6 +97,13 @@ Notes:
 
 - Homebrew formula updates are automated from tagged releases (`v*`) by the release workflow.
 
+To update to the latest version, you'll use:
+
+```sh
+brew update
+brew upgrade metafab/tap/otel-gui
+```
+
 ### Docker 🐳
 
 Pull and run the published GHCR image:
