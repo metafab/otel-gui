@@ -106,9 +106,11 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          robocopy node_modules dist\binaries\otel-gui-${{ matrix.platform }}\node_modules /E /R:0 /W:0 /NJH /NJS /NFL /NDL /NP
-          if ($LASTEXITCODE -le 7) { exit 0 }
-          exit $LASTEXITCODE
+          robocopy node_modules dist\binaries\otel-gui-${{ matrix.platform }}\node_modules /E /R:0 /W:0
+          $rc = $LASTEXITCODE
+          Write-Host "robocopy exit code: $rc"
+          if ($rc -gt 7) { exit $rc }
+          exit 0
 
       - name: Create archive (Linux / macOS)
         if: runner.os != 'Windows'
