@@ -44,6 +44,38 @@
   const maxTraces = $derived(traceStore.maxTraces)
   const persistence = $derived(traceStore.persistence)
 
+  type TraceSortBy =
+    | 'rootService'
+    | 'rootName'
+    | 'duration'
+    | 'spans'
+    | 'time'
+    | 'status'
+  type TraceSortOrder = 'asc' | 'desc'
+
+  const DEFAULT_SORT_BY: TraceSortBy = 'time'
+  const DEFAULT_SORT_ORDER: TraceSortOrder = 'desc'
+
+  function parseSortBy(rawValue: string | null): TraceSortBy {
+    switch (rawValue) {
+      case 'rootService':
+      case 'rootName':
+      case 'duration':
+      case 'spans':
+      case 'time':
+      case 'status':
+        return rawValue
+      default:
+        return DEFAULT_SORT_BY
+    }
+  }
+
+  function parseSortOrder(rawValue: string | null): TraceSortOrder {
+    return rawValue === 'asc' || rawValue === 'desc'
+      ? rawValue
+      : DEFAULT_SORT_ORDER
+  }
+
   function parseFilterNumber(rawValue: string | null): number | null {
     if (!rawValue) {
       return null
@@ -61,6 +93,8 @@
       showErrorsOnly: url.searchParams.get('errors') === 'true',
       minDuration: parseFilterNumber(url.searchParams.get('minDuration')),
       maxDuration: parseFilterNumber(url.searchParams.get('maxDuration')),
+      sortBy: parseSortBy(url.searchParams.get('sort')),
+      sortOrder: parseSortOrder(url.searchParams.get('order')),
     } as const
   }
 
@@ -99,6 +133,14 @@
       url.searchParams.set('maxDuration', String(maxDuration))
     } else {
       url.searchParams.delete('maxDuration')
+    }
+
+    if (sortBy === DEFAULT_SORT_BY && sortOrder === DEFAULT_SORT_ORDER) {
+      url.searchParams.delete('sort')
+      url.searchParams.delete('order')
+    } else {
+      url.searchParams.set('sort', sortBy)
+      url.searchParams.set('order', sortOrder)
     }
   }
 
@@ -164,6 +206,8 @@
   let showErrorsOnly = $state(initialFilterState.showErrorsOnly)
   let minDuration = $state<number | null>(initialFilterState.minDuration)
   let maxDuration = $state<number | null>(initialFilterState.maxDuration)
+  let sortBy = $state<TraceSortBy>(initialFilterState.sortBy)
+  let sortOrder = $state<TraceSortOrder>(initialFilterState.sortOrder)
 
   // Get unique services for filter dropdown
   const services = $derived(
@@ -215,7 +259,45 @@
       result = result.filter((t) => t.durationMs <= max)
     }
 
-    return result
+    const sorted = [...result].sort((a, b) => {
+      let directionlessResult = 0
+
+      switch (sortBy) {
+        case 'rootService':
+          directionlessResult = a.serviceName.localeCompare(b.serviceName)
+          break
+        case 'duration':
+          directionlessResult = a.durationMs - b.durationMs
+          break
+        case 'spans':
+          directionlessResult = a.spanCount - b.spanCount
+          break
+        case 'time':
+          directionlessResult = a.startTime.localeCompare(b.startTime)
+          break
+        case 'rootName':
+          directionlessResult = a.rootSpanName.localeCompare(b.rootSpanName)
+          break
+        case 'status':
+          // asc: OK (false) first, then ERROR (true)
+          directionlessResult = Number(a.hasError) - Number(b.hasError)
+          break
+      }
+
+      if (directionlessResult !== 0) {
+        return sortOrder === 'asc' ? directionlessResult : -directionlessResult
+      }
+
+      // Keep ordering deterministic when values are equal.
+      const startTimeTieBreaker = b.startTime.localeCompare(a.startTime)
+      if (startTimeTieBreaker !== 0) {
+        return startTimeTieBreaker
+      }
+
+      return a.traceId.localeCompare(b.traceId)
+    })
+
+    return sorted
   })
 
   const selectedTraceIdSet = $derived(new Set(selectedTraceIds))
@@ -247,6 +329,30 @@
     minDuration = null
     maxDuration = null
     selectedTraceIds = []
+  }
+
+  function getAriaSort(column: TraceSortBy) {
+    if (sortBy !== column) {
+      return 'none'
+    }
+    return sortOrder === 'asc' ? 'ascending' : 'descending'
+  }
+
+  function getSortIndicator(column: TraceSortBy) {
+    if (sortBy !== column) {
+      return ''
+    }
+    return sortOrder === 'asc' ? '↑' : '↓'
+  }
+
+  function handleSort(column: TraceSortBy) {
+    if (sortBy === column) {
+      sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'
+      return
+    }
+
+    sortBy = column
+    sortOrder = column === 'time' ? 'desc' : 'asc'
   }
 
   function handleRowClick(traceId: string) {
@@ -645,12 +751,84 @@
                       title="Invert filtered trace selection"
                     />
                   </th>
-                  <th>Root Service</th>
-                  <th>Root Name</th>
-                  <th>Duration</th>
-                  <th>Spans</th>
-                  <th>Time</th>
-                  <th>Status</th>
+                  <th aria-sort={getAriaSort('rootService')}>
+                    <button
+                      type="button"
+                      class="sortable-header"
+                      onclick={() => handleSort('rootService')}
+                      aria-label="Sort by root service"
+                    >
+                      Root Service
+                      <span class="sort-indicator"
+                        >{getSortIndicator('rootService')}</span
+                      >
+                    </button>
+                  </th>
+                  <th aria-sort={getAriaSort('rootName')}>
+                    <button
+                      type="button"
+                      class="sortable-header"
+                      onclick={() => handleSort('rootName')}
+                      aria-label="Sort by root name"
+                    >
+                      Root Name
+                      <span class="sort-indicator"
+                        >{getSortIndicator('rootName')}</span
+                      >
+                    </button>
+                  </th>
+                  <th aria-sort={getAriaSort('duration')}>
+                    <button
+                      type="button"
+                      class="sortable-header"
+                      onclick={() => handleSort('duration')}
+                      aria-label="Sort by duration"
+                    >
+                      Duration
+                      <span class="sort-indicator"
+                        >{getSortIndicator('duration')}</span
+                      >
+                    </button>
+                  </th>
+                  <th aria-sort={getAriaSort('spans')}>
+                    <button
+                      type="button"
+                      class="sortable-header"
+                      onclick={() => handleSort('spans')}
+                      aria-label="Sort by spans"
+                    >
+                      Spans
+                      <span class="sort-indicator"
+                        >{getSortIndicator('spans')}</span
+                      >
+                    </button>
+                  </th>
+                  <th aria-sort={getAriaSort('time')}>
+                    <button
+                      type="button"
+                      class="sortable-header"
+                      onclick={() => handleSort('time')}
+                      aria-label="Sort by time"
+                    >
+                      Time
+                      <span class="sort-indicator"
+                        >{getSortIndicator('time')}</span
+                      >
+                    </button>
+                  </th>
+                  <th aria-sort={getAriaSort('status')}>
+                    <button
+                      type="button"
+                      class="sortable-header"
+                      onclick={() => handleSort('status')}
+                      aria-label="Sort by status"
+                    >
+                      Status
+                      <span class="sort-indicator"
+                        >{getSortIndicator('status')}</span
+                      >
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -1246,6 +1424,37 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     white-space: nowrap;
+  }
+
+  .sortable-header {
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-transform: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .sortable-header:hover {
+    color: var(--text-primary);
+  }
+
+  .sortable-header:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .sort-indicator {
+    width: 0.75rem;
+    text-align: center;
+    color: var(--text-muted);
   }
 
   tbody tr {

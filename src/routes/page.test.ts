@@ -127,4 +127,65 @@ describe('trace list page URL filters', () => {
     expect(url.searchParams.get('minDuration')).toBe('10')
     expect(url.searchParams.get('maxDuration')).toBe('20')
   })
+
+  it('defaults to time descending sort state', () => {
+    render(Page)
+
+    const timeHeader = screen.getByRole('columnheader', { name: 'Time ↓' })
+    const durationHeader = screen.getByRole('columnheader', {
+      name: 'Duration',
+    })
+
+    expect(timeHeader).toHaveAttribute('aria-sort', 'descending')
+    expect(durationHeader).toHaveAttribute('aria-sort', 'none')
+  })
+
+  it('syncs sort edits back into the URL', async () => {
+    render(Page)
+
+    mockReplaceState.mockClear()
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'Sort by duration' }),
+    )
+
+    await waitFor(() => {
+      expect(mockReplaceState).toHaveBeenCalled()
+    })
+
+    let url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
+    expect(url.searchParams.get('sort')).toBe('duration')
+    expect(url.searchParams.get('order')).toBe('asc')
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'Sort by duration' }),
+    )
+
+    await waitFor(() => {
+      const latestUrl = mockReplaceState.mock.calls.at(-1)?.[0] as URL
+      expect(latestUrl.searchParams.get('order')).toBe('desc')
+    })
+
+    url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
+    expect(url.searchParams.get('sort')).toBe('duration')
+    expect(url.searchParams.get('order')).toBe('desc')
+  })
+
+  it('syncs root service sort edits back into the URL', async () => {
+    render(Page)
+
+    mockReplaceState.mockClear()
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'Sort by root service' }),
+    )
+
+    await waitFor(() => {
+      expect(mockReplaceState).toHaveBeenCalled()
+    })
+
+    const url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
+    expect(url.searchParams.get('sort')).toBe('rootService')
+    expect(url.searchParams.get('order')).toBe('asc')
+  })
 })
