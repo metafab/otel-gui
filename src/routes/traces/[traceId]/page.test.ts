@@ -4,8 +4,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte'
 
 import type { StoredSpan } from '$lib/types'
 
-const { mockFetchTrace } = vi.hoisted(() => ({
+const { mockFetchTrace, mockGoto, mockReplaceState } = vi.hoisted(() => ({
   mockFetchTrace: vi.fn(),
+  mockGoto: vi.fn(),
+  mockReplaceState: vi.fn(),
 }))
 
 const { mockFetchTraceLogs } = vi.hoisted(() => ({
@@ -13,7 +15,8 @@ const { mockFetchTraceLogs } = vi.hoisted(() => ({
 }))
 
 vi.mock('$app/navigation', () => ({
-  replaceState: vi.fn(),
+  goto: mockGoto,
+  replaceState: mockReplaceState,
 }))
 
 vi.mock('$app/stores', async () => {
@@ -67,6 +70,15 @@ function makeSpan(overrides: Partial<StoredSpan> = {}): StoredSpan {
 describe('traces/[traceId] page search UI', () => {
   beforeEach(() => {
     mutableTraceStore.traces = []
+    mockGoto.mockClear()
+    mockReplaceState.mockClear()
+
+    window.history.replaceState({}, '', '/traces/trace-nested')
+
+    Object.defineProperty(document, 'referrer', {
+      configurable: true,
+      get: () => 'http://localhost/?search=checkout',
+    })
 
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
       value: vi.fn(),
@@ -262,5 +274,24 @@ describe('traces/[traceId] page search UI', () => {
         callsBeforeEnable,
       )
     })
+  })
+
+  it('falls back to the trace list when no list referrer is available', async () => {
+    Object.defineProperty(document, 'referrer', {
+      configurable: true,
+      get: () => '',
+    })
+
+    render(TracePage)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+    })
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: '← Back to Traces' }),
+    )
+
+    expect(mockGoto).toHaveBeenCalledWith('/')
   })
 })

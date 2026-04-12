@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { replaceState } from '$app/navigation'
+  import { page } from '$app/stores'
   import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import ServiceMap from '$lib/components/ServiceMap.svelte'
@@ -42,6 +44,66 @@
   const maxTraces = $derived(traceStore.maxTraces)
   const persistence = $derived(traceStore.persistence)
 
+  function parseFilterNumber(rawValue: string | null): number | null {
+    if (!rawValue) {
+      return null
+    }
+
+    const parsedValue = Number(rawValue)
+    return Number.isFinite(parsedValue) && parsedValue >= 0 ? parsedValue : null
+  }
+
+  function readFilterStateFromUrl(url: URL) {
+    return {
+      activeTab: url.searchParams.get('tab') === 'map' ? 'map' : 'traces',
+      searchQuery: url.searchParams.get('search') ?? '',
+      selectedService: url.searchParams.get('service') ?? 'all',
+      showErrorsOnly: url.searchParams.get('errors') === 'true',
+      minDuration: parseFilterNumber(url.searchParams.get('minDuration')),
+      maxDuration: parseFilterNumber(url.searchParams.get('maxDuration')),
+    } as const
+  }
+
+  function applyFilterStateToUrl(url: URL) {
+    if (activeTab === 'map') {
+      url.searchParams.set('tab', 'map')
+    } else {
+      url.searchParams.delete('tab')
+    }
+
+    if (searchQuery.trim()) {
+      url.searchParams.set('search', searchQuery)
+    } else {
+      url.searchParams.delete('search')
+    }
+
+    if (selectedService !== 'all') {
+      url.searchParams.set('service', selectedService)
+    } else {
+      url.searchParams.delete('service')
+    }
+
+    if (showErrorsOnly) {
+      url.searchParams.set('errors', 'true')
+    } else {
+      url.searchParams.delete('errors')
+    }
+
+    if (minDuration !== null) {
+      url.searchParams.set('minDuration', String(minDuration))
+    } else {
+      url.searchParams.delete('minDuration')
+    }
+
+    if (maxDuration !== null) {
+      url.searchParams.set('maxDuration', String(maxDuration))
+    } else {
+      url.searchParams.delete('maxDuration')
+    }
+  }
+
+  const initialFilterState = readFilterStateFromUrl($page.url)
+
   // Compute the OTLP endpoint URL dynamically
   const otlpEndpoint = $derived.by(() => {
     if (typeof window !== 'undefined') {
@@ -52,7 +114,7 @@
   })
 
   // Tab navigation
-  let activeTab = $state<'traces' | 'map'>('traces')
+  let activeTab = $state<'traces' | 'map'>(initialFilterState.activeTab)
 
   // Service map state
   let serviceMapData = $state<ServiceMapData | null>(null)
@@ -88,8 +150,8 @@
   }
 
   // Filter state
-  let searchQuery = $state('')
-  let selectedService = $state<string>('all')
+  let searchQuery = $state(initialFilterState.searchQuery)
+  let selectedService = $state<string>(initialFilterState.selectedService)
   let searchInputEl = $state<HTMLInputElement | null>(null)
   let showShortcuts = $state(false)
   let showImportModal = $state(false)
@@ -99,14 +161,24 @@
   let selectedTraceIds = $state<string[]>([])
   let showClearMenu = $state(false)
   let clearSplitContainer = $state<HTMLElement | null>(null)
-  let showErrorsOnly = $state(false)
-  let minDuration = $state<number | null>(null)
-  let maxDuration = $state<number | null>(null)
+  let showErrorsOnly = $state(initialFilterState.showErrorsOnly)
+  let minDuration = $state<number | null>(initialFilterState.minDuration)
+  let maxDuration = $state<number | null>(initialFilterState.maxDuration)
 
   // Get unique services for filter dropdown
   const services = $derived(
     Array.from(new Set(traces.map((t) => t.serviceName))).sort(),
   )
+
+  $effect(() => {
+    if (selectedService === 'all' || services.length === 0) {
+      return
+    }
+
+    if (!services.includes(selectedService)) {
+      selectedService = 'all'
+    }
+  })
 
   // Filtered traces
   const filteredTraces = $derived.by(() => {
@@ -180,6 +252,21 @@
   function handleRowClick(traceId: string) {
     window.location.href = `/traces/${traceId}`
   }
+
+  $effect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const nextUrl = new URL(window.location.href)
+    applyFilterStateToUrl(nextUrl)
+
+    if (nextUrl.search === window.location.search) {
+      return
+    }
+
+    replaceState(nextUrl, {})
+  })
 
   $effect(() => {
     if (typeof document === 'undefined') return

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { replaceState } from '$app/navigation'
+  import { goto, replaceState } from '$app/navigation'
   import { page } from '$app/stores'
   import FullscreenValueModal from '$lib/components/FullscreenValueModal.svelte'
   import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
@@ -571,7 +571,24 @@
   }
 
   function handleBack() {
-    window.location.href = '/'
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      try {
+        if (document.referrer) {
+          const referrer = new URL(document.referrer)
+          if (
+            referrer.origin === window.location.origin &&
+            referrer.pathname === '/'
+          ) {
+            window.history.back()
+            return
+          }
+        }
+      } catch {
+        // Fall through to the plain list route when the referrer is invalid.
+      }
+    }
+
+    void goto('/')
   }
 
   async function handleRefresh() {
