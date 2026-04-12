@@ -68,6 +68,10 @@
   let showShortcuts = $state(false)
   let isExporting = $state(false)
   let exportError = $state<string | null>(null)
+  let autoRefreshEnabled = $state(false)
+  let showRefreshMenu = $state(false)
+  let refreshSplitContainer = $state<HTMLElement | null>(null)
+  let lastAutoRefreshSourceUpdatedAt = $state<number | null>(null)
 
   const liveTraceSummary = $derived(
     traceStore.traces.find((item) => item.traceId === traceId) || null,
@@ -171,6 +175,25 @@
     }
   })
 
+  // Auto-refresh immediately when newer data is detected and the mode is enabled.
+  $effect(() => {
+    if (
+      !autoRefreshEnabled ||
+      !needsRefresh ||
+      isLoading ||
+      !liveTraceSummary
+    ) {
+      return
+    }
+
+    if (lastAutoRefreshSourceUpdatedAt === liveTraceSummary.updatedAt) {
+      return
+    }
+
+    lastAutoRefreshSourceUpdatedAt = liveTraceSummary.updatedAt
+    void handleRefresh()
+  })
+
   // Reset current error index when trace changes
   $effect(() => {
     if (errorCount > 0) {
@@ -228,9 +251,27 @@
   $effect(() => {
     if (typeof document === 'undefined') return
 
+    function handleRefreshMenuPointerDown(event: MouseEvent) {
+      if (!showRefreshMenu) return
+      const target = event.target as Node | null
+      if (
+        refreshSplitContainer &&
+        target &&
+        !refreshSplitContainer.contains(target)
+      ) {
+        showRefreshMenu = false
+      }
+    }
+
     function handleEscCapture(e: KeyboardEvent) {
       if (e.key !== 'Escape') return
       if (fullscreenAttr) return // fullscreen modal handles its own Esc
+
+      if (showRefreshMenu) {
+        e.preventDefault()
+        showRefreshMenu = false
+        return
+      }
 
       if (showShortcuts) {
         e.preventDefault()
@@ -251,11 +292,14 @@
       }
     }
 
+    document.addEventListener('mousedown', handleRefreshMenuPointerDown)
     document.addEventListener('keydown', handleEscCapture, { capture: true })
-    return () =>
+    return () => {
+      document.removeEventListener('mousedown', handleRefreshMenuPointerDown)
       document.removeEventListener('keydown', handleEscCapture, {
         capture: true,
       })
+    }
   })
 
   // Auto-restore span details panel when a span is selected.
@@ -531,7 +575,18 @@
   }
 
   async function handleRefresh() {
+    showRefreshMenu = false
     await loadTrace()
+  }
+
+  function toggleRefreshMenu(event: MouseEvent) {
+    event.stopPropagation()
+    showRefreshMenu = !showRefreshMenu
+  }
+
+  function handleToggleAutoRefresh() {
+    autoRefreshEnabled = !autoRefreshEnabled
+    showRefreshMenu = false
   }
 
   async function handleExportTrace() {
@@ -821,40 +876,81 @@
         >
           {isExporting ? 'Exporting...' : 'Export Trace'}
         </button>
-        <button
-          class="toggle-button refresh-button"
-          class:refresh-needed={needsRefresh}
-          class:refresh-alert={needsRefresh && !isLoading}
-          onclick={handleRefresh}
-          title={needsRefresh
-            ? 'This trace has new data. Refresh to update the timeline.'
-            : 'Refresh trace to load late-arriving spans'}
-          disabled={isLoading}
+        <div
+          class="refresh-split-action"
+          role="group"
+          aria-label="Trace refresh actions"
+          bind:this={refreshSplitContainer}
         >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
-            fill="none"
-            aria-hidden="true"
-            class:is-spinning={isLoading}
+          <button
+            class="toggle-button refresh-button refresh-split-primary"
+            class:refresh-needed={needsRefresh && !autoRefreshEnabled}
+            class:refresh-alert={needsRefresh &&
+              !isLoading &&
+              !autoRefreshEnabled}
+            class:auto-refresh-active={autoRefreshEnabled}
+            onclick={handleRefresh}
+            title={autoRefreshEnabled
+              ? 'Auto-refresh is enabled. Refresh now.'
+              : needsRefresh
+                ? 'This trace has new data. Refresh to update the timeline.'
+                : 'Refresh trace to load late-arriving spans'}
+            disabled={isLoading}
           >
-            <path
-              d="M11.8 7A4.8 4.8 0 1 1 10.4 3.6"
-              stroke="currentColor"
-              stroke-width="1.5"
-              stroke-linecap="round"
-            />
-            <path
-              d="M10.4 1.7v2.3h2.3"
-              stroke="currentColor"
-              stroke-width="1.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          {isLoading ? 'Refreshing...' : 'Refresh'}
-        </button>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              aria-hidden="true"
+              class:is-spinning={isLoading}
+            >
+              <path
+                d="M11.8 7A4.8 4.8 0 1 1 10.4 3.6"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
+              <path
+                d="M10.4 1.7v2.3h2.3"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            {isLoading ? 'Refreshing...' : 'Refresh'}
+          </button>
+          <button
+            class="toggle-button refresh-button refresh-split-toggle"
+            class:auto-refresh-active={autoRefreshEnabled}
+            onclick={toggleRefreshMenu}
+            disabled={isLoading}
+            aria-label="Refresh options"
+            aria-expanded={showRefreshMenu}
+            title="Refresh options"
+          >
+            ▼
+          </button>
+
+          {#if showRefreshMenu}
+            <div
+              class="refresh-split-menu"
+              role="menu"
+              aria-label="Refresh actions menu"
+            >
+              <button
+                class="refresh-split-menu-item"
+                role="menuitem"
+                onclick={handleToggleAutoRefresh}
+              >
+                {autoRefreshEnabled
+                  ? 'Disable Auto-Refresh'
+                  : 'Enable Auto-Refresh'}
+              </button>
+            </div>
+          {/if}
+        </div>
         <button
           class="toggle-button"
           onpointerdown={captureWaterfallFocus}
@@ -1329,6 +1425,66 @@
   .refresh-button {
     border-color: var(--border-strong, var(--border));
     font-variant-numeric: tabular-nums;
+  }
+
+  .refresh-split-action {
+    position: relative;
+    display: inline-flex;
+    align-items: stretch;
+  }
+
+  .refresh-split-primary {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .refresh-split-toggle {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: none;
+    width: 34px;
+    min-width: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .refresh-button.auto-refresh-active {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--selected-bg) 45%, var(--bg-surface));
+  }
+
+  .refresh-split-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 210px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow:
+      0 8px 20px var(--shadow),
+      0 1px 3px var(--shadow-sm);
+    z-index: 40;
+    overflow: hidden;
+  }
+
+  .refresh-split-menu-item {
+    width: 100%;
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .refresh-split-menu-item:hover {
+    background: var(--bg-muted);
   }
 
   .refresh-button.refresh-needed {

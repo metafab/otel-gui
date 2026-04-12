@@ -36,7 +36,12 @@ vi.mock('$lib/stores/traces.svelte', () => ({
   },
 }))
 
+import { traceStore } from '$lib/stores/traces.svelte'
 import TracePage from './+page.svelte'
+
+const mutableTraceStore = traceStore as unknown as {
+  traces: Array<{ traceId: string; updatedAt: number }>
+}
 
 function makeSpan(overrides: Partial<StoredSpan> = {}): StoredSpan {
   return {
@@ -61,6 +66,14 @@ function makeSpan(overrides: Partial<StoredSpan> = {}): StoredSpan {
 
 describe('traces/[traceId] page search UI', () => {
   beforeEach(() => {
+    mutableTraceStore.traces = []
+
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      value: vi.fn(),
+      writable: true,
+      configurable: true,
+    })
+
     const rootSpan = makeSpan({
       spanId: 'root-span',
       parentSpanId: '',
@@ -146,5 +159,108 @@ describe('traces/[traceId] page search UI', () => {
     })
 
     expect(screen.getByText('1 span found')).toBeInTheDocument()
+  })
+
+  it('shows a refresh split-menu and toggles auto-refresh from it', async () => {
+    render(TracePage)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+    })
+
+    const optionsButton = screen.getByRole('button', {
+      name: 'Refresh options',
+    })
+    await fireEvent.click(optionsButton)
+
+    const enableAutoRefreshButton = screen.getByRole('menuitem', {
+      name: 'Enable Auto-Refresh',
+    })
+    await fireEvent.click(enableAutoRefreshButton)
+
+    await fireEvent.click(optionsButton)
+    expect(
+      screen.getByRole('menuitem', { name: 'Disable Auto-Refresh' }),
+    ).toBeInTheDocument()
+  })
+
+  it('auto-refreshes when enabled and newer data is available', async () => {
+    mutableTraceStore.traces = [
+      {
+        traceId: 'trace-nested',
+        updatedAt: 200,
+      },
+    ]
+
+    const rootSpan = makeSpan({
+      spanId: 'root-span',
+      parentSpanId: '',
+      name: 'HTTP GET /checkout',
+      startTimeUnixNano: '1000000000',
+      endTimeUnixNano: '8000000000',
+    })
+
+    mockFetchTrace.mockReset()
+    mockFetchTrace
+      .mockResolvedValueOnce({
+        traceId: 'trace-nested',
+        rootSpanName: rootSpan.name,
+        serviceName: 'checkout-service',
+        startTimeUnixNano: '1000000000',
+        endTimeUnixNano: '8000000000',
+        updatedAt: 100,
+        spanCount: 1,
+        hasError: false,
+        spans: {
+          [rootSpan.spanId]: rootSpan,
+        },
+      })
+      .mockResolvedValueOnce({
+        traceId: 'trace-nested',
+        rootSpanName: rootSpan.name,
+        serviceName: 'checkout-service',
+        startTimeUnixNano: '1000000000',
+        endTimeUnixNano: '8000000000',
+        updatedAt: 100,
+        spanCount: 1,
+        hasError: false,
+        spans: {
+          [rootSpan.spanId]: rootSpan,
+        },
+      })
+      .mockResolvedValue({
+        traceId: 'trace-nested',
+        rootSpanName: rootSpan.name,
+        serviceName: 'checkout-service',
+        startTimeUnixNano: '1000000000',
+        endTimeUnixNano: '8000000000',
+        updatedAt: 250,
+        spanCount: 1,
+        hasError: false,
+        spans: {
+          [rootSpan.spanId]: rootSpan,
+        },
+      })
+
+    render(TracePage)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+    })
+
+    const callsBeforeEnable = mockFetchTrace.mock.calls.length
+    const optionsButton = screen.getByRole('button', {
+      name: 'Refresh options',
+    })
+    await fireEvent.click(optionsButton)
+    await fireEvent.click(
+      screen.getByRole('menuitem', { name: 'Enable Auto-Refresh' }),
+    )
+
+    await waitFor(() => {
+      expect(mockFetchTrace.mock.calls.length).toBeGreaterThan(
+        callsBeforeEnable,
+      )
+    })
   })
 })
