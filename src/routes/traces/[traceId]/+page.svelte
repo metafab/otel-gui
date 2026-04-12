@@ -882,11 +882,13 @@
 
 <div class="trace-detail">
   <header class="header">
-    <button class="back-button" onclick={handleBack}>← Back to Traces</button>
+    <button class="action-button back-button" onclick={handleBack}>
+      ← Back to Traces
+    </button>
     {#if trace}
       <div class="view-controls">
         <button
-          class="toggle-button"
+          class="action-button toggle-button"
           onclick={handleExportTrace}
           disabled={isExporting}
           title="Export this trace as JSON"
@@ -900,7 +902,7 @@
           bind:this={refreshSplitContainer}
         >
           <button
-            class="toggle-button refresh-button refresh-split-primary"
+            class="action-button toggle-button refresh-button refresh-split-primary"
             class:refresh-needed={needsRefresh && !autoRefreshEnabled}
             class:refresh-alert={needsRefresh &&
               !isLoading &&
@@ -932,7 +934,7 @@
             {isLoading ? 'Refreshing...' : 'Refresh'}
           </button>
           <button
-            class="toggle-button refresh-button refresh-split-toggle"
+            class="action-button toggle-button refresh-button refresh-split-toggle"
             class:auto-refresh-active={autoRefreshEnabled}
             onclick={toggleRefreshMenu}
             disabled={isLoading}
@@ -962,7 +964,7 @@
           {/if}
         </div>
         <button
-          class="toggle-button"
+          class="action-button toggle-button"
           onpointerdown={captureWaterfallFocus}
           onclick={() => {
             showTraceDetails = !showTraceDetails
@@ -1007,7 +1009,7 @@
           {showTraceDetails ? 'Hide' : 'Show'} Trace Details
         </button>
         <button
-          class="toggle-button"
+          class="action-button toggle-button"
           onpointerdown={captureWaterfallFocus}
           onclick={() => {
             showSpanDetails = !showSpanDetails
@@ -1054,7 +1056,7 @@
         </button>
         {#if !isMaximized}
           <button
-            class="toggle-button maximize-button"
+            class="action-button toggle-button maximize-button"
             onpointerdown={captureWaterfallFocus}
             onclick={() => {
               showTraceDetails = false
@@ -1390,41 +1392,10 @@
     gap: 0.5rem;
   }
 
-  .back-button {
-    padding: 0.5rem 1rem;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.875rem;
-    color: var(--text-primary);
-  }
-
-  .back-button:hover {
-    background: var(--bg-muted);
-  }
-
   .toggle-button {
-    padding: 0.5rem 1rem;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: 4px;
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    cursor: pointer;
-    font-size: 0.875rem;
-    color: var(--text-primary);
-    transition: all 0.15s ease;
-  }
-
-  .toggle-button:hover {
-    background: var(--bg-muted);
-    border-color: var(--accent);
-  }
-
-  .toggle-button:active {
-    background: var(--selected-bg);
   }
 
   .toggle-button:disabled {

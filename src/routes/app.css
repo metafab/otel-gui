@@ -320,6 +320,31 @@ a:hover {
   text-decoration: underline;
 }
 
+.action-button {
+  padding: 0.5rem 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+}
+
+.action-button:hover:not(:disabled) {
+  background: var(--bg-muted);
+  border-color: var(--accent);
+}
+
+.action-button:active:not(:disabled) {
+  background: var(--selected-bg);
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Shared: keyboard shortcut help button (appears in both pages) */
 .shortcut-help-btn {
   padding: 0.5rem 0.75rem;

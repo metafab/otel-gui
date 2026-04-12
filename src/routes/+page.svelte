@@ -616,7 +616,7 @@
         aria-label="Keyboard shortcuts">?</button
       >
       <button
-        class="secondary-action"
+        class="action-button secondary-action"
         onclick={() => {
           exportError = null
           importSuccessMessage = null
@@ -626,14 +626,14 @@
         Import Traces
       </button>
       <button
-        class="secondary-action"
+        class="action-button secondary-action"
         onclick={handleExportFiltered}
         disabled={filteredTraces.length === 0 || isExporting}
       >
         {isExporting ? 'Exporting...' : 'Export Filtered'}
       </button>
       <button
-        class="secondary-action"
+        class="action-button secondary-action"
         onclick={handleExportSelected}
         disabled={selectedTraceIds.length === 0 || isExporting}
       >
@@ -650,14 +650,14 @@
         bind:this={clearSplitContainer}
       >
         <button
-          class="split-primary"
+          class="action-button split-primary"
           onclick={handleClearAll}
           disabled={isLoading || traces.length === 0}
         >
           Clear All
         </button>
         <button
-          class="split-toggle"
+          class="action-button split-toggle"
           onclick={toggleClearMenu}
           disabled={isLoading || traces.length === 0}
           aria-label="More clear actions"
@@ -1077,37 +1077,11 @@
     gap: 0.5rem;
   }
 
-  .actions button:not(.shortcut-help-btn) {
-    padding: 0.5rem 1rem;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.875rem;
-    background: var(--bg-surface);
-    color: var(--text-primary);
-    transition:
-      background 0.12s ease,
-      border-color 0.12s ease,
-      color 0.12s ease;
-  }
-
-  .actions button:not(.shortcut-help-btn):hover:not(:disabled) {
-    background: var(--bg-muted);
-    border-color: var(--border-strong, var(--border));
-  }
-
   .split-action {
     position: relative;
     display: inline-flex;
     align-items: stretch;
     box-shadow: 0 1px 2px var(--shadow-sm);
-  }
-
-  .split-action .split-primary,
-  .split-action .split-toggle {
-    border: 1px solid color-mix(in srgb, var(--accent) 80%, black);
-    background: var(--accent);
-    color: white;
   }
 
   .split-action .split-primary {
@@ -1128,17 +1102,6 @@
     justify-content: center;
     line-height: 1;
     text-align: center;
-  }
-
-  .split-action .split-primary:hover:not(:disabled),
-  .split-action .split-toggle:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--accent) 86%, black);
-  }
-
-  .split-action .split-primary:disabled,
-  .split-action .split-toggle:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 
   .split-menu {
@@ -1173,11 +1136,6 @@
 
   .split-menu-item:disabled {
     color: var(--text-muted);
-    cursor: not-allowed;
-  }
-
-  .actions button:not(.shortcut-help-btn):disabled {
-    opacity: 0.5;
     cursor: not-allowed;
   }
 
