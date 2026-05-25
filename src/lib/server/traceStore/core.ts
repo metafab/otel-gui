@@ -10,7 +10,11 @@ import { buildServiceMap } from '@otel-gui/core'
 import { extractAnyValue, flattenAttributes } from '@otel-gui/core'
 import { formatTimestamp, getDurationMs } from '$lib/utils/time'
 import { SPAN_KIND_NAMES, STATUS_CODE_NAMES } from '$lib/utils/otlpEnums'
-import { createLogId, resolveRootSpanName } from '@otel-gui/core'
+import {
+  createLogId,
+  resolveRootServiceName,
+  resolveRootSpanName,
+} from '@otel-gui/core'
 
 export interface InternalTraceStore extends TraceStore {
   listAllTraces(): StoredTrace[]
@@ -134,6 +138,11 @@ export function createInternalTraceStore(
           trace.spanCount = trace.spans.size
           trace.rootSpanName = resolveRootSpanName(trace)
 
+          const rootServiceName = resolveRootServiceName(trace)
+          if (rootServiceName !== 'unknown') {
+            trace.serviceName = rootServiceName
+          }
+
           if (isBeforeNano(span.startTimeUnixNano, trace.startTimeUnixNano)) {
             trace.startTimeUnixNano = span.startTimeUnixNano
           }
@@ -145,7 +154,11 @@ export function createInternalTraceStore(
             trace.hasError = true
           }
 
-          if (trace.serviceName === 'unknown' && serviceName !== 'unknown') {
+          if (
+            trace.serviceName === 'unknown' &&
+            rootServiceName === 'unknown' &&
+            serviceName !== 'unknown'
+          ) {
             trace.serviceName = serviceName
           }
         }
@@ -256,12 +269,15 @@ export function createInternalTraceStore(
     })
 
     return traceArray.slice(0, limit).map((trace) => ({
+      serviceName:
+        resolveRootServiceName(trace) === 'unknown'
+          ? trace.serviceName
+          : resolveRootServiceName(trace),
       traceId: trace.traceId,
       rootSpanName: resolveRootSpanName(trace),
       rootSpanTentative: !Array.from(trace.spans.values()).some(
         (s) => !s.parentSpanId || s.parentSpanId === '',
       ),
-      serviceName: trace.serviceName,
       durationMs: getDurationMs(trace.startTimeUnixNano, trace.endTimeUnixNano),
       spanCount: trace.spanCount,
       hasError: trace.hasError,

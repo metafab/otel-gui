@@ -1,4 +1,5 @@
 import { extractAnyValue } from './attributes.js'
+import type { StoredSpan } from './types.js'
 import type { StoredTrace } from './types.js'
 
 export function createLogId(logRecord: any, index: number): string {
@@ -25,17 +26,31 @@ export function createLogId(logRecord: any, index: number): string {
   ].join(':')
 }
 
-export function resolveRootSpanName(trace: StoredTrace): string {
+function resolveRootSpan(trace: StoredTrace): StoredSpan | undefined {
   const spans = Array.from(trace.spans.values())
-  let rootSpan = spans.find((s) => !s.parentSpanId || s.parentSpanId === '')
-  if (!rootSpan) {
-    const orphans = spans.filter((s) => !trace.spans.has(s.parentSpanId))
-    if (orphans.length > 0) {
-      orphans.sort((a, b) =>
-        BigInt(a.startTimeUnixNano) < BigInt(b.startTimeUnixNano) ? -1 : 1,
-      )
-      rootSpan = orphans[0]
-    }
+  const rootSpan = spans.find((s) => !s.parentSpanId || s.parentSpanId === '')
+  if (rootSpan) {
+    return rootSpan
   }
+
+  const orphans = spans.filter((s) => !trace.spans.has(s.parentSpanId))
+  if (orphans.length > 0) {
+    orphans.sort((a, b) =>
+      BigInt(a.startTimeUnixNano) < BigInt(b.startTimeUnixNano) ? -1 : 1,
+    )
+    return orphans[0]
+  }
+}
+
+export function resolveRootSpanName(trace: StoredTrace): string {
+  const rootSpan = resolveRootSpan(trace)
   return rootSpan?.name || 'unknown'
+}
+
+export function resolveRootServiceName(trace: StoredTrace): string {
+  const rootSpan = resolveRootSpan(trace)
+  const serviceName = rootSpan?.resource['service.name']
+  return typeof serviceName === 'string' && serviceName.length > 0
+    ? serviceName
+    : 'unknown'
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { traceStore } from '$lib/server/traceStore'
-import { resolveRootSpanName } from '@otel-gui/core'
+import { resolveRootServiceName, resolveRootSpanName } from '@otel-gui/core'
 import type { StoredTrace } from '$lib/types'
 import simpleTrace from '../../../tests/fixtures/simple-trace.json'
 import simpleLog from '../../../tests/fixtures/simple-log.json'
@@ -166,6 +166,15 @@ describe('traceStore.ingest / getTraceList', () => {
     expect(list).toHaveLength(1)
     expect(list[0].spanCount).toBe(3) // root + 2 backend spans
   })
+
+  it('resolves serviceName from the root span resource even when another service arrives first', () => {
+    traceStore.ingest([...multiServiceTrace.resourceSpans].reverse())
+    const [item] = traceStore.getTraceList()
+    expect(item.serviceName).toBe('frontend')
+
+    const trace = traceStore.getTrace(item.traceId)!
+    expect(trace.serviceName).toBe('frontend')
+  })
 })
 
 describe('traceStore.ingestLogs', () => {
@@ -311,6 +320,13 @@ describe('resolveRootSpanName', () => {
       spans: new Map(),
     }
     expect(resolveRootSpanName(emptyTrace)).toBe('unknown')
+  })
+
+  it('returns the root span service name', () => {
+    traceStore.ingest([...multiServiceTrace.resourceSpans].reverse())
+    const traceId = traceStore.getTraceList()[0].traceId
+    const trace = traceStore.getTrace(traceId) as StoredTrace
+    expect(resolveRootServiceName(trace)).toBe('frontend')
   })
 })
 

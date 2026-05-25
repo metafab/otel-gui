@@ -2,7 +2,7 @@
 import { json, error } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import { traceStore } from '$lib/server/traceStore'
-import { resolveRootSpanName } from '@otel-gui/core'
+import { resolveRootServiceName, resolveRootSpanName } from '@otel-gui/core'
 
 export const GET: RequestHandler = async ({ params }) => {
   const { traceId } = params
@@ -22,6 +22,10 @@ export const GET: RequestHandler = async ({ params }) => {
   return json({
     ...trace,
     rootSpanName: resolveRootSpanName(trace),
+    serviceName:
+      resolveRootServiceName(trace) === 'unknown'
+        ? trace.serviceName
+        : resolveRootServiceName(trace),
     spans: spansRecord,
   })
 }
