@@ -4,6 +4,7 @@ import type {
   StoredTrace,
   TraceLogListItem,
   TraceLogDetail,
+  LogListItem,
 } from '$lib/types'
 
 interface PersistenceConfig {
@@ -19,6 +20,7 @@ interface PersistenceConfig {
 
 // State management
 let traces = $state.raw<TraceListItem[]>([])
+let allLogs = $state.raw<LogListItem[]>([])
 let selectedId = $state<string | null>(null)
 let isLoading = $state<boolean>(false)
 let error = $state<string | null>(null)
@@ -81,6 +83,11 @@ function connectSSE() {
       error = null
     })
 
+    es.addEventListener('logs', (event: MessageEvent) => {
+      allLogs = JSON.parse(event.data)
+      error = null
+    })
+
     es.addEventListener('open', () => {
       error = null
     })
@@ -140,6 +147,52 @@ async function fetchTraceLogs(
       err instanceof Error ? err.message : 'Unknown error fetching trace logs'
     console.error('Error fetching trace logs:', err)
     return []
+  } finally {
+    isLoading = false
+  }
+}
+
+async function fetchAllLogs(options?: {
+  limit?: number
+}): Promise<import('$lib/types').LogListItem[]> {
+  try {
+    isLoading = true
+    error = null
+
+    const params = new URLSearchParams()
+    if (options?.limit) params.set('limit', String(options.limit))
+    const query = params.toString()
+
+    const response = await fetch(`/api/logs${query ? `?${query}` : ''}`)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch logs: ${response.statusText}`)
+    }
+
+    return await response.json()
+  } catch (err) {
+    error = err instanceof Error ? err.message : 'Unknown error fetching logs'
+    console.error('Error fetching logs:', err)
+    return []
+  } finally {
+    isLoading = false
+  }
+}
+
+async function fetchGlobalLogDetail(
+  logId: string,
+): Promise<TraceLogDetail | null> {
+  try {
+    isLoading = true
+    error = null
+    const response = await fetch(`/api/logs/${logId}`)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch log detail: ${response.statusText}`)
+    }
+    return await response.json()
+  } catch (err) {
+    error = err instanceof Error ? err.message : 'Unknown error fetching log'
+    console.error('Error fetching log:', err)
+    return null
   } finally {
     isLoading = false
   }
@@ -237,6 +290,9 @@ export const traceStore = {
   get traces() {
     return traces
   },
+  get allLogs() {
+    return allLogs
+  },
   get selected() {
     return selected
   },
@@ -257,6 +313,8 @@ export const traceStore = {
   },
   fetchTrace,
   fetchTraceLogs,
+  fetchAllLogs,
+  fetchGlobalLogDetail,
   fetchTraceLog,
   selectTrace,
   clearAllTraces,

@@ -1,13 +1,16 @@
 <script lang="ts">
   import { replaceState } from '$app/navigation'
   import { page } from '$app/stores'
+  import GlobalLogList from '$lib/components/GlobalLogList.svelte'
+  import LogDetailsSidebar from '$lib/components/LogDetailsSidebar.svelte'
+  import FullscreenValueModal from '$lib/components/FullscreenValueModal.svelte'
   import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import ServiceMap from '$lib/components/ServiceMap.svelte'
   import TraceFilters from '$lib/components/TraceFilters.svelte'
   import TraceImportModal from '$lib/components/TraceImportModal.svelte'
   import { traceStore } from '$lib/stores/traces.svelte'
-  import type { ServiceMapData } from '$lib/types'
+  import type { ServiceMapData, LogListItem, TraceLogDetail } from '$lib/types'
   import { isInputFocused, isMac } from '$lib/utils/keyboard'
   import { formatDurationFromMs } from '$lib/utils/time'
   import { checkForUpdate, dismissUpdate } from '$lib/utils/updateCheck'
@@ -43,6 +46,19 @@
   const isLoading = $derived(traceStore.isLoading)
   const maxTraces = $derived(traceStore.maxTraces)
   const persistence = $derived(traceStore.persistence)
+
+  // Logs state
+  const allLogs = $derived(traceStore.allLogs)
+  let selectedLog = $state<TraceLogDetail | null>(null)
+  let fullscreenAttr = $state<{ key: string; value: string } | null>(null)
+
+  function openFullscreen(key: string, formatted: string) {
+    fullscreenAttr = { key, value: formatted }
+  }
+
+  function closeFullscreen() {
+    fullscreenAttr = null
+  }
 
   type TraceSortBy =
     | 'rootService'
@@ -86,8 +102,13 @@
   }
 
   function readFilterStateFromUrl(url: URL) {
+    const tabParam = url.searchParams.get('tab')
+    let activeTab: 'traces' | 'map' | 'logs' = 'traces'
+    if (tabParam === 'map') activeTab = 'map'
+    if (tabParam === 'logs') activeTab = 'logs'
+
     return {
-      activeTab: url.searchParams.get('tab') === 'map' ? 'map' : 'traces',
+      activeTab,
       searchQuery: url.searchParams.get('search') ?? '',
       selectedService: url.searchParams.get('service') ?? 'all',
       showErrorsOnly: url.searchParams.get('errors') === 'true',
@@ -99,10 +120,10 @@
   }
 
   function applyFilterStateToUrl(url: URL) {
-    if (activeTab === 'map') {
-      url.searchParams.set('tab', 'map')
-    } else {
+    if (activeTab === 'traces') {
       url.searchParams.delete('tab')
+    } else {
+      url.searchParams.set('tab', activeTab)
     }
 
     if (searchQuery.trim()) {
@@ -359,6 +380,15 @@
     window.location.href = `/traces/${traceId}`
   }
 
+  async function handleSelectLog(logItem: LogListItem) {
+    const detail = await traceStore.fetchGlobalLogDetail(logItem.id)
+    if (detail) {
+      selectedLog = detail
+    }
+  }
+
+  /* Removed manual fetch for allLogs as it's now reactive via SSE */
+
   $effect(() => {
     if (typeof window === 'undefined') {
       return
@@ -573,16 +603,24 @@
       e.preventDefault()
       showShortcuts = !showShortcuts
     }
-    // 'm': toggle between Traces and Map tabs
+    // 'm': cycle through tabs
     if (e.key === 'm' && !isInputFocused()) {
       e.preventDefault()
-      activeTab = activeTab === 'traces' ? 'map' : 'traces'
+      if (activeTab === 'traces') activeTab = 'logs'
+      else if (activeTab === 'logs') activeTab = 'map'
+      else activeTab = 'traces'
     }
   }
 </script>
 
 <svelte:head>
-  <title>otel-gui – {activeTab === 'map' ? 'Service Map' : 'Traces'}</title>
+  <title
+    >otel-gui – {activeTab === 'map'
+      ? 'Service Map'
+      : activeTab === 'logs'
+        ? 'Logs'
+        : 'Traces'}</title
+  >
 </svelte:head>
 
 <svelte:window onkeydown={handleGlobalKeydown} />
@@ -599,6 +637,13 @@
         >Traces {#if traces.length > 0}<span class="tab-count"
             >{traces.length}</span
           >{/if}</button
+      >
+      <button
+        role="tab"
+        aria-selected={activeTab === 'logs'}
+        class="tab-btn"
+        class:active={activeTab === 'logs'}
+        onclick={() => (activeTab = 'logs')}>Logs</button
       >
       <button
         role="tab"
@@ -942,6 +987,17 @@
         </p>
       </div>
     </div>
+  {:else if activeTab === 'logs'}
+    <div class="logs-content">
+      <GlobalLogList logs={allLogs} onSelectLog={handleSelectLog} />
+      {#if selectedLog}
+        <LogDetailsSidebar
+          log={selectedLog}
+          onClose={() => (selectedLog = null)}
+          onFullscreen={openFullscreen}
+        />
+      {/if}
+    </div>
   {:else}
     <!-- Service Map tab -->
     <div class="map-content">
@@ -971,7 +1027,7 @@
         keys: [isMac ? 'Option+⌫' : 'Alt+Delete'],
         description: 'Clear all traces (opens confirm dialog)',
       },
-      { keys: ['m'], description: 'Toggle Traces / Service Map tab' },
+      { keys: ['m'], description: 'Toggle Traces / Logs / Service Map tab' },
       { keys: ['?'], description: 'Toggle keyboard shortcuts help' },
     ]}
     onclose={() => (showShortcuts = false)}
@@ -982,6 +1038,14 @@
   <TraceImportModal
     onclose={() => (showImportModal = false)}
     onimported={handleImportCompleted}
+  />
+{/if}
+
+{#if fullscreenAttr}
+  <FullscreenValueModal
+    title={fullscreenAttr.key}
+    value={fullscreenAttr.value}
+    onclose={closeFullscreen}
   />
 {/if}
 
@@ -1069,6 +1133,14 @@
     padding: 3rem 2rem;
     color: var(--text-muted);
     font-size: 0.875rem;
+  }
+
+  .logs-content {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    overflow: hidden;
+    margin-top: 0;
   }
 
   .actions {

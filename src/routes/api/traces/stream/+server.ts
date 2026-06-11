@@ -19,10 +19,17 @@ export const GET: RequestHandler = async () => {
   const stream = new ReadableStream({
     start(controller) {
       // Send current state immediately on connect
-      const initial = JSON.stringify(
+      const initialTraces = JSON.stringify(
         traceStore.getTraceList(traceStore.maxTraces),
       )
-      controller.enqueue(encoder.encode(`event: traces\ndata: ${initial}\n\n`))
+      controller.enqueue(
+        encoder.encode(`event: traces\ndata: ${initialTraces}\n\n`),
+      )
+
+      const initialLogs = JSON.stringify(traceStore.getLogList(1000))
+      controller.enqueue(
+        encoder.encode(`event: logs\ndata: ${initialLogs}\n\n`),
+      )
 
       // Debounce rapid-fire ingestion (batched exports can arrive all at once)
       let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -30,11 +37,16 @@ export const GET: RequestHandler = async () => {
         if (debounceTimer !== null) clearTimeout(debounceTimer)
         debounceTimer = setTimeout(() => {
           try {
-            const data = JSON.stringify(
+            const tracesData = JSON.stringify(
               traceStore.getTraceList(traceStore.maxTraces),
             )
             controller.enqueue(
-              encoder.encode(`event: traces\ndata: ${data}\n\n`),
+              encoder.encode(`event: traces\ndata: ${tracesData}\n\n`),
+            )
+
+            const logsData = JSON.stringify(traceStore.getLogList(1000))
+            controller.enqueue(
+              encoder.encode(`event: logs\ndata: ${logsData}\n\n`),
             )
           } catch {
             // Controller already closed (client disconnected)

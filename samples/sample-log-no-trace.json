@@ -1,0 +1,51 @@
+{
+  "resourceLogs": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": { "stringValue": "background-worker" }
+          }
+        ]
+      },
+      "scopeLogs": [
+        {
+          "scope": {
+            "name": "worker-logger"
+          },
+          "logRecords": [
+            {
+              "timeUnixNano": "1781207767000000000",
+              "severityNumber": 9,
+              "severityText": "INFO",
+              "body": {
+                "stringValue": "Background task started: periodic cleanup"
+              },
+              "attributes": [
+                {
+                  "key": "task.id",
+                  "value": { "stringValue": "cleanup-123" }
+                }
+              ]
+            },
+            {
+              "timeUnixNano": "1781207744000000000",
+              "severityNumber": 13,
+              "severityText": "WARN",
+              "body": {
+                "stringValue": "Cleanup encountered some locked files, will retry later"
+              },
+              "attributes": [
+                {
+                  "key": "locked_files_count",
+                  "value": { "intValue": "5" }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

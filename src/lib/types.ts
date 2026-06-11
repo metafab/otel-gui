@@ -31,6 +31,18 @@ export interface TraceLogListItem {
   body: unknown
 }
 
+export interface LogListItem {
+  id: string
+  traceId: string
+  spanId: string
+  timeUnixNano: string
+  severityNumber: number
+  severityText: string
+  body: unknown
+  serviceName: string
+  timestamp: string // ISO timestamp for display
+}
+
 export interface TraceLogDetail extends StoredLog {
   id: string
 }
@@ -77,6 +89,8 @@ export interface TraceStore {
   ingest(resourceSpans: any[]): void
   ingestLogs(resourceLogs: any[]): void
   getTraceList(limit?: number): TraceListItem[]
+  getLogList(limit?: number): LogListItem[]
+  getLogDetail(logId: string): TraceLogDetail | undefined
   getTrace(traceId: string): StoredTrace | undefined
   getServiceMap(traceId?: string): ServiceMapData
   clear(): void

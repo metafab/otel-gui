@@ -221,6 +221,22 @@ curl -X POST http://localhost:4318/v1/logs \
   -d @samples/sample-log.json
 ```
 
+#### `sample-log-no-trace.json`
+
+Example of logs **not associated with any trace**:
+
+- 2 log records from a `background-worker` service
+- Demonstrate the "Logs" tab functionality for orphan logs
+- INFO and WARN severities
+
+**Usage:**
+
+```bash
+curl -X POST http://localhost:4318/v1/logs \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-log-no-trace.json
+```
+
 ## Features to Explore
 
 Once traces are loaded, visit http://localhost:5173 to explore:

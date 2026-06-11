@@ -1,4 +1,5 @@
 import type {
+  LogListItem,
   ServiceMapData,
   StoredLog,
   StoredSpan,
@@ -51,7 +52,10 @@ export function createInternalTraceStore(
   maxTraces: number,
 ): InternalTraceStore {
   const traces = new Map<string, StoredTrace>()
+  const allLogs = new Map<string, StoredLog>()
   const listeners = new Set<() => void>()
+
+  const MAX_LOGS = maxTraces * 10
 
   function notifyListeners() {
     for (const listener of listeners) {
@@ -185,35 +189,11 @@ export function createInternalTraceStore(
         const logRecords = sl.logRecords || []
 
         for (const [index, logRecord] of logRecords.entries()) {
-          const traceId = logRecord.traceId
-          if (!traceId) continue
-
           const now = Date.now()
           const timestamp = getLogTimestamp(logRecord)
           if (!timestamp) continue
 
-          let trace = traces.get(traceId)
-          if (!trace) {
-            trace = {
-              traceId,
-              rootSpanName: 'unknown',
-              serviceName,
-              startTimeUnixNano: timestamp,
-              endTimeUnixNano: timestamp,
-              updatedAt: now,
-              spanCount: 0,
-              hasError: false,
-              spans: new Map(),
-              logs: new Map(),
-              logCount: 0,
-            }
-            traces.set(traceId, trace)
-            evictOverflow()
-          }
-
-          if (!trace.logs) {
-            trace.logs = new Map()
-          }
+          const traceId = logRecord.traceId || ''
 
           const storedLog: StoredLog = {
             traceId,
@@ -234,23 +214,56 @@ export function createInternalTraceStore(
           }
 
           const logId = createLogId(logRecord, index)
-          trace.logs.set(logId, storedLog)
-          trace.logCount = trace.logs.size
-          trace.updatedAt = now
+          allLogs.set(logId, storedLog)
 
-          if (isBeforeNano(timestamp, trace.startTimeUnixNano)) {
-            trace.startTimeUnixNano = timestamp
-          }
-          if (isAfterNano(timestamp, trace.endTimeUnixNano)) {
-            trace.endTimeUnixNano = timestamp
+          // Global log eviction
+          if (allLogs.size > MAX_LOGS) {
+            const oldestLogId = allLogs.keys().next().value
+            if (oldestLogId) allLogs.delete(oldestLogId)
           }
 
-          if (storedLog.severityNumber >= 17) {
-            trace.hasError = true
-          }
+          if (traceId) {
+            let trace = traces.get(traceId)
+            if (!trace) {
+              trace = {
+                traceId,
+                rootSpanName: 'unknown',
+                serviceName,
+                startTimeUnixNano: timestamp,
+                endTimeUnixNano: timestamp,
+                updatedAt: now,
+                spanCount: 0,
+                hasError: false,
+                spans: new Map(),
+                logs: new Map(),
+                logCount: 0,
+              }
+              traces.set(traceId, trace)
+              evictOverflow()
+            }
 
-          if (trace.serviceName === 'unknown' && serviceName !== 'unknown') {
-            trace.serviceName = serviceName
+            if (!trace.logs) {
+              trace.logs = new Map()
+            }
+
+            trace.logs.set(logId, storedLog)
+            trace.logCount = trace.logs.size
+            trace.updatedAt = now
+
+            if (isBeforeNano(timestamp, trace.startTimeUnixNano)) {
+              trace.startTimeUnixNano = timestamp
+            }
+            if (isAfterNano(timestamp, trace.endTimeUnixNano)) {
+              trace.endTimeUnixNano = timestamp
+            }
+
+            if (storedLog.severityNumber >= 17) {
+              trace.hasError = true
+            }
+
+            if (trace.serviceName === 'unknown' && serviceName !== 'unknown') {
+              trace.serviceName = serviceName
+            }
           }
         }
       }
@@ -286,6 +299,39 @@ export function createInternalTraceStore(
     }))
   }
 
+  function getLogList(limit = 100): LogListItem[] {
+    const logEntries = Array.from(allLogs.entries())
+
+    logEntries.sort(([, a], [, b]) => {
+      const aTs = BigInt(a.timeUnixNano || a.observedTimeUnixNano || '0')
+      const bTs = BigInt(b.timeUnixNano || b.observedTimeUnixNano || '0')
+      return aTs > bTs ? -1 : aTs < bTs ? 1 : 0
+    })
+
+    return logEntries.slice(0, limit).map(([id, log]) => {
+      return {
+        id,
+        traceId: log.traceId,
+        spanId: log.spanId,
+        timeUnixNano: log.timeUnixNano || log.observedTimeUnixNano,
+        severityNumber: log.severityNumber,
+        severityText: log.severityText,
+        body: log.body,
+        serviceName: (log.resource['service.name'] as string) || 'unknown',
+        timestamp: formatTimestamp(log.timeUnixNano || log.observedTimeUnixNano),
+      }
+    })
+  }
+
+  function getLogDetail(logId: string): TraceLogDetail | undefined {
+    const log = allLogs.get(logId)
+    if (!log) return undefined
+    return {
+      ...log,
+      id: logId,
+    }
+  }
+
   function getTrace(traceId: string): StoredTrace | undefined {
     return traces.get(traceId)
   }
@@ -299,6 +345,7 @@ export function createInternalTraceStore(
 
   function clear(): void {
     traces.clear()
+    allLogs.clear()
     notifyListeners()
   }
 
@@ -309,8 +356,17 @@ export function createInternalTraceStore(
 
     let deletedCount = 0
     for (const traceId of traceIds) {
-      if (traces.delete(traceId)) {
-        deletedCount++
+      const trace = traces.get(traceId)
+      if (trace) {
+        // Also delete logs associated with this trace from allLogs
+        if (trace.logs) {
+          for (const logId of trace.logs.keys()) {
+            allLogs.delete(logId)
+          }
+        }
+        if (traces.delete(traceId)) {
+          deletedCount++
+        }
       }
     }
 
@@ -345,6 +401,8 @@ export function createInternalTraceStore(
     ingest,
     ingestLogs,
     getTraceList,
+    getLogList,
+    getLogDetail,
     getTrace,
     getServiceMap,
     clear,
