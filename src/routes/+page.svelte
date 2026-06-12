@@ -5,6 +5,7 @@
   import LogDetailsSidebar from '$lib/components/LogDetailsSidebar.svelte'
   import FullscreenValueModal from '$lib/components/FullscreenValueModal.svelte'
   import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
+  import LogFilters from '$lib/components/LogFilters.svelte'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import ServiceMap from '$lib/components/ServiceMap.svelte'
   import TraceFilters from '$lib/components/TraceFilters.svelte'
@@ -116,6 +117,9 @@
       maxDuration: parseFilterNumber(url.searchParams.get('maxDuration')),
       sortBy: parseSortBy(url.searchParams.get('sort')),
       sortOrder: parseSortOrder(url.searchParams.get('order')),
+      logSearchQuery: url.searchParams.get('logSearch') ?? '',
+      logService: url.searchParams.get('logService') ?? 'all',
+      logSeverity: url.searchParams.get('logSeverity') ?? 'all',
     } as const
   }
 
@@ -163,6 +167,30 @@
       url.searchParams.set('sort', sortBy)
       url.searchParams.set('order', sortOrder)
     }
+
+    if (activeTab === 'logs') {
+      if (logSearchQuery.trim()) {
+        url.searchParams.set('logSearch', logSearchQuery)
+      } else {
+        url.searchParams.delete('logSearch')
+      }
+
+      if (logService !== 'all') {
+        url.searchParams.set('logService', logService)
+      } else {
+        url.searchParams.delete('logService')
+      }
+
+      if (logSeverity !== 'all') {
+        url.searchParams.set('logSeverity', logSeverity)
+      } else {
+        url.searchParams.delete('logSeverity')
+      }
+    } else {
+      url.searchParams.delete('logSearch')
+      url.searchParams.delete('logService')
+      url.searchParams.delete('logSeverity')
+    }
   }
 
   const initialFilterState = readFilterStateFromUrl($page.url)
@@ -174,6 +202,14 @@
       return `${protocol}//${hostname}${port ? ':' + port : ''}/v1/traces`
     }
     return 'http://localhost:4318/v1/traces'
+  })
+
+  const otlpLogsEndpoint = $derived.by(() => {
+    if (typeof window !== 'undefined') {
+      const { protocol, hostname, port } = window.location
+      return `${protocol}//${hostname}${port ? ':' + port : ''}/v1/logs`
+    }
+    return 'http://localhost:4318/v1/logs'
   })
 
   // Tab navigation
@@ -229,6 +265,11 @@
   let maxDuration = $state<number | null>(initialFilterState.maxDuration)
   let sortBy = $state<TraceSortBy>(initialFilterState.sortBy)
   let sortOrder = $state<TraceSortOrder>(initialFilterState.sortOrder)
+
+  let logSearchQuery = $state(initialFilterState.logSearchQuery)
+  let logService = $state<string>(initialFilterState.logService)
+  let logSeverity = $state<string>(initialFilterState.logSeverity)
+  let logSearchInputEl = $state<HTMLInputElement | null>(null)
 
   // Get unique services for filter dropdown
   const services = $derived(
@@ -319,6 +360,43 @@
     })
 
     return sorted
+  })
+
+  const logServices = $derived(
+    Array.from(new Set(allLogs.map((log) => log.serviceName))).sort(),
+  )
+
+  const filteredLogs = $derived.by(() => {
+    let result = allLogs
+
+    if (logService !== 'all') {
+      result = result.filter((log) => log.serviceName === logService)
+    }
+
+    if (logSeverity !== 'all') {
+      result = result.filter((log) => {
+        const sev = log.severityNumber
+        const cls = sev >= 17 ? 'error' : sev >= 13 ? 'warn' : sev >= 9 ? 'info' : 'debug'
+        return cls === logSeverity
+      })
+    }
+
+    if (logSearchQuery.trim()) {
+      const query = logSearchQuery.toLowerCase()
+      result = result.filter((log) => {
+        const bodyStr = typeof log.body === 'string' ? log.body : JSON.stringify(log.body)
+        return (
+          log.id.toLowerCase().includes(query) ||
+          log.serviceName.toLowerCase().includes(query) ||
+          (log.severityText && log.severityText.toLowerCase().includes(query)) ||
+          bodyStr.toLowerCase().includes(query) ||
+          (log.traceId && log.traceId.toLowerCase().includes(query)) ||
+          (log.spanId && log.spanId.toLowerCase().includes(query))
+        )
+      })
+    }
+
+    return result
   })
 
   const selectedTraceIdSet = $derived(new Set(selectedTraceIds))
@@ -433,6 +511,12 @@
       document.removeEventListener('keydown', handleDocumentEscape)
     }
   })
+
+  function handleClearLogFilters() {
+    logSearchQuery = ''
+    logService = 'all'
+    logSeverity = 'all'
+  }
 
   async function handleClearAll() {
     if (confirm('Clear all traces? This cannot be undone.')) {
@@ -989,7 +1073,32 @@
     </div>
   {:else if activeTab === 'logs'}
     <div class="logs-content">
-      <GlobalLogList logs={allLogs} onSelectLog={handleSelectLog} />
+      {#if allLogs.length === 0}
+        <div class="empty">
+          <p>No logs received yet.</p>
+          <p class="hint">
+            Send OTLP logs to <code>{otlpLogsEndpoint}</code>
+          </p>
+        </div>
+      {:else if filteredLogs.length === 0}
+        <div class="empty">
+          <p>No logs match the current filters.</p>
+          <button onclick={handleClearLogFilters} class="clear-filters-btn">
+            Clear Filters
+          </button>
+        </div>
+      {:else}
+        <LogFilters
+          services={logServices}
+          bind:searchQuery={logSearchQuery}
+          bind:selectedService={logService}
+          bind:selectedSeverity={logSeverity}
+          bind:searchInputEl={logSearchInputEl}
+          filteredCount={filteredLogs.length}
+          totalCount={allLogs.length}
+        />
+        <GlobalLogList logs={filteredLogs} onSelectLog={handleSelectLog} />
+      {/if}
       {#if selectedLog}
         <LogDetailsSidebar
           log={selectedLog}
@@ -1137,7 +1246,7 @@
 
   .logs-content {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     flex: 1;
     overflow: hidden;
     margin-top: 0;

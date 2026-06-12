@@ -27,54 +27,46 @@
 </script>
 
 <div class="logs-container">
-  {#if logs.length === 0}
-    <div class="empty-state">
-      <div class="empty-icon">📝</div>
-      <p>No logs found.</p>
-      <p class="subtitle">Logs matching the OTLP/HTTP standard on port 4318 will appear here.</p>
-    </div>
-  {:else}
-    <div class="table-wrapper">
-      <table class="logs-table">
-        <thead>
-          <tr>
-            <th class="time-col">Time</th>
-            <th class="sev-col">Severity</th>
-            <th class="service-col">Service</th>
-            <th class="body-col">Body</th>
-            <th class="trace-col">Trace ID</th>
+  <div class="table-wrapper">
+    <table class="logs-table">
+      <thead>
+        <tr>
+          <th class="time-col">Time</th>
+          <th class="sev-col">Severity</th>
+          <th class="service-col">Service</th>
+          <th class="body-col">Body</th>
+          <th class="trace-col">Trace ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each logs as log (log.id)}
+          <tr onclick={() => onSelectLog?.(log)}>
+            <td class="timestamp" title={log.timestamp}>
+              {new Date(log.timestamp).toLocaleString()}
+            </td>
+            <td class="severity">
+              <span class="severity-badge {getSeverityClass(log.severityNumber)}">
+                {log.severityText || `SEV ${log.severityNumber}`}
+              </span>
+            </td>
+            <td><ServiceBadge serviceName={log.serviceName} /></td>
+            <td class="body-cell" title={formatBody(log.body)}>
+              <div class="body-text">{formatBody(log.body)}</div>
+            </td>
+            <td class="trace-id">
+              {#if log.traceId}
+                <a href="/traces/{log.traceId}" onclick={(e) => e.stopPropagation()}>
+                  {log.traceId.slice(0, 8)}…
+                </a>
+              {:else}
+                <span class="none">-</span>
+              {/if}
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          {#each logs as log (log.id)}
-            <tr onclick={() => onSelectLog?.(log)}>
-              <td class="timestamp" title={log.timestamp}>
-                {new Date(log.timestamp).toLocaleString()}
-              </td>
-              <td class="severity">
-                <span class="severity-badge {getSeverityClass(log.severityNumber)}">
-                  {log.severityText || `SEV ${log.severityNumber}`}
-                </span>
-              </td>
-              <td><ServiceBadge serviceName={log.serviceName} /></td>
-              <td class="body-cell" title={formatBody(log.body)}>
-                <div class="body-text">{formatBody(log.body)}</div>
-              </td>
-              <td class="trace-id">
-                {#if log.traceId}
-                  <a href="/traces/{log.traceId}" onclick={(e) => e.stopPropagation()}>
-                    {log.traceId.slice(0, 8)}…
-                  </a>
-                {:else}
-                  <span class="none">-</span>
-                {/if}
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  {/if}
+        {/each}
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <style>
@@ -87,23 +79,6 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-  }
-
-  .empty-state {
-    padding: 4rem 2rem;
-    text-align: center;
-    color: var(--text-muted);
-  }
-
-  .empty-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-  }
-
-  .subtitle {
-    font-size: 0.875rem;
-    margin-top: 0.5rem;
   }
 
   .table-wrapper {
