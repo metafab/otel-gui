@@ -5,6 +5,7 @@ import type {
   StoredSpan,
   StoredTrace,
   TraceListItem,
+  TraceLogDetail,
   TraceStore,
 } from '$lib/types'
 import { buildServiceMap } from '@otel-gui/core'
@@ -318,7 +319,9 @@ export function createInternalTraceStore(
         severityText: log.severityText,
         body: log.body,
         serviceName: (log.resource['service.name'] as string) || 'unknown',
-        timestamp: formatTimestamp(log.timeUnixNano || log.observedTimeUnixNano),
+        timestamp: formatTimestamp(
+          log.timeUnixNano || log.observedTimeUnixNano,
+        ),
       }
     })
   }

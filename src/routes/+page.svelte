@@ -213,7 +213,9 @@
   })
 
   // Tab navigation
-  let activeTab = $state<'traces' | 'map'>(initialFilterState.activeTab)
+  let activeTab = $state<'traces' | 'map' | 'logs'>(
+    initialFilterState.activeTab,
+  )
 
   // Service map state
   let serviceMapData = $state<ServiceMapData | null>(null)
@@ -376,7 +378,8 @@
     if (logSeverity !== 'all') {
       result = result.filter((log) => {
         const sev = log.severityNumber
-        const cls = sev >= 17 ? 'error' : sev >= 13 ? 'warn' : sev >= 9 ? 'info' : 'debug'
+        const cls =
+          sev >= 17 ? 'error' : sev >= 13 ? 'warn' : sev >= 9 ? 'info' : 'debug'
         return cls === logSeverity
       })
     }
@@ -384,11 +387,13 @@
     if (logSearchQuery.trim()) {
       const query = logSearchQuery.toLowerCase()
       result = result.filter((log) => {
-        const bodyStr = typeof log.body === 'string' ? log.body : JSON.stringify(log.body)
+        const bodyStr =
+          typeof log.body === 'string' ? log.body : JSON.stringify(log.body)
         return (
           log.id.toLowerCase().includes(query) ||
           log.serviceName.toLowerCase().includes(query) ||
-          (log.severityText && log.severityText.toLowerCase().includes(query)) ||
+          (log.severityText &&
+            log.severityText.toLowerCase().includes(query)) ||
           bodyStr.toLowerCase().includes(query) ||
           (log.traceId && log.traceId.toLowerCase().includes(query)) ||
           (log.spanId && log.spanId.toLowerCase().includes(query))
@@ -1151,11 +1156,7 @@
 {/if}
 
 {#if fullscreenAttr}
-  <FullscreenValueModal
-    title={fullscreenAttr.key}
-    value={fullscreenAttr.value}
-    onclose={closeFullscreen}
-  />
+  <FullscreenValueModal attr={fullscreenAttr} onclose={closeFullscreen} />
 {/if}
 
 <style>

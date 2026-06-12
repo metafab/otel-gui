@@ -45,7 +45,9 @@
               {new Date(log.timestamp).toLocaleString()}
             </td>
             <td class="severity">
-              <span class="severity-badge {getSeverityClass(log.severityNumber)}">
+              <span
+                class="severity-badge {getSeverityClass(log.severityNumber)}"
+              >
                 {log.severityText || `SEV ${log.severityNumber}`}
               </span>
             </td>
@@ -55,7 +57,10 @@
             </td>
             <td class="trace-id">
               {#if log.traceId}
-                <a href="/traces/{log.traceId}" onclick={(e) => e.stopPropagation()}>
+                <a
+                  href="/traces/{log.traceId}"
+                  onclick={(e) => e.stopPropagation()}
+                >
                   {log.traceId.slice(0, 8)}…
                 </a>
               {:else}
@@ -120,10 +125,18 @@
     cursor: pointer;
   }
 
-  .time-col { width: 180px; }
-  .sev-col { width: 120px; }
-  .service-col { width: 180px; }
-  .trace-col { width: 120px; }
+  .time-col {
+    width: 180px;
+  }
+  .sev-col {
+    width: 120px;
+  }
+  .service-col {
+    width: 180px;
+  }
+  .trace-col {
+    width: 120px;
+  }
 
   .timestamp {
     color: var(--text-secondary);
@@ -149,10 +162,22 @@
     letter-spacing: 0.025em;
   }
 
-  .severity-badge.error { background: #fee2e2; color: #991b1b; }
-  .severity-badge.warn { background: #fef3c7; color: #92400e; }
-  .severity-badge.info { background: #e0f2fe; color: #075985; }
-  .severity-badge.debug { background: #f1f5f9; color: #475569; }
+  .severity-badge.error {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  .severity-badge.warn {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  .severity-badge.info {
+    background: #e0f2fe;
+    color: #075985;
+  }
+  .severity-badge.debug {
+    background: #f1f5f9;
+    color: #475569;
+  }
 
   .trace-id a {
     color: var(--accent);

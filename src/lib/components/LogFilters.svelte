@@ -20,7 +20,9 @@
   }: Props = $props()
 
   const hasActiveFilters = $derived(
-    searchQuery.trim() !== '' || selectedService !== 'all' || selectedSeverity !== 'all',
+    searchQuery.trim() !== '' ||
+      selectedService !== 'all' ||
+      selectedSeverity !== 'all',
   )
 
   function handleClear() {
@@ -46,7 +48,11 @@
 
     <div class="filter-group">
       <label for="log-service">Service</label>
-      <select id="log-service" bind:value={selectedService} class="filter-select">
+      <select
+        id="log-service"
+        bind:value={selectedService}
+        class="filter-select"
+      >
         <option value="all">All Services</option>
         {#each services as service}
           <option value={service}>{service}</option>
@@ -56,7 +62,11 @@
 
     <div class="filter-group">
       <label for="log-severity">Severity</label>
-      <select id="log-severity" bind:value={selectedSeverity} class="filter-select">
+      <select
+        id="log-severity"
+        bind:value={selectedSeverity}
+        class="filter-select"
+      >
         <option value="all">All Severities</option>
         <option value="error">Error</option>
         <option value="warn">Warn</option>

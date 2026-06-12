@@ -22,7 +22,9 @@
 <div class="sidebar">
   <header>
     <div class="header-main">
-      <button class="close-btn" onclick={onClose} aria-label="Close sidebar">✕</button>
+      <button class="close-btn" onclick={onClose} aria-label="Close sidebar"
+        >✕</button
+      >
       <h2>Log Detail</h2>
     </div>
     <div class="timestamp">
@@ -74,8 +76,8 @@
     <section class="attributes-section">
       <h3>Attributes</h3>
       <div class="attributes-list">
-        {#each Object.entries(log.attributes) as [key, value]}
-          <AttributeItem {key} {value} {onFullscreen} />
+        {#each Object.entries(log.attributes) as [attrKey, value]}
+          <AttributeItem {attrKey} {value} {onFullscreen} />
         {:else}
           <div class="empty">No attributes</div>
         {/each}
@@ -85,8 +87,8 @@
     <section class="resource-section">
       <h3>Resource</h3>
       <div class="attributes-list">
-        {#each Object.entries(log.resource) as [key, value]}
-          <AttributeItem {key} {value} {onFullscreen} />
+        {#each Object.entries(log.resource) as [attrKey, value]}
+          <AttributeItem {attrKey} {value} {onFullscreen} />
         {/each}
       </div>
     </section>
@@ -190,10 +192,22 @@
     text-transform: uppercase;
   }
 
-  .severity-badge.error { background: #fee2e2; color: #991b1b; }
-  .severity-badge.warn { background: #fef3c7; color: #92400e; }
-  .severity-badge.info { background: #e0f2fe; color: #075985; }
-  .severity-badge.debug { background: #f1f5f9; color: #475569; }
+  .severity-badge.error {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  .severity-badge.warn {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  .severity-badge.info {
+    background: #e0f2fe;
+    color: #075985;
+  }
+  .severity-badge.debug {
+    background: #f1f5f9;
+    color: #475569;
+  }
 
   .body-content {
     background: var(--bg-muted);
