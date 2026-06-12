@@ -59,6 +59,19 @@ export const POST: RequestHandler = async ({ request }) => {
 
     traceStore.ingestLogs(body.resourceLogs)
 
+    // Return successful response. OTLP HTTP spec requires the response
+    // Content-Type to match the request Content-Type. An empty message
+    // is a valid ExportLogsServiceResponse in protobuf.
+    if (
+      contentType.includes('application/x-protobuf') ||
+      contentType.includes('application/protobuf')
+    ) {
+      return new Response(new Uint8Array(0), {
+        status: 200,
+        headers: { 'Content-Type': 'application/x-protobuf' },
+      })
+    }
+
     return json({}, { status: 200 })
   } catch (error) {
     console.error('Error processing OTLP logs request:', error)
