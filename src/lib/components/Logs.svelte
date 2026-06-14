@@ -18,6 +18,61 @@
   let severityFilter = $state<
     'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error'
   >('all')
+  type LogSortBy = 'time' | 'service' | 'severity' | 'body' | 'trace' | 'span'
+  type LogSortOrder = 'asc' | 'desc'
+  const DEFAULT_SORT_BY: LogSortBy = 'time'
+  const DEFAULT_SORT_ORDER: LogSortOrder = 'desc'
+
+  function parseSortBy(rawValue: string | null): LogSortBy {
+    switch (rawValue) {
+      case 'time':
+      case 'service':
+      case 'severity':
+      case 'body':
+      case 'trace':
+      case 'span':
+        return rawValue
+      default:
+        return DEFAULT_SORT_BY
+    }
+  }
+
+  function parseSortOrder(rawValue: string | null): LogSortOrder {
+    return rawValue === 'asc' || rawValue === 'desc'
+      ? rawValue
+      : DEFAULT_SORT_ORDER
+  }
+
+  function readSortParamsFromLocation() {
+    if (typeof window === 'undefined') {
+      return {
+        sortBy: DEFAULT_SORT_BY,
+        sortOrder: DEFAULT_SORT_ORDER,
+      } as const
+    }
+
+    const url = new URL(window.location.href)
+    return {
+      sortBy: parseSortBy(url.searchParams.get('sort')),
+      sortOrder: parseSortOrder(url.searchParams.get('order')),
+    } as const
+  }
+
+  function applySortParams(url: URL) {
+    if (sortBy === DEFAULT_SORT_BY && sortOrder === DEFAULT_SORT_ORDER) {
+      url.searchParams.delete('sort')
+      url.searchParams.delete('order')
+      return
+    }
+
+    url.searchParams.set('sort', sortBy)
+    url.searchParams.set('order', sortOrder)
+  }
+
+  const initialSort = readSortParamsFromLocation()
+
+  let sortBy = $state<LogSortBy>(initialSort.sortBy)
+  let sortOrder = $state<LogSortOrder>(initialSort.sortOrder)
   let selectedLogIds = $state<string[]>([])
   let isDeleting = $state(false)
 
@@ -43,6 +98,14 @@
     if (isDeletingBound !== isDeleting) {
       isDeletingBound = isDeleting
     }
+  })
+
+  $effect(() => {
+    if (typeof window === 'undefined') return
+    const nextUrl = new URL(window.location.href)
+    applySortParams(nextUrl)
+    if (nextUrl.search === window.location.search) return
+    window.history.replaceState(window.history.state, '', nextUrl)
   })
 
   function severityBucket(
@@ -126,16 +189,63 @@
     })
   })
 
+  const sortedLogs = $derived.by(() => {
+    const logsToSort = [...filteredLogs]
+
+    logsToSort.sort((a, b) => {
+      let directionlessResult = 0
+
+      switch (sortBy) {
+        case 'time': {
+          const aTs = BigInt(a.timeUnixNano || a.observedTimeUnixNano || '0')
+          const bTs = BigInt(b.timeUnixNano || b.observedTimeUnixNano || '0')
+          directionlessResult = aTs < bTs ? -1 : aTs > bTs ? 1 : 0
+          break
+        }
+        case 'service':
+          directionlessResult = (a.serviceName || '').localeCompare(
+            b.serviceName || '',
+          )
+          break
+        case 'severity':
+          directionlessResult =
+            (Number(a.severityNumber) || 0) - (Number(b.severityNumber) || 0)
+          break
+        case 'body':
+          directionlessResult = normalizeBody(a.body).localeCompare(
+            normalizeBody(b.body),
+          )
+          break
+        case 'trace':
+          directionlessResult = (a.traceId || '').localeCompare(b.traceId || '')
+          break
+        case 'span':
+          directionlessResult = (a.spanId || '').localeCompare(b.spanId || '')
+          break
+      }
+
+      if (directionlessResult !== 0) {
+        return sortOrder === 'asc' ? directionlessResult : -directionlessResult
+      }
+
+      const aTs = BigInt(a.timeUnixNano || a.observedTimeUnixNano || '0')
+      const bTs = BigInt(b.timeUnixNano || b.observedTimeUnixNano || '0')
+      return bTs < aTs ? -1 : bTs > aTs ? 1 : 0
+    })
+
+    return logsToSort
+  })
+
   const selectedLogIdSet = $derived(new Set(selectedLogIds))
   const selectedFilteredCount = $derived(
-    filteredLogs.filter((log) => selectedLogIdSet.has(log.id)).length,
+    sortedLogs.filter((log) => selectedLogIdSet.has(log.id)).length,
   )
   const allFilteredSelected = $derived(
-    filteredLogs.length > 0 && selectedFilteredCount === filteredLogs.length,
+    sortedLogs.length > 0 && selectedFilteredCount === sortedLogs.length,
   )
 
   $effect(() => {
-    const visibleIds = new Set(filteredLogs.map((log) => log.id))
+    const visibleIds = new Set(sortedLogs.map((log) => log.id))
     const next = selectedLogIds.filter((id) => visibleIds.has(id))
     const changed =
       next.length !== selectedLogIds.length ||
@@ -241,9 +351,29 @@
   }
 
   function toggleSelectAllFiltered() {
-    selectedLogIds = filteredLogs
+    selectedLogIds = sortedLogs
       .filter((log) => !selectedLogIdSet.has(log.id))
       .map((log) => log.id)
+  }
+
+  function getAriaSort(column: LogSortBy) {
+    if (sortBy !== column) return 'none'
+    return sortOrder === 'asc' ? 'ascending' : 'descending'
+  }
+
+  function getSortIndicator(column: LogSortBy) {
+    if (sortBy !== column) return ''
+    return sortOrder === 'asc' ? '↑' : '↓'
+  }
+
+  function handleSort(column: LogSortBy) {
+    if (sortBy === column) {
+      sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'
+      return
+    }
+
+    sortBy = column
+    sortOrder = column === 'time' ? 'desc' : 'asc'
   }
 
   function toggleLogSelection(logId: string) {
@@ -285,11 +415,11 @@
     <LogsFilter
       bind:searchQuery
       bind:severityFilter
-      filteredCount={filteredLogs.length}
+      filteredCount={sortedLogs.length}
       totalCount={logs.length}
     />
 
-    {#if filteredLogs.length === 0}
+    {#if sortedLogs.length === 0}
       <div class="empty">
         <p>No logs match the current filters.</p>
       </div>
@@ -308,16 +438,76 @@
                   title="Invert filtered log selection"
                 />
               </th>
-              <th>Time</th>
-              <th>Service</th>
-              <th>Severity</th>
-              <th>Body</th>
-              <th>Trace</th>
-              <th>Span</th>
+              <th aria-sort={getAriaSort('time')}>
+                <button
+                  type="button"
+                  class="sortable-header"
+                  onclick={() => handleSort('time')}
+                  aria-label="Sort by time"
+                >
+                  Time
+                  <span class="sort-indicator">{getSortIndicator('time')}</span>
+                </button>
+              </th>
+              <th aria-sort={getAriaSort('service')}>
+                <button
+                  type="button"
+                  class="sortable-header"
+                  onclick={() => handleSort('service')}
+                  aria-label="Sort by service"
+                >
+                  Service
+                  <span class="sort-indicator">{getSortIndicator('service')}</span>
+                </button>
+              </th>
+              <th aria-sort={getAriaSort('severity')}>
+                <button
+                  type="button"
+                  class="sortable-header"
+                  onclick={() => handleSort('severity')}
+                  aria-label="Sort by severity"
+                >
+                  Severity
+                  <span class="sort-indicator">{getSortIndicator('severity')}</span>
+                </button>
+              </th>
+              <th aria-sort={getAriaSort('body')}>
+                <button
+                  type="button"
+                  class="sortable-header"
+                  onclick={() => handleSort('body')}
+                  aria-label="Sort by body"
+                >
+                  Body
+                  <span class="sort-indicator">{getSortIndicator('body')}</span>
+                </button>
+              </th>
+              <th aria-sort={getAriaSort('trace')}>
+                <button
+                  type="button"
+                  class="sortable-header"
+                  onclick={() => handleSort('trace')}
+                  aria-label="Sort by trace"
+                >
+                  Trace
+                  <span class="sort-indicator">{getSortIndicator('trace')}</span>
+                </button>
+              </th>
+              <th aria-sort={getAriaSort('span')}>
+                <button
+                  type="button"
+                  class="sortable-header"
+                  onclick={() => handleSort('span')}
+                  aria-label="Sort by span"
+                >
+                  Span
+                  <span class="sort-indicator">{getSortIndicator('span')}</span>
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody>
-            {#each filteredLogs as log (log.id)}
+            {#each sortedLogs as log (log.id)}
               <tr class:selected={selectedLogIdSet.has(log.id)}>
                 <td class="select-col">
                   <input

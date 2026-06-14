@@ -984,37 +984,6 @@
     white-space: nowrap;
   }
 
-  .sortable-header {
-    border: none;
-    padding: 0;
-    margin: 0;
-    background: none;
-    color: inherit;
-    font: inherit;
-    text-transform: inherit;
-    letter-spacing: inherit;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-
-  .sortable-header:hover {
-    color: var(--text-primary);
-  }
-
-  .sortable-header:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-    border-radius: 4px;
-  }
-
-  .sort-indicator {
-    width: 0.75rem;
-    text-align: center;
-    color: var(--text-muted);
-  }
-
   tbody tr {
     cursor: pointer;
     transition: background 0.15s ease;
