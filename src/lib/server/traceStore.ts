@@ -21,6 +21,19 @@ function resolveMaxTraces(): number {
   return parsed
 }
 
+function resolveMaxLogs(): number {
+  const raw = env.OTEL_GUI_MAX_LOGS
+  if (raw === undefined || raw === '') return 1000
+  const parsed = Number.parseInt(raw, 10)
+  if (Number.isNaN(parsed) || parsed < 1 || parsed > 10_000) {
+    console.warn(
+      `[otel-gui] Invalid OTEL_GUI_MAX_LOGS="${raw}". Must be an integer between 1 and 10000. Falling back to 1000.`,
+    )
+    return 1000
+  }
+  return parsed
+}
+
 function resolvePersistenceMode(): 'memory' | 'pglite' {
   const raw = env.OTEL_GUI_PERSISTENCE_MODE
   if (raw === undefined || raw === '') return 'memory'
@@ -51,6 +64,7 @@ function resolveFlushMs(): number {
 }
 
 const maxTraces = resolveMaxTraces()
+const maxLogs = resolveMaxLogs()
 const persistenceMode = resolvePersistenceMode()
 const persistencePath = resolvePersistencePath()
 const flushMs = resolveFlushMs()
@@ -217,6 +231,7 @@ async function createTraceStore(): Promise<TraceStoreWithPersistenceStatus> {
     try {
       const store = await backend({
         maxTraces,
+        maxLogs,
         persistencePath,
         flushMs,
       })
@@ -259,6 +274,7 @@ async function createTraceStore(): Promise<TraceStoreWithPersistenceStatus> {
 
   const memoryStore = await memoryBackend({
     maxTraces,
+    maxLogs,
     persistencePath,
     flushMs,
   })

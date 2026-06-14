@@ -67,7 +67,7 @@ export const POST: RequestHandler = async ({ request }) => {
     }
 
     // Ingest spans
-    traceStore.ingest(body.resourceSpans)
+    traceStore.ingestSpans(body.resourceSpans)
 
     // Return successful response (empty is valid)
     return json({}, { status: 200 })

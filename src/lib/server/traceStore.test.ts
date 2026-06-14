@@ -14,45 +14,45 @@ beforeEach(() => {
 
 // ─── ingest + getTraceList ───────────────────────────────────────────────────
 
-describe('traceStore.ingest / getTraceList', () => {
+describe('traceStore.ingestSpans / getTraceList', () => {
   it('stores a trace after ingestion', () => {
-    traceStore.ingest(simpleTrace.resourceSpans)
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
     const list = traceStore.getTraceList()
     expect(list).toHaveLength(1)
   })
 
   it('extracts service name from resource attributes', () => {
-    traceStore.ingest(simpleTrace.resourceSpans)
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
     const [item] = traceStore.getTraceList()
     expect(item.serviceName).toBe('frontend')
   })
 
   it('sets rootSpanName from the root span', () => {
-    traceStore.ingest(simpleTrace.resourceSpans)
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
     const [item] = traceStore.getTraceList()
     expect(item.rootSpanName).toBe('GET /')
   })
 
   it('computes a positive durationMs', () => {
-    traceStore.ingest(simpleTrace.resourceSpans)
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
     const [item] = traceStore.getTraceList()
     expect(item.durationMs).toBeGreaterThan(0)
   })
 
   it('sets hasError to false when no error spans', () => {
-    traceStore.ingest(simpleTrace.resourceSpans)
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
     const [item] = traceStore.getTraceList()
     expect(item.hasError).toBe(false)
   })
 
   it('sets hasError to true when a span has status.code === 2', () => {
-    traceStore.ingest(errorTrace.resourceSpans)
+    traceStore.ingestSpans(errorTrace.resourceSpans)
     const [item] = traceStore.getTraceList()
     expect(item.hasError).toBe(true)
   })
 
   it('normalizes string enum kind ("SPAN_KIND_SERVER") to numeric 2', () => {
-    traceStore.ingest([
+    traceStore.ingestSpans([
       {
         resource: {
           attributes: [{ key: 'service.name', value: { stringValue: 'svc' } }],
@@ -87,7 +87,7 @@ describe('traceStore.ingest / getTraceList', () => {
   })
 
   it('normalizes string enum status code ("STATUS_CODE_ERROR") to numeric 2 and sets hasError', () => {
-    traceStore.ingest([
+    traceStore.ingestSpans([
       {
         resource: {
           attributes: [{ key: 'service.name', value: { stringValue: 'svc' } }],
@@ -124,20 +124,20 @@ describe('traceStore.ingest / getTraceList', () => {
   })
 
   it('counts spans correctly', () => {
-    traceStore.ingest(simpleTrace.resourceSpans)
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
     const [item] = traceStore.getTraceList()
     expect(item.spanCount).toBe(1)
   })
 
   it('ignores ingestion of non-array resourceSpans', () => {
-    traceStore.ingest(null as any)
+    traceStore.ingestSpans(null as any)
     expect(traceStore.getTraceList()).toHaveLength(0)
   })
 
   it('merges spans from multiple ingestions into the same trace', () => {
     const batches = outOfOrderSpans as any[]
-    traceStore.ingest(batches[0].resourceSpans) // child first
-    traceStore.ingest(batches[1].resourceSpans) // root second
+    traceStore.ingestSpans(batches[0].resourceSpans) // child first
+    traceStore.ingestSpans(batches[1].resourceSpans) // root second
     const list = traceStore.getTraceList()
     // Should be ONE trace, not two
     expect(list).toHaveLength(1)
@@ -147,20 +147,20 @@ describe('traceStore.ingest / getTraceList', () => {
   it('updates rootSpanName when root span arrives late', () => {
     const batches = outOfOrderSpans as any[]
     // Ingest only the child batch first
-    traceStore.ingest(batches[0].resourceSpans)
+    traceStore.ingestSpans(batches[0].resourceSpans)
     let list = traceStore.getTraceList()
     // No true root yet — stored name might be the child's name or 'unknown'
     const traceId = list[0].traceId
 
     // Now ingest the root batch
-    traceStore.ingest(batches[1].resourceSpans)
+    traceStore.ingestSpans(batches[1].resourceSpans)
     list = traceStore.getTraceList()
     const item = list.find((t) => t.traceId === traceId)!
     expect(item.rootSpanName).toBe('GET /api/items')
   })
 
   it('handles multi-service traces without merging into one trace', () => {
-    traceStore.ingest(multiServiceTrace.resourceSpans)
+    traceStore.ingestSpans(multiServiceTrace.resourceSpans)
     const list = traceStore.getTraceList()
     // AAAABBBBCCCCDDDD… is one traceId, all spans belong to it
     expect(list).toHaveLength(1)
@@ -168,7 +168,7 @@ describe('traceStore.ingest / getTraceList', () => {
   })
 
   it('resolves serviceName from the root span resource even when another service arrives first', () => {
-    traceStore.ingest([...multiServiceTrace.resourceSpans].reverse())
+    traceStore.ingestSpans([...multiServiceTrace.resourceSpans].reverse())
     const [item] = traceStore.getTraceList()
     expect(item.serviceName).toBe('frontend')
 
@@ -184,16 +184,15 @@ describe('traceStore.ingestLogs', () => {
   })
 
   it('correlates logs into an existing trace by traceId', () => {
-    traceStore.ingest(simpleTrace.resourceSpans)
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
     traceStore.ingestLogs(simpleLog.resourceLogs)
 
     const traceId = traceStore.getTraceList()[0].traceId
-    const trace = traceStore.getTrace(traceId)
+    const logs = traceStore.getTraceLogs(traceId)
 
-    expect(trace?.logCount).toBe(1)
-    expect(trace?.logs?.size).toBe(1)
+    expect(logs).toHaveLength(1)
 
-    const [log] = Array.from(trace?.logs?.values() || [])
+    const [log] = logs
     expect(log.traceId).toBe('5B8EFFF798038103D269B633813FC60C')
     expect(log.spanId).toBe('EEE19B7EC3C1B174')
     expect(log.body).toBe('database timeout')
@@ -222,7 +221,7 @@ describe('traceStore.getTrace', () => {
   })
 
   it('returns the StoredTrace after ingestion', () => {
-    traceStore.ingest(simpleTrace.resourceSpans)
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
     const traceId = traceStore.getTraceList()[0].traceId
     const trace = traceStore.getTrace(traceId)
     expect(trace).toBeDefined()
@@ -230,7 +229,7 @@ describe('traceStore.getTrace', () => {
   })
 
   it('returns spans as a Map', () => {
-    traceStore.ingest(simpleTrace.resourceSpans)
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
     const traceId = traceStore.getTraceList()[0].traceId
     const trace = traceStore.getTrace(traceId)!
     expect(trace.spans).toBeInstanceOf(Map)
@@ -238,7 +237,7 @@ describe('traceStore.getTrace', () => {
   })
 
   it('stores flattened attributes on spans', () => {
-    traceStore.ingest(simpleTrace.resourceSpans)
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
     const traceId = traceStore.getTraceList()[0].traceId
     const trace = traceStore.getTrace(traceId)!
     const span = Array.from(trace.spans.values())[0]
@@ -255,7 +254,7 @@ describe('traceStore eviction', () => {
     // Insert limit + 1 unique traces
     for (let i = 0; i < limit + 1; i++) {
       const traceId = `TRACE${i.toString().padStart(28, '0')}`
-      traceStore.ingest([
+      traceStore.ingestSpans([
         {
           resource: {
             attributes: [
@@ -291,7 +290,7 @@ describe('traceStore eviction', () => {
 
 describe('resolveRootSpanName', () => {
   it('returns the name of the true root span (no parentSpanId)', () => {
-    traceStore.ingest(simpleTrace.resourceSpans)
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
     const traceId = traceStore.getTraceList()[0].traceId
     const trace = traceStore.getTrace(traceId) as StoredTrace
     expect(resolveRootSpanName(trace)).toBe('GET /')
@@ -300,7 +299,7 @@ describe('resolveRootSpanName', () => {
   it('falls back to earliest orphan when no true root exists', () => {
     // Ingest only the child batch (root span not included)
     const batches = outOfOrderSpans as any[]
-    traceStore.ingest(batches[0].resourceSpans)
+    traceStore.ingestSpans(batches[0].resourceSpans)
     const traceId = traceStore.getTraceList()[0].traceId
     const trace = traceStore.getTrace(traceId) as StoredTrace
     // The only span is the child, and it becomes the orphan root
@@ -323,7 +322,7 @@ describe('resolveRootSpanName', () => {
   })
 
   it('returns the root span service name', () => {
-    traceStore.ingest([...multiServiceTrace.resourceSpans].reverse())
+    traceStore.ingestSpans([...multiServiceTrace.resourceSpans].reverse())
     const traceId = traceStore.getTraceList()[0].traceId
     const trace = traceStore.getTrace(traceId) as StoredTrace
     expect(resolveRootServiceName(trace)).toBe('frontend')
@@ -338,7 +337,7 @@ describe('traceStore.subscribe', () => {
     const unsub = traceStore.subscribe(() => {
       callCount++
     })
-    traceStore.ingest(simpleTrace.resourceSpans)
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
     unsub()
     expect(callCount).toBe(1)
   })
@@ -349,7 +348,7 @@ describe('traceStore.subscribe', () => {
       callCount++
     })
     unsub()
-    traceStore.ingest(simpleTrace.resourceSpans)
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
     expect(callCount).toBe(0)
   })
 

@@ -204,7 +204,7 @@ describe('GET /api/traces', () => {
   it('respects the limit query param', async () => {
     for (let i = 0; i < 5; i++) {
       const traceId = `LIMITTEST${i.toString().padStart(23, '0')}`
-      traceStore.ingest([
+      traceStore.ingestSpans([
         {
           resource: {
             attributes: [
@@ -241,7 +241,7 @@ describe('GET /api/traces', () => {
   })
 
   it('sorts traces newest-first', async () => {
-    traceStore.ingest([
+    traceStore.ingestSpans([
       {
         resource: {
           attributes: [{ key: 'service.name', value: { stringValue: 'old' } }],
@@ -266,7 +266,7 @@ describe('GET /api/traces', () => {
         ],
       },
     ])
-    traceStore.ingest([
+    traceStore.ingestSpans([
       {
         resource: {
           attributes: [{ key: 'service.name', value: { stringValue: 'new' } }],

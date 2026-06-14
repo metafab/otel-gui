@@ -265,6 +265,7 @@ See [SAMPLE_TRACES.md](./samples/SAMPLE_TRACES.md) for a full feature exploratio
 | ------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`                                | `4318`             | HTTP port the server listens on                                                                                                                                                                                                                                                 |
 | `OTEL_GUI_MAX_TRACES`                 | `1000`             | Maximum number of traces kept in memory (1–10 000). Oldest traces are evicted first when the limit is reached. Requires a restart.                                                                                                                                              |
+| `OTEL_GUI_MAX_LOGS`                   | `1000`             | Maximum number of log records kept in memory (1–10 000). Oldest records are evicted first when the limit is reached. Requires a restart.                                                                                                                                        |
 | `OTEL_GUI_PERSISTENCE_MODE`           | `memory`           | Persistence backend mode. Use `memory` (default, no disk writes) or `pglite` (requires an external backend module, typically enterprise).                                                                                                                                       |
 | `OTEL_GUI_PERSISTENCE_PATH`           | `.otel-gui/pglite` | Directory path for local PGlite data when persistence mode is `pglite`.                                                                                                                                                                                                         |
 | `OTEL_GUI_PERSISTENCE_FLUSH_MS`       | `750`              | Debounce interval for batched persistence flushes in milliseconds (50–60000).                                                                                                                                                                                                   |
@@ -388,7 +389,7 @@ GET  /api/traces/stream  ← SSE stream (real-time push)
 GET  /api/service-map    ← aggregated service graph
 ```
 
-Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limit defaults to 1000 traces and is configurable via `OTEL_GUI_MAX_TRACES`.
+Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limit defaults to 1000 traces (`OTEL_GUI_MAX_TRACES`) and 1000 log records (`OTEL_GUI_MAX_LOGS`).
 <br />
 SSE subscribers are notified on every write and receive a debounced `event: traces` message.
 <br />

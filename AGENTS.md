@@ -73,6 +73,8 @@ Use `flattenAttributes()` from `@otel-gui/core` ([packages/core/src/attributes.t
 
 Environment variables used by the bootstrap layer in `traceStore.ts`:
 
+- `OTEL_GUI_MAX_TRACES`: max traces in memory (integer 1-10 000, default 1000)
+- `OTEL_GUI_MAX_LOGS`: max logs in memory (integer 1-10 000, default 1000)
 - `OTEL_GUI_PERSISTENCE_MODE`: `memory` or `pglite` (invalid values warn and fall back to `memory`)
 - `OTEL_GUI_PERSISTENCE_PATH`: local PGlite data path (default `.otel-gui/pglite`)
 - `OTEL_GUI_PERSISTENCE_FLUSH_MS`: flush debounce in ms (50-60000, default `750`)
@@ -172,7 +174,7 @@ Shortcuts implemented:
 2. **adapter-node required** — In-memory `Map` must persist across requests
 3. **Protobuf and JSON supported** — Both `application/json` and `application/x-protobuf` content types accepted
 4. **Gzip request bodies supported** — OTLP receivers accept gzip-compressed payloads
-5. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1-10 000, default 1000). FIFO eviction. Read via `$env/dynamic/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000.
+5. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1-10 000, default 1000). FIFO eviction. Read via `$env/dynamic/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000. Logs have an independent `OTEL_GUI_MAX_LOGS` env var (same range/defaults), exposed as `traceStore.maxLogs`.
 6. **Persistence is optional** — OSS always has `memory`; `pglite` requires a registered backend (usually via `OTEL_GUI_PERSISTENCE_BACKEND_MODULE`). If unavailable, runtime falls back to memory with `persistence.unavailableReason` in `GET /api/config`.
 7. **Update availability check** — On mount, the page fetches `https://api.github.com/repos/metafab/otel-gui/releases/latest` (GitHub API) and compares `tag_name` to `import.meta.env.PACKAGE_VERSION` (embedded at build time from `package.json` via Vite `define`). If a newer semver is found, a non-intrusive notice is shown in the bottom-left of the trace list, next to the retention notice. The notice links to `https://github.com/metafab/otel-gui/releases` and can be dismissed per-version via `localStorage`. The result is cached in `localStorage` (`update-check-cache`) for 1 hour to avoid hitting the GitHub rate limit (60 unauthenticated req/h). Network failures are silent and do not affect the UI.
 8. **Import/export UX contract** — list page provides Import, Export Filtered, Export Selected, and split delete actions (`Clear All` + dropdown `Delete Selected (n)`); import always previews metadata before confirmation.

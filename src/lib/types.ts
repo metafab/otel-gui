@@ -20,15 +20,22 @@ export type {
   ServiceMapData,
 } from '@otel-gui/core'
 
-export interface TraceLogListItem {
+export interface LogListItem {
   id: string
-  traceId: string
-  spanId: string
+  traceId: string | null
+  spanId: string | null
   timeUnixNano: string
   observedTimeUnixNano: string
   severityNumber: number
   severityText: string
   body: unknown
+  serviceName: string
+}
+
+// Narrows LogListItem for per-trace context where traceId/spanId are always present
+export interface TraceLogListItem extends LogListItem {
+  traceId: string
+  spanId: string
 }
 
 export interface TraceLogDetail extends StoredLog {
@@ -74,15 +81,33 @@ export interface TraceImportPreview {
 
 // Swappable storage interface
 export interface TraceStore {
-  ingest(resourceSpans: any[]): void
+  // Ingestion
+  ingestSpans(resourceSpans: any[]): void
   ingestLogs(resourceLogs: any[]): void
+
+  // Trace reads
   getTraceList(limit?: number): TraceListItem[]
   getTrace(traceId: string): StoredTrace | undefined
   getServiceMap(traceId?: string): ServiceMapData
-  clear(): void
+
+  // Trace writes
   deleteTraces(traceIds: string[]): number
+
+  // Log reads
+  getLogList(limit?: number): LogListItem[]
+  getTraceLogs(traceId: string, limit?: number): LogListItem[]
+  getLog(logId: string): TraceLogDetail | undefined
+
+  // Log writes
+  deleteLogs(logIds: string[]): number
+
+  // Global reset
+  clear(): void
+
+  // Infrastructure
   subscribe(fn: () => void): () => void
   readonly maxTraces: number
+  readonly maxLogs: number
 }
 
 // Span tree node for waterfall rendering

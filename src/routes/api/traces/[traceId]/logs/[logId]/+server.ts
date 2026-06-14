@@ -10,13 +10,10 @@ export const GET: RequestHandler = async ({ params }) => {
     throw error(404, 'Trace not found')
   }
 
-  const log = trace.logs?.get(logId)
+  const log = traceStore.getLog(logId)
   if (!log) {
     throw error(404, 'Log not found')
   }
 
-  return json({
-    id: logId,
-    ...log,
-  })
+  return json(log)
 }

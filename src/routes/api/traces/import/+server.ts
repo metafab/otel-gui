@@ -45,7 +45,7 @@ export const POST: RequestHandler = async ({ request }) => {
       maxTraces: traceStore.maxTraces,
     })
 
-    traceStore.ingest(parsed.resourceSpans)
+    traceStore.ingestSpans(parsed.resourceSpans)
 
     return json({
       importedTraceCount: parsed.preview.traceCount,
