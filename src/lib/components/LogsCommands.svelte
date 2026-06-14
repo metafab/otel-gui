@@ -22,7 +22,11 @@
     function onPointerDown(event: MouseEvent) {
       if (!showClearMenu) return
       const target = event.target as Node | null
-      if (clearSplitContainer && target && !clearSplitContainer.contains(target)) {
+      if (
+        clearSplitContainer &&
+        target &&
+        !clearSplitContainer.contains(target)
+      ) {
         showClearMenu = false
       }
     }
@@ -53,7 +57,10 @@
   </button>
   <button
     class="action-button split-toggle"
-    onclick={(e) => { e.stopPropagation(); showClearMenu = !showClearMenu }}
+    onclick={(e) => {
+      e.stopPropagation()
+      showClearMenu = !showClearMenu
+    }}
     disabled={totalCount === 0 || isDeleting}
     aria-label="More clear actions"
     aria-expanded={showClearMenu}
@@ -66,7 +73,10 @@
       <button
         class="split-menu-item"
         role="menuitem"
-        onclick={() => { showClearMenu = false; onDeleteSelected() }}
+        onclick={() => {
+          showClearMenu = false
+          onDeleteSelected()
+        }}
         disabled={selectedCount === 0 || isDeleting}
       >
         Delete Selected{selectedCount > 0 ? ` (${selectedCount})` : ''}

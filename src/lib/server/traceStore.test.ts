@@ -4,6 +4,7 @@ import { resolveRootServiceName, resolveRootSpanName } from '@otel-gui/core'
 import type { StoredTrace } from '$lib/types'
 import simpleTrace from '../../../tests/fixtures/simple-trace.json'
 import simpleLog from '../../../tests/fixtures/simple-log.json'
+import unlinkedLog from '../../../tests/fixtures/log-unlinked.json'
 import multiServiceTrace from '../../../tests/fixtures/multi-service-trace.json'
 import errorTrace from '../../../tests/fixtures/error-trace.json'
 import outOfOrderSpans from '../../../tests/fixtures/out-of-order-spans.json'
@@ -211,6 +212,32 @@ describe('traceStore.ingestLogs', () => {
     traceStore.ingestLogs(simpleLog.resourceLogs)
     const [traceItem] = traceStore.getTraceList()
     expect(traceItem.hasError).toBe(true)
+  })
+
+  it('ingests uncorrelated logs with null traceId/spanId into global log list', () => {
+    traceStore.ingestLogs(unlinkedLog.resourceLogs)
+
+    const logs = traceStore.getLogList(10)
+    expect(logs).toHaveLength(3)
+    expect(logs.every((log) => log.traceId === null)).toBe(true)
+    expect(logs.every((log) => log.spanId === null)).toBe(true)
+    expect(logs.every((log) => log.serviceName === 'background-worker')).toBe(
+      true,
+    )
+  })
+
+  it('supports deleting selected global logs and clearing all logs', () => {
+    traceStore.ingestLogs(unlinkedLog.resourceLogs)
+
+    const initial = traceStore.getLogList(10)
+    expect(initial).toHaveLength(3)
+
+    const deletedCount = traceStore.deleteLogs([initial[0].id])
+    expect(deletedCount).toBe(1)
+    expect(traceStore.getLogList(10)).toHaveLength(2)
+
+    traceStore.clearLogs()
+    expect(traceStore.getLogList(10)).toHaveLength(0)
   })
 })
 

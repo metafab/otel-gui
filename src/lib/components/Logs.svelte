@@ -14,7 +14,9 @@
   let isLoading = $state(false)
   let loadError = $state<string | null>(null)
   let searchQuery = $state('')
-  let severityFilter = $state<'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error'>('all')
+  let severityFilter = $state<
+    'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error'
+  >('all')
   let selectedLogIds = $state<string[]>([])
   let isDeleting = $state(false)
 
@@ -26,11 +28,25 @@
     return 'http://localhost:4318/v1/logs'
   })
 
-  $effect(() => { totalCount = logs.length })
-  $effect(() => { selectedCount = selectedLogIds.length })
-  $effect(() => { isDeletingBound = isDeleting })
+  $effect(() => {
+    if (totalCount !== logs.length) {
+      totalCount = logs.length
+    }
+  })
+  $effect(() => {
+    if (selectedCount !== selectedLogIds.length) {
+      selectedCount = selectedLogIds.length
+    }
+  })
+  $effect(() => {
+    if (isDeletingBound !== isDeleting) {
+      isDeletingBound = isDeleting
+    }
+  })
 
-  function severityBucket(log: LogListItem): 'trace' | 'debug' | 'info' | 'warn' | 'error' {
+  function severityBucket(
+    log: LogListItem,
+  ): 'trace' | 'debug' | 'info' | 'warn' | 'error' {
     const n = Number(log.severityNumber) || 0
     if (n >= 17) return 'error'
     if (n >= 13) return 'warn'
@@ -41,7 +57,11 @@
 
   function normalizeBody(value: unknown): string {
     if (value == null) return ''
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean'
+    ) {
       return String(value)
     }
 
@@ -123,7 +143,8 @@
       }
       logs = await response.json()
     } catch (error) {
-      loadError = error instanceof Error ? error.message : 'Unknown error loading logs'
+      loadError =
+        error instanceof Error ? error.message : 'Unknown error loading logs'
       logs = []
     } finally {
       isLoading = false
@@ -150,7 +171,8 @@
       logs = []
       selectedLogIds = []
     } catch (error) {
-      loadError = error instanceof Error ? error.message : 'Unknown error clearing logs'
+      loadError =
+        error instanceof Error ? error.message : 'Unknown error clearing logs'
     } finally {
       isDeleting = false
     }
@@ -181,11 +203,14 @@
       })
 
       if (!response.ok) {
-        throw new Error(`Failed to delete selected logs: ${response.statusText}`)
+        throw new Error(
+          `Failed to delete selected logs: ${response.statusText}`,
+        )
       }
 
       const payload = await response.json()
-      const deletedCount = typeof payload.deletedCount === 'number' ? payload.deletedCount : 0
+      const deletedCount =
+        typeof payload.deletedCount === 'number' ? payload.deletedCount : 0
 
       if (deletedCount > 0) {
         const selected = new Set(selectedLogIds)
@@ -193,7 +218,10 @@
         selectedLogIds = []
       }
     } catch (error) {
-      loadError = error instanceof Error ? error.message : 'Unknown error deleting selected logs'
+      loadError =
+        error instanceof Error
+          ? error.message
+          : 'Unknown error deleting selected logs'
     } finally {
       isDeleting = false
     }
@@ -253,61 +281,65 @@
         <p>No logs match the current filters.</p>
       </div>
     {:else}
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th class="select-col">
-              <input
-                type="checkbox"
-                class="row-checkbox"
-                checked={allFilteredSelected}
-                onchange={toggleSelectAllFiltered}
-                aria-label="Invert filtered log selection"
-                title="Invert filtered log selection"
-              />
-            </th>
-            <th>Time</th>
-            <th>Service</th>
-            <th>Severity</th>
-            <th>Body</th>
-            <th>Trace</th>
-            <th>Span</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each filteredLogs as log (log.id)}
-            <tr class:selected={selectedLogIdSet.has(log.id)}>
-              <td class="select-col">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th class="select-col">
                 <input
                   type="checkbox"
                   class="row-checkbox"
-                  checked={selectedLogIdSet.has(log.id)}
-                  onchange={() => toggleLogSelection(log.id)}
-                  aria-label={`Select log ${log.id}`}
+                  checked={allFilteredSelected}
+                  onchange={toggleSelectAllFiltered}
+                  aria-label="Invert filtered log selection"
+                  title="Invert filtered log selection"
                 />
-              </td>
-              <td class="timestamp">{formatLogTime(log)}</td>
-              <td>{log.serviceName || 'unknown'}</td>
-              <td>
-                <span class={`severity-badge severity-${severityBucket(log)}`}>
-                  {log.severityText || severityBucket(log).toUpperCase()}
-                </span>
-              </td>
-              <td class="log-body" title={normalizeBody(log.body)}>{normalizeBody(log.body) || '(empty body)'}</td>
-              <td class="mono">
-                {#if log.traceId}
-                  <a href={`/traces/${log.traceId}`}>{log.traceId}</a>
-                {:else}
-                  <span class="muted">Unlinked</span>
-                {/if}
-              </td>
-              <td class="mono">{log.spanId || '-'}</td>
+              </th>
+              <th>Time</th>
+              <th>Service</th>
+              <th>Severity</th>
+              <th>Body</th>
+              <th>Trace</th>
+              <th>Span</th>
             </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {#each filteredLogs as log (log.id)}
+              <tr class:selected={selectedLogIdSet.has(log.id)}>
+                <td class="select-col">
+                  <input
+                    type="checkbox"
+                    class="row-checkbox"
+                    checked={selectedLogIdSet.has(log.id)}
+                    onchange={() => toggleLogSelection(log.id)}
+                    aria-label={`Select log ${log.id}`}
+                  />
+                </td>
+                <td class="timestamp">{formatLogTime(log)}</td>
+                <td>{log.serviceName || 'unknown'}</td>
+                <td>
+                  <span
+                    class={`severity-badge severity-${severityBucket(log)}`}
+                  >
+                    {log.severityText || severityBucket(log).toUpperCase()}
+                  </span>
+                </td>
+                <td class="log-body" title={normalizeBody(log.body)}
+                  >{normalizeBody(log.body) || '(empty body)'}</td
+                >
+                <td class="mono">
+                  {#if log.traceId}
+                    <a href={`/traces/${log.traceId}`}>{log.traceId}</a>
+                  {:else}
+                    <span class="muted">Unlinked</span>
+                  {/if}
+                </td>
+                <td class="mono">{log.spanId || '-'}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
     {/if}
   {/if}
 </div>
@@ -372,7 +404,9 @@
   }
 
   .mono {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+      'Courier New', monospace;
     font-size: 0.75rem;
     word-break: break-all;
   }

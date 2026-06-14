@@ -77,8 +77,10 @@
   let isExporting = $state(false)
 
   // Logs ref and reactive state for LogsCommands
-  let logsRef: { triggerClearAll: () => void; triggerDeleteSelected: () => void } | null =
-    $state(null)
+  let logsRef: {
+    triggerClearAll: () => void
+    triggerDeleteSelected: () => void
+  } | null = $state(null)
   let logsTotal = $state(0)
   let logsSelected = $state(0)
   let logsDeleting = $state(false)
@@ -120,7 +122,6 @@
     }
   }
 </script>
-
 
 <svelte:head>
   <title

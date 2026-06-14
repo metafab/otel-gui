@@ -23,8 +23,12 @@ describe('TraceFilters', () => {
 
     expect(screen.getByLabelText('Search')).toBeInTheDocument()
     expect(screen.getByLabelText('Service')).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'checkout-service' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'inventory-service' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'checkout-service' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'inventory-service' }),
+    ).toBeInTheDocument()
     expect(container.querySelector('.filter-stats')?.textContent).toContain(
       'Showing 2 of 5 traces',
     )
@@ -81,6 +85,8 @@ describe('TraceFilters', () => {
       },
     })
 
-    expect(screen.queryByRole('button', { name: 'Clear Filters' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Clear Filters' }),
+    ).not.toBeInTheDocument()
   })
 })

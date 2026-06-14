@@ -14,10 +14,7 @@ import { GET as getTraceLog } from './api/traces/[traceId]/logs/[logId]/+server'
 import { GET as getServiceMap } from './api/service-map/+server'
 import { GET as getMetrics } from './metrics/+server'
 import { GET as getConfig } from './api/config/+server'
-import {
-  GET as getLogList,
-  DELETE as deleteLogs,
-} from './api/logs/+server'
+import { GET as getLogList, DELETE as deleteLogs } from './api/logs/+server'
 import { POST as postOtlpMetrics } from './v1/metrics/+server'
 import { POST as postOtlpLogs } from './v1/logs/+server'
 import { traceStore } from '$lib/server/traceStore'
@@ -1036,6 +1033,39 @@ describe('GET /api/logs', () => {
     expect(logs).toHaveLength(1)
   })
 
+  it('applies limit filtering by returning only the newest log first', async () => {
+    await postOtlpLogs({
+      request: makeLogsPostRequest(unlinkedLog),
+    } as any)
+
+    const response = await getLogList({
+      url: makeUrl('/api/logs', { limit: '1' }),
+    } as any)
+    const logs = await response.json()
+
+    expect(logs).toHaveLength(1)
+    expect(logs[0].body).toContain('Background job completed')
+  })
+
+  it('ignores invalid limit values and falls back to default behavior', async () => {
+    await postOtlpLogs({
+      request: makeLogsPostRequest(unlinkedLog),
+    } as any)
+
+    const invalidLimitResponse = await getLogList({
+      url: makeUrl('/api/logs', { limit: 'abc' }),
+    } as any)
+    const nonPositiveLimitResponse = await getLogList({
+      url: makeUrl('/api/logs', { limit: '0' }),
+    } as any)
+
+    const invalidLimitLogs = await invalidLimitResponse.json()
+    const nonPositiveLimitLogs = await nonPositiveLimitResponse.json()
+
+    expect(invalidLimitLogs).toHaveLength(3)
+    expect(nonPositiveLimitLogs).toHaveLength(3)
+  })
+
   it('returns logs sorted newest-first', async () => {
     await postOtlpLogs({
       request: makeLogsPostRequest(unlinkedLog),
@@ -1045,8 +1075,12 @@ describe('GET /api/logs', () => {
     const logs = await response.json()
 
     for (let i = 1; i < logs.length; i++) {
-      const prev = BigInt(logs[i - 1].timeUnixNano || logs[i - 1].observedTimeUnixNano || '0')
-      const curr = BigInt(logs[i].timeUnixNano || logs[i].observedTimeUnixNano || '0')
+      const prev = BigInt(
+        logs[i - 1].timeUnixNano || logs[i - 1].observedTimeUnixNano || '0',
+      )
+      const curr = BigInt(
+        logs[i].timeUnixNano || logs[i].observedTimeUnixNano || '0',
+      )
       expect(prev >= curr).toBe(true)
     }
   })
@@ -1115,6 +1149,35 @@ describe('DELETE /api/logs', () => {
     const remaining = await afterResponse.json()
     expect(remaining).toHaveLength(logs.length - 1)
     expect(remaining.find((l: any) => l.id === idToDelete)).toBeUndefined()
+  })
+
+  it('filters invalid logIds and deletes only valid matching IDs', async () => {
+    await postOtlpLogs({ request: makeLogsPostRequest(unlinkedLog) } as any)
+
+    const beforeResponse = await getLogList({
+      url: makeUrl('/api/logs'),
+    } as any)
+    const before = await beforeResponse.json()
+    const targetId = before[0].id
+
+    const deleteRequest = new Request('http://localhost/api/logs', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        logIds: [targetId, 123, null, 'missing-id'],
+      }),
+    })
+
+    const deleteResponse = await deleteLogs({ request: deleteRequest } as any)
+    const deleteBody = await deleteResponse.json()
+    expect(deleteBody.success).toBe(true)
+    expect(deleteBody.mode).toBe('selected')
+    expect(deleteBody.deletedCount).toBe(1)
+
+    const afterResponse = await getLogList({ url: makeUrl('/api/logs') } as any)
+    const after = await afterResponse.json()
+    expect(after).toHaveLength(before.length - 1)
+    expect(after.find((l: any) => l.id === targetId)).toBeUndefined()
   })
 
   it('does not affect traces when clearing logs', async () => {

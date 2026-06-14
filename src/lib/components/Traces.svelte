@@ -39,7 +39,6 @@
 
   const traces = $derived(traceStore.traces)
   const error = $derived(traceStore.error)
-  const isLoading = $derived(traceStore.isLoading)
   const maxTraces = $derived(traceStore.maxTraces)
   const persistence = $derived(traceStore.persistence)
 
@@ -249,13 +248,19 @@
 
   // Sync internal state to bindable props for parent header buttons
   $effect(() => {
-    filteredCount = filteredTraces.length
+    if (filteredCount !== filteredTraces.length) {
+      filteredCount = filteredTraces.length
+    }
   })
   $effect(() => {
-    selectedCount = selectedTraceIds.length
+    if (selectedCount !== selectedTraceIds.length) {
+      selectedCount = selectedTraceIds.length
+    }
   })
   $effect(() => {
-    isExportingBound = isExporting
+    if (isExportingBound !== isExporting) {
+      isExportingBound = isExporting
+    }
   })
 
   $effect(() => {

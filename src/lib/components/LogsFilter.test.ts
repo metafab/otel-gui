@@ -34,7 +34,9 @@ describe('LogsFilter', () => {
 
     expect(searchInput).toHaveValue('checkout')
     expect(severitySelect).toHaveValue('error')
-    expect(screen.getByRole('button', { name: 'Clear Filters' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Clear Filters' }),
+    ).toBeInTheDocument()
 
     await fireEvent.click(screen.getByRole('button', { name: 'Clear Filters' }))
 
@@ -52,6 +54,8 @@ describe('LogsFilter', () => {
       },
     })
 
-    expect(screen.queryByRole('button', { name: 'Clear Filters' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Clear Filters' }),
+    ).not.toBeInTheDocument()
   })
 })

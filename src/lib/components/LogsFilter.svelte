@@ -55,7 +55,9 @@
     </div>
 
     {#if hasActiveFilters}
-      <button onclick={handleClear} class="clear-filters-btn">Clear Filters</button>
+      <button onclick={handleClear} class="clear-filters-btn"
+        >Clear Filters</button
+      >
     {/if}
   </div>
 

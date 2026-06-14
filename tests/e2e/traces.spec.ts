@@ -21,6 +21,8 @@ async function resolveCssVarColor(page: Page, variableName: string) {
 }
 
 const simpleTrace = readFixture('simple-trace.json')
+const simpleLog = readFixture('simple-log.json')
+const unlinkedLog = readFixture('log-unlinked.json')
 const errorTrace = readFixture('error-trace.json')
 const multiServiceTrace = readFixture('multi-service-trace.json')
 const errorNavigationTrace = {
@@ -139,6 +141,7 @@ test.describe('Trace ingestion flow', () => {
 
   test.beforeEach(async ({ request }) => {
     await request.delete('/api/traces')
+    await request.delete('/api/logs')
   })
 
   test('ingests OTLP JSON and shows trace list + detail page', async ({
@@ -199,6 +202,18 @@ test.describe('Trace ingestion flow', () => {
       'true',
     )
 
+    await page.keyboard.press('l')
+    await expect(page.getByRole('tab', { name: 'Logs' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+
+    await page.keyboard.press('t')
+    await expect(page.getByRole('tab', { name: /Traces/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+
     await page.keyboard.press('/')
     await expect(page.locator('#search')).toBeFocused()
 
@@ -211,6 +226,44 @@ test.describe('Trace ingestion flow', () => {
     await page.keyboard.press('Escape')
     await expect(page.locator('#search')).toHaveValue('')
     await expect(page.locator('tbody tr')).toHaveCount(2)
+  })
+
+  test('supports logs tab delete selected and clear all interactions', async ({
+    page,
+    request,
+  }) => {
+    await request.post('/v1/logs', {
+      headers: { 'Content-Type': 'application/json' },
+      data: simpleLog,
+    })
+    await request.post('/v1/logs', {
+      headers: { 'Content-Type': 'application/json' },
+      data: unlinkedLog,
+    })
+
+    await page.goto('/')
+
+    await page.keyboard.press('l')
+    await expect(page.getByRole('tab', { name: 'Logs' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+
+    const logRows = page.locator('tbody tr')
+    await expect(logRows).toHaveCount(4)
+
+    await logRows.first().locator('input.row-checkbox').check()
+
+    await page.getByRole('button', { name: 'More clear actions' }).click()
+    page.once('dialog', (dialog) => dialog.accept())
+    await page.getByRole('menuitem', { name: /Delete Selected/ }).click()
+
+    await expect(logRows).toHaveCount(3)
+
+    page.once('dialog', (dialog) => dialog.accept())
+    await page.getByRole('button', { name: 'Clear All' }).click()
+
+    await expect(page.getByText('No logs received yet.')).toBeVisible()
   })
 
   test('supports trace-detail span search keyboard shortcuts', async ({

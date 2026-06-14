@@ -43,7 +43,10 @@ export interface TraceStoreBackendModule {
 const backendFactories = new Map<PersistenceMode, TraceStoreBackendFactory>()
 
 backendFactories.set('memory', async (config) => {
-  const store = createMemoryTraceStore({ maxTraces: config.maxTraces, maxLogs: config.maxLogs })
+  const store = createMemoryTraceStore({
+    maxTraces: config.maxTraces,
+    maxLogs: config.maxLogs,
+  })
   return {
     ...store,
     getPersistenceStatus: () => ({

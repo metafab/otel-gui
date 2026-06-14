@@ -3,7 +3,10 @@
     {
       "resource": {
         "attributes": [
-          { "key": "service.name", "value": { "stringValue": "background-worker" } },
+          {
+            "key": "service.name",
+            "value": { "stringValue": "background-worker" }
+          },
           { "key": "host.name", "value": { "stringValue": "worker-01" } }
         ]
       },
@@ -18,7 +21,10 @@
               "severityText": "INFO",
               "body": { "stringValue": "Background job started" },
               "attributes": [
-                { "key": "job.type", "value": { "stringValue": "report-generation" } },
+                {
+                  "key": "job.type",
+                  "value": { "stringValue": "report-generation" }
+                },
                 { "key": "job.id", "value": { "stringValue": "job-abc-123" } }
               ]
             },
@@ -29,7 +35,10 @@
               "severityText": "WARN",
               "body": { "stringValue": "Report generation slow: 2000ms" },
               "attributes": [
-                { "key": "job.type", "value": { "stringValue": "report-generation" } },
+                {
+                  "key": "job.type",
+                  "value": { "stringValue": "report-generation" }
+                },
                 { "key": "duration_ms", "value": { "intValue": "2000" } }
               ]
             },
@@ -40,7 +49,10 @@
               "severityText": "INFO",
               "body": { "stringValue": "Background job completed" },
               "attributes": [
-                { "key": "job.type", "value": { "stringValue": "report-generation" } },
+                {
+                  "key": "job.type",
+                  "value": { "stringValue": "report-generation" }
+                },
                 { "key": "job.id", "value": { "stringValue": "job-abc-123" } },
                 { "key": "pages_generated", "value": { "intValue": "42" } }
               ]

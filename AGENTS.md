@@ -162,7 +162,11 @@ Shortcuts implemented:
 |-----|-----------|--------------|
 | `/` | Focus search | Focus span search |
 | `Esc` | Clear search (if focused) | Clear search or go back |
-| `Alt/⌥+⌫` | Clear all traces | — || `m` | Toggle Traces/Map tab | Toggle mini service map || `Enter` / `Shift+Enter` | — | Next / prev match (when search focused) |
+| `Alt/⌥+⌫` | Clear all traces | — |
+| `t` | Switch to Traces tab | — |
+| `l` | Switch to Logs tab | — |
+| `m` | Toggle Traces/Map tab | Toggle mini service map |
+| `Enter` / `Shift+Enter` | — | Next / prev match (when search focused) |
 | `n` / `Shift+N` | — | Next / prev search match |
 | `e` / `Shift+E` | — | Next / prev error span |
 | `↑↓←→` / `Enter` | — | Waterfall tree navigation |

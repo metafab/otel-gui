@@ -18,7 +18,10 @@
               "severityText": "INFO",
               "body": { "stringValue": "Scheduler started" },
               "attributes": [
-                { "key": "cron.expression", "value": { "stringValue": "0 * * * *" } }
+                {
+                  "key": "cron.expression",
+                  "value": { "stringValue": "0 * * * *" }
+                }
               ]
             },
             {
@@ -29,7 +32,10 @@
               "body": { "stringValue": "Job queue full — dropping task" },
               "attributes": [
                 { "key": "queue.size", "value": { "intValue": "1000" } },
-                { "key": "task.type", "value": { "stringValue": "email-digest" } }
+                {
+                  "key": "task.type",
+                  "value": { "stringValue": "email-digest" }
+                }
               ]
             }
           ]

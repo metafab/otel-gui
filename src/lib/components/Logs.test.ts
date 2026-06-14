@@ -35,7 +35,10 @@ describe('Logs', () => {
     vi.restoreAllMocks()
     fetchMock.mockReset()
     vi.stubGlobal('fetch', fetchMock)
-    vi.stubGlobal('confirm', vi.fn(() => true))
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => true),
+    )
   })
 
   it('loads and renders global logs including unlinked logs', async () => {
@@ -63,7 +66,11 @@ describe('Logs', () => {
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ success: true, deletedCount: 1, mode: 'selected' }),
+        json: async () => ({
+          success: true,
+          deletedCount: 1,
+          mode: 'selected',
+        }),
       } as Response)
 
     const { component } = render(Logs)
