@@ -1,6 +1,5 @@
 <script lang="ts">
   import { replaceState } from '$app/navigation'
-  import { page } from '$app/stores'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import TraceFilters from '$lib/components/TraceFilters.svelte'
   import TraceImportModal from '$lib/components/TraceImportModal.svelte'
@@ -140,7 +139,9 @@
     }
   }
 
-  const initialFilters = readFilterParams($page.url)
+  const initialFilterUrl =
+    typeof window !== 'undefined' ? new URL(window.location.href) : new URL('http://localhost/')
+  const initialFilters = readFilterParams(initialFilterUrl)
 
   let searchQuery = $state(initialFilters.searchQuery)
   let selectedService = $state<string>(initialFilters.selectedService)

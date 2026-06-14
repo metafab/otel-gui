@@ -132,4 +132,31 @@ describe('Logs', () => {
 
     expect(await screen.findByText('checkout failed')).toBeInTheDocument()
   })
+
+  it('restores logs filters from URL query params', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleLogs,
+    } as Response)
+
+    const originalUrl = window.location.href
+    window.history.replaceState(
+      window.history.state,
+      '',
+      '/?tab=logs&search=worker&severity=info',
+    )
+
+    render(Logs)
+
+    expect(await screen.findByText('worker-service')).toBeInTheDocument()
+    expect(screen.queryByText('checkout-service')).not.toBeInTheDocument()
+
+    const searchInput = screen.getByLabelText('Search logs') as HTMLInputElement
+    expect(searchInput.value).toBe('worker')
+
+    const severitySelect = screen.getByLabelText('Severity') as HTMLSelectElement
+    expect(severitySelect.value).toBe('info')
+
+    window.history.replaceState(window.history.state, '', originalUrl)
+  })
 })

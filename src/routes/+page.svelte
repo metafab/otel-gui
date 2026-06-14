@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { replaceState } from '$app/navigation'
+  import { pushState } from '$app/navigation'
+  import { tick } from 'svelte'
   import { page } from '$app/stores'
   import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
   import Logs from '$lib/components/Logs.svelte'
@@ -46,17 +47,57 @@
     initialTab === 'map' || initialTab === 'logs' ? initialTab : 'traces',
   )
 
-  // Sync active tab to URL
+  // Store the last URL for each tab to restore when switching back.
+  let tabUrlMap = $state<Record<'traces' | 'logs' | 'map', string>>({
+    traces: '/',
+    logs: '/?tab=logs',
+    map: '/?tab=map',
+  })
+
+  function tabFromUrl(url: URL): 'traces' | 'logs' | 'map' {
+    const tab = url.searchParams.get('tab')
+    return tab === 'map' || tab === 'logs' ? tab : 'traces'
+  }
+
+  async function switchTab(nextTab: 'traces' | 'logs' | 'map') {
+    if (typeof window === 'undefined' || nextTab === activeTab) return
+
+    // Let pending child effects flush URL filter changes before snapshotting.
+    await tick()
+
+    const currentUrl = new URL(window.location.href)
+    const currentTab = tabFromUrl(currentUrl)
+    tabUrlMap[currentTab] = currentUrl.href
+
+    const nextUrl = new URL(tabUrlMap[nextTab], window.location.origin)
+    if (nextUrl.href !== window.location.href) {
+      pushState(nextUrl, {})
+    }
+
+    activeTab = nextTab
+  }
+
+  // Seed current tab URL so first switch can restore accurately.
   $effect(() => {
     if (typeof window === 'undefined') return
-    const nextUrl = new URL(window.location.href)
-    if (activeTab === 'map' || activeTab === 'logs') {
-      nextUrl.searchParams.set('tab', activeTab)
-    } else {
-      nextUrl.searchParams.delete('tab')
+    const currentUrl = new URL(window.location.href)
+    tabUrlMap[tabFromUrl(currentUrl)] = currentUrl.href
+  })
+
+  // Sync URL changes (back/forward) to active tab.
+  $effect(() => {
+    if (typeof window === 'undefined') return
+
+    function handlePopState() {
+      const url = new URL(window.location.href)
+      const tab = tabFromUrl(url)
+      tabUrlMap[tab] = url.href
+      activeTab = tab
     }
-    if (nextUrl.search === window.location.search) return
-    replaceState(nextUrl, {})
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => window.removeEventListener('popstate', handlePopState)
   })
 
   // Service map state
@@ -110,8 +151,8 @@
   let logsDeleting = $state(false)
 
   function handleMapNodeSelect(serviceName: string) {
+    switchTab('traces')
     tracesRef?.setSelectedService(serviceName)
-    activeTab = 'traces'
   }
 
   let showShortcuts = $state(false)
@@ -127,21 +168,21 @@
     // 't': switch directly to Traces tab
     if (e.key === 't' && !isInputFocused()) {
       e.preventDefault()
-      activeTab = 'traces'
+      switchTab('traces')
       return
     }
 
     // 'l': switch directly to Logs tab
     if (e.key === 'l' && !isInputFocused()) {
       e.preventDefault()
-      activeTab = 'logs'
+      switchTab('logs')
       return
     }
 
     // 'm': toggle between Traces and Map tabs
     if (e.key === 'm' && !isInputFocused()) {
       e.preventDefault()
-      activeTab = activeTab === 'traces' ? 'map' : 'traces'
+      switchTab(activeTab === 'traces' ? 'map' : 'traces')
       return
     }
   }
@@ -167,7 +208,7 @@
         aria-selected={activeTab === 'traces'}
         class="tab-btn"
         class:active={activeTab === 'traces'}
-        onclick={() => (activeTab = 'traces')}
+        onclick={() => switchTab('traces')}
         >Traces {#if traces.length > 0}<span class="tab-count"
             >{traces.length}</span
           >{/if}</button
@@ -177,7 +218,7 @@
         aria-selected={activeTab === 'logs'}
         class="tab-btn"
         class:active={activeTab === 'logs'}
-        onclick={() => (activeTab = 'logs')}
+        onclick={() => switchTab('logs')}
         >Logs {#if logsBadgeTotal > 0}<span class="tab-count"
             >{logsBadgeTotal}</span
           >{/if}</button
@@ -187,7 +228,7 @@
         aria-selected={activeTab === 'map'}
         class="tab-btn"
         class:active={activeTab === 'map'}
-        onclick={() => (activeTab = 'map')}>Service Map</button
+        onclick={() => switchTab('map')}>Service Map</button
       >
     </div>
     <div class="actions">

@@ -6,12 +6,17 @@ const { mockReplaceState } = vi.hoisted(() => ({
   mockReplaceState: vi.fn(),
 }))
 
+const { mockPushState } = vi.hoisted(() => ({
+  mockPushState: vi.fn(),
+}))
+
 const { mockCheckForUpdate, mockDismissUpdate } = vi.hoisted(() => ({
   mockCheckForUpdate: vi.fn().mockResolvedValue(null),
   mockDismissUpdate: vi.fn(),
 }))
 
 vi.mock('$app/navigation', () => ({
+  pushState: mockPushState,
   replaceState: mockReplaceState,
 }))
 
@@ -83,6 +88,7 @@ import Page from './+page.svelte'
 describe('trace list page URL filters', () => {
   beforeEach(() => {
     mockReplaceState.mockClear()
+    mockPushState.mockClear()
     mockCheckForUpdate.mockClear()
     mockDismissUpdate.mockClear()
 
@@ -91,6 +97,11 @@ describe('trace list page URL filters', () => {
       '',
       '/?search=checkout&service=checkout-service&errors=true&minDuration=10&maxDuration=20',
     )
+
+    // Emulate SvelteKit pushState by updating the browser location in tests.
+    mockPushState.mockImplementation((url: URL) => {
+      window.history.pushState({}, '', url)
+    })
   })
 
   it('restores filters from the list page query params', () => {
@@ -192,15 +203,122 @@ describe('trace list page URL filters', () => {
   it('syncs logs tab selection into the URL', async () => {
     render(Page)
 
-    mockReplaceState.mockClear()
+    mockPushState.mockClear()
 
     await fireEvent.click(screen.getByRole('tab', { name: 'Logs' }))
 
     await waitFor(() => {
-      expect(mockReplaceState).toHaveBeenCalled()
+      expect(mockPushState).toHaveBeenCalled()
     })
 
-    const url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
-    expect(url.searchParams.get('tab')).toBe('logs')
+    const callArgs = mockPushState.mock.calls.at(-1)
+    const url = callArgs?.[0] as URL
+    expect(url.href).toContain('tab=logs')
+  })
+
+  it('clears all params when switching directly from traces to logs', async () => {
+    render(Page)
+
+    mockPushState.mockClear()
+
+    await fireEvent.click(screen.getByRole('tab', { name: 'Logs' }))
+
+    await waitFor(() => {
+      expect(mockPushState).toHaveBeenCalled()
+    })
+
+    const callArgs = mockPushState.mock.calls.at(-1)
+    const url = callArgs?.[0] as URL
+    expect(url.search).toBe('?tab=logs')
+  })
+
+  it('clears all params when switching directly from logs to traces', async () => {
+    render(Page)
+
+    // First go to Logs tab
+    await fireEvent.click(screen.getByRole('tab', { name: /^Logs/ }))
+
+    await waitFor(() => {
+      const logsTab = screen.getByRole('tab', { name: /^Logs/ })
+      expect(logsTab).toHaveAttribute('aria-selected', 'true')
+    })
+
+    mockPushState.mockClear()
+
+    // Now click Traces tab (use regex to match "Traces" with optional count badge)
+    const allTabs = screen.getAllByRole('tab')
+    const tracesTab = allTabs[0] // First tab is Traces
+    await fireEvent.click(tracesTab)
+
+    await waitFor(() => {
+      expect(mockPushState).toHaveBeenCalled()
+    })
+
+    const callArgs = mockPushState.mock.calls.at(-1)
+    const url = callArgs?.[0] as URL
+    // Should restore the previous Traces URL state from before switching to Logs.
+    expect(url.searchParams.get('search')).toBe('checkout')
+    expect(url.searchParams.get('service')).toBe('checkout-service')
+    expect(url.searchParams.get('tab')).toBeNull()
+  })
+
+  it('restores tab state when switching between tabs', async () => {
+    render(Page)
+
+    // 1. Set search to "a" on Traces tab
+    await fireEvent.input(screen.getByLabelText('Search'), {
+      target: { value: 'a' },
+    })
+
+    await waitFor(() => {
+      expect((screen.getByLabelText('Search') as HTMLInputElement).value).toBe(
+        'a',
+      )
+    })
+
+    // Manually update location to simulate Traces component updating URL
+    const tracesUrlWithSearch = new URL(window.location.href)
+    tracesUrlWithSearch.searchParams.set('search', 'a')
+    window.history.replaceState({}, '', tracesUrlWithSearch)
+
+    expect(window.location.href).toContain('search=a')
+
+    mockPushState.mockClear()
+
+    // 2. Switch to Logs tab
+    await fireEvent.click(screen.getByRole('tab', { name: /^Logs/ }))
+
+    await waitFor(() => {
+      const logsTab = screen.getByRole('tab', { name: /^Logs/ })
+      expect(logsTab).toHaveAttribute('aria-selected', 'true')
+    })
+
+    // 3. Verify Logs URL is clean (only has tab=logs)
+    const logsUrl = new URL(window.location.href)
+    expect(logsUrl.searchParams.get('tab')).toBe('logs')
+    expect(logsUrl.searchParams.get('search')).toBeNull()
+
+    mockPushState.mockClear()
+
+    // 4. Switch back to Traces tab
+    const allTabs = screen.getAllByRole('tab')
+    const tracesTab = allTabs[0]
+    await fireEvent.click(tracesTab)
+
+    await waitFor(() => {
+      const tab = screen.getByRole('tab', { name: /^Traces/ })
+      expect(tab).toHaveAttribute('aria-selected', 'true')
+    })
+
+    // 5. Verify Traces URL is restored with search="a"
+    const restoredUrl = new URL(window.location.href)
+    expect(restoredUrl.searchParams.get('search')).toBe('a')
+    expect(restoredUrl.searchParams.get('tab')).toBeNull() // Traces has no tab param
+
+    await waitFor(() => {
+      expect((screen.getByLabelText('Search') as HTMLInputElement).value).toBe(
+        'a',
+      )
+    })
   })
 })

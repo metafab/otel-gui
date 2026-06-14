@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { replaceState } from '$app/navigation'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import LogsFilter from '$lib/components/LogsFilter.svelte'
   import type { LogListItem } from '$lib/types'
@@ -14,10 +15,6 @@
   let logs = $state.raw<LogListItem[]>([])
   let isLoading = $state(false)
   let loadError = $state<string | null>(null)
-  let searchQuery = $state('')
-  let severityFilter = $state<
-    'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error'
-  >('all')
   type LogSortBy = 'time' | 'service' | 'severity' | 'body' | 'trace' | 'span'
   type LogSortOrder = 'asc' | 'desc'
   const DEFAULT_SORT_BY: LogSortBy = 'time'
@@ -43,9 +40,26 @@
       : DEFAULT_SORT_ORDER
   }
 
-  function readSortParamsFromLocation() {
+  function parseSeverityFilter(
+    rawValue: string | null,
+  ): 'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error' {
+    switch (rawValue) {
+      case 'trace':
+      case 'debug':
+      case 'info':
+      case 'warn':
+      case 'error':
+        return rawValue
+      default:
+        return 'all'
+    }
+  }
+
+  function readParamsFromLocation() {
     if (typeof window === 'undefined') {
       return {
+        searchQuery: '',
+        severityFilter: 'all',
         sortBy: DEFAULT_SORT_BY,
         sortOrder: DEFAULT_SORT_ORDER,
       } as const
@@ -53,12 +67,26 @@
 
     const url = new URL(window.location.href)
     return {
+      searchQuery: url.searchParams.get('search') ?? '',
+      severityFilter: parseSeverityFilter(url.searchParams.get('severity')),
       sortBy: parseSortBy(url.searchParams.get('sort')),
       sortOrder: parseSortOrder(url.searchParams.get('order')),
     } as const
   }
 
-  function applySortParams(url: URL) {
+  function applyParams(url: URL) {
+    if (searchQuery.trim()) {
+      url.searchParams.set('search', searchQuery)
+    } else {
+      url.searchParams.delete('search')
+    }
+
+    if (severityFilter !== 'all') {
+      url.searchParams.set('severity', severityFilter)
+    } else {
+      url.searchParams.delete('severity')
+    }
+
     if (sortBy === DEFAULT_SORT_BY && sortOrder === DEFAULT_SORT_ORDER) {
       url.searchParams.delete('sort')
       url.searchParams.delete('order')
@@ -69,10 +97,14 @@
     url.searchParams.set('order', sortOrder)
   }
 
-  const initialSort = readSortParamsFromLocation()
+  const initialParams = readParamsFromLocation()
 
-  let sortBy = $state<LogSortBy>(initialSort.sortBy)
-  let sortOrder = $state<LogSortOrder>(initialSort.sortOrder)
+  let searchQuery = $state(initialParams.searchQuery)
+  let severityFilter = $state<
+    'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error'
+  >(initialParams.severityFilter)
+  let sortBy = $state<LogSortBy>(initialParams.sortBy)
+  let sortOrder = $state<LogSortOrder>(initialParams.sortOrder)
   let selectedLogIds = $state<string[]>([])
   let isDeleting = $state(false)
 
@@ -103,9 +135,14 @@
   $effect(() => {
     if (typeof window === 'undefined') return
     const nextUrl = new URL(window.location.href)
-    applySortParams(nextUrl)
+    applyParams(nextUrl)
     if (nextUrl.search === window.location.search) return
-    window.history.replaceState(window.history.state, '', nextUrl)
+    try {
+      replaceState(nextUrl, {})
+    } catch {
+      // Component tests can run before SvelteKit router bootstraps.
+      window.history.replaceState(window.history.state, '', nextUrl)
+    }
   })
 
   function severityBucket(
@@ -488,7 +525,9 @@
                   aria-label="Sort by service"
                 >
                   Service
-                  <span class="sort-indicator">{getSortIndicator('service')}</span>
+                  <span class="sort-indicator"
+                    >{getSortIndicator('service')}</span
+                  >
                 </button>
               </th>
               <th aria-sort={getAriaSort('severity')}>
@@ -499,7 +538,9 @@
                   aria-label="Sort by severity"
                 >
                   Severity
-                  <span class="sort-indicator">{getSortIndicator('severity')}</span>
+                  <span class="sort-indicator"
+                    >{getSortIndicator('severity')}</span
+                  >
                 </button>
               </th>
               <th aria-sort={getAriaSort('body')}>
@@ -521,7 +562,8 @@
                   aria-label="Sort by trace"
                 >
                   Trace
-                  <span class="sort-indicator">{getSortIndicator('trace')}</span>
+                  <span class="sort-indicator">{getSortIndicator('trace')}</span
+                  >
                 </button>
               </th>
               <th aria-sort={getAriaSort('span')}>
@@ -549,8 +591,14 @@
                     aria-label={`Select log ${log.id}`}
                   />
                 </td>
-                <td class="timestamp" title={formatLogTimeTitle(log)}>{formatLogTime(log)}</td>
-                <td><ServiceBadge serviceName={log.serviceName || 'unknown'} /></td>
+                <td class="timestamp" title={formatLogTimeTitle(log)}
+                  >{formatLogTime(log)}</td
+                >
+                <td
+                  ><ServiceBadge
+                    serviceName={log.serviceName || 'unknown'}
+                  /></td
+                >
                 <td>
                   <span
                     class={`severity-badge severity-${severityBucket(log)}`}
