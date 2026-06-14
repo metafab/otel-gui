@@ -91,6 +91,7 @@ export interface TraceStore {
   getServiceMap(traceId?: string): ServiceMapData
 
   // Trace writes
+  clearTraces(): void
   deleteTraces(traceIds: string[]): number
 
   // Log reads
@@ -99,10 +100,8 @@ export interface TraceStore {
   getLog(logId: string): TraceLogDetail | undefined
 
   // Log writes
+  clearLogs(): void
   deleteLogs(logIds: string[]): number
-
-  // Global reset
-  clear(): void
 
   // Infrastructure
   subscribe(fn: () => void): () => void

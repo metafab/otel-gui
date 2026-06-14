@@ -30,7 +30,7 @@ pnpm run format:check
 
 ## Architecture
 
-- **Routes**: `/v1/traces` + `/v1/logs` (OTLP receivers), `/api/traces` (list + clear/delete-selected), `/api/traces/:id` (detail), `/api/traces/:id/export` (single export), `/api/traces/export` (bulk export), `/api/traces/import/preview` + `/api/traces/import` (import flow), `/api/service-map` (service graph), `/api/config` (runtime config + persistence status)
+- **Routes**: `/v1/traces` + `/v1/logs` (OTLP receivers), `/api/traces` (list + clear/delete-selected), `/api/traces/:id` (detail), `/api/traces/:id/export` (single export), `/api/traces/export` (bulk export), `/api/traces/import/preview` + `/api/traces/import` (import flow), `/api/traces/:id/logs` (trace-scoped logs), `/api/traces/:id/logs/:logId` (log detail), `/api/logs` (global log list + clear/delete-selected), `/api/service-map` (service graph), `/api/config` (runtime config + persistence status)
 - **Server-only code**: `$lib/server/` — never bundled for client
 - **Utilities**: `$lib/utils/` — shared helpers for OTLP data transformation
 - **Types**: `$lib/types.ts` — all interfaces (use `import type`)

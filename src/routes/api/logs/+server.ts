@@ -1,11 +1,10 @@
-// API endpoint to get trace list
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import { traceStore } from '$lib/server/traceStore'
 
 export const GET: RequestHandler = async ({ url }) => {
   const limitParam = url.searchParams.get('limit')
-  const DEFAULT_LIMIT = 100
+  const DEFAULT_LIMIT = 500
 
   let limit = DEFAULT_LIMIT
 
@@ -13,17 +12,16 @@ export const GET: RequestHandler = async ({ url }) => {
     const parsed = Number.parseInt(limitParam, 10)
 
     if (!Number.isNaN(parsed) && parsed > 0) {
-      limit = Math.min(parsed, traceStore.maxTraces)
+      limit = Math.min(parsed, traceStore.maxLogs)
     }
   }
-  const traces = traceStore.getTraceList(limit)
 
-  return json(traces)
+  return json(traceStore.getLogList(limit))
 }
 
 export const DELETE: RequestHandler = async ({ request }) => {
   if (!request) {
-    traceStore.clearTraces()
+    traceStore.clearLogs()
     return json({ success: true, deletedCount: null, mode: 'all' })
   }
 
@@ -32,14 +30,14 @@ export const DELETE: RequestHandler = async ({ request }) => {
   if (contentType.includes('application/json')) {
     try {
       const body = await request.json()
-      const traceIds = body?.traceIds
+      const logIds = body?.logIds
 
-      if (Array.isArray(traceIds)) {
-        const validTraceIds = traceIds.filter(
-          (traceId: unknown): traceId is string => typeof traceId === 'string',
+      if (Array.isArray(logIds)) {
+        const validLogIds = logIds.filter(
+          (logId: unknown): logId is string => typeof logId === 'string',
         )
 
-        const deletedCount = traceStore.deleteTraces(validTraceIds)
+        const deletedCount = traceStore.deleteLogs(validLogIds)
         return json({ success: true, deletedCount, mode: 'selected' })
       }
     } catch {
@@ -47,6 +45,6 @@ export const DELETE: RequestHandler = async ({ request }) => {
     }
   }
 
-  traceStore.clearTraces()
+  traceStore.clearLogs()
   return json({ success: true, deletedCount: null, mode: 'all' })
 }

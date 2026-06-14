@@ -9,7 +9,8 @@ import errorTrace from '../../../tests/fixtures/error-trace.json'
 import outOfOrderSpans from '../../../tests/fixtures/out-of-order-spans.json'
 
 beforeEach(() => {
-  traceStore.clear()
+  traceStore.clearTraces()
+  traceStore.clearLogs()
 })
 
 // ─── ingest + getTraceList ───────────────────────────────────────────────────
@@ -357,7 +358,7 @@ describe('traceStore.subscribe', () => {
     const unsub = traceStore.subscribe(() => {
       callCount++
     })
-    traceStore.clear()
+    traceStore.clearTraces()
     unsub()
     expect(callCount).toBe(1)
   })

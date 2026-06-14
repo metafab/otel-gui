@@ -14,6 +14,10 @@ import { GET as getTraceLog } from './api/traces/[traceId]/logs/[logId]/+server'
 import { GET as getServiceMap } from './api/service-map/+server'
 import { GET as getMetrics } from './metrics/+server'
 import { GET as getConfig } from './api/config/+server'
+import {
+  GET as getLogList,
+  DELETE as deleteLogs,
+} from './api/logs/+server'
 import { POST as postOtlpMetrics } from './v1/metrics/+server'
 import { POST as postOtlpLogs } from './v1/logs/+server'
 import { traceStore } from '$lib/server/traceStore'
@@ -22,6 +26,7 @@ import simpleLog from '../../tests/fixtures/simple-log.json'
 import multiServiceTrace from '../../tests/fixtures/multi-service-trace.json'
 import errorTrace from '../../tests/fixtures/error-trace.json'
 import outOfOrderSpans from '../../tests/fixtures/out-of-order-spans.json'
+import unlinkedLog from '../../tests/fixtures/log-unlinked.json'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -64,7 +69,8 @@ function makeJsonRequest(path: string, body: unknown): Request {
 }
 
 beforeEach(() => {
-  traceStore.clear()
+  traceStore.clearTraces()
+  traceStore.clearLogs()
 })
 
 // ─── POST /v1/traces ─────────────────────────────────────────────────────────
@@ -449,7 +455,7 @@ describe('GET /api/traces/:traceId/export', () => {
     const exportResponse = await exportTrace({ params: { traceId } } as any)
     const exportedPayload = await exportResponse.json()
 
-    traceStore.clear()
+    traceStore.clearTraces()
     await POST({
       request: makePostRequest(exportedPayload.traces[0]),
     } as any)
@@ -515,7 +521,7 @@ describe('POST /api/traces/import/preview', () => {
     const exportResponse = await exportTrace({ params: { traceId } } as any)
     const exportedPayload = await exportResponse.json()
 
-    traceStore.clear()
+    traceStore.clearTraces()
 
     const previewResponse = await previewTraceImport({
       request: makeJsonRequest('/api/traces/import/preview', {
@@ -619,7 +625,7 @@ describe('POST /api/traces/import', () => {
     const exportResponse = await exportTrace({ params: { traceId } } as any)
     const exportedPayload = await exportResponse.json()
 
-    traceStore.clear()
+    traceStore.clearTraces()
 
     const importResponse = await importTraces({
       request: makeJsonRequest('/api/traces/import', {
@@ -692,7 +698,7 @@ describe('POST /api/traces/import', () => {
       traces: exportedTraces.flatMap((exported) => exported.traces),
     }
 
-    traceStore.clear()
+    traceStore.clearTraces()
 
     const importResponse = await importTraces({
       request: makeJsonRequest('/api/traces/import', {
@@ -963,5 +969,177 @@ describe('GET /api/config', () => {
     if (body.persistence.unavailableReason != null) {
       expect(typeof body.persistence.unavailableReason).toBe('string')
     }
+  })
+})
+
+// ─── GET /api/logs ────────────────────────────────────────────────────────────
+
+describe('GET /api/logs', () => {
+  it('returns empty array when no logs have been ingested', async () => {
+    const response = await getLogList({ url: makeUrl('/api/logs') } as any)
+    const logs = await response.json()
+    expect(logs).toEqual([])
+  })
+
+  it('returns correlated logs', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+    await postOtlpLogs({ request: makeLogsPostRequest(simpleLog) } as any)
+
+    const response = await getLogList({ url: makeUrl('/api/logs') } as any)
+    const logs = await response.json()
+
+    expect(logs).toHaveLength(1)
+    expect(logs[0].traceId).not.toBeNull()
+    expect(logs[0].severityText).toBe('ERROR')
+  })
+
+  it('returns uncorrelated logs with null traceId and spanId', async () => {
+    await postOtlpLogs({
+      request: makeLogsPostRequest(unlinkedLog),
+    } as any)
+
+    const response = await getLogList({ url: makeUrl('/api/logs') } as any)
+    const logs = await response.json()
+
+    expect(logs.length).toBeGreaterThan(0)
+    for (const log of logs) {
+      expect(log.traceId).toBeNull()
+      expect(log.spanId).toBeNull()
+    }
+  })
+
+  it('returns both correlated and uncorrelated logs together', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+    await postOtlpLogs({ request: makeLogsPostRequest(simpleLog) } as any)
+    await postOtlpLogs({
+      request: makeLogsPostRequest(unlinkedLog),
+    } as any)
+
+    const response = await getLogList({ url: makeUrl('/api/logs') } as any)
+    const logs = await response.json()
+
+    expect(logs.length).toBe(4) // 1 correlated + 3 unlinked
+    expect(logs.some((l: any) => l.traceId !== null)).toBe(true)
+    expect(logs.some((l: any) => l.traceId === null)).toBe(true)
+  })
+
+  it('respects the limit query param', async () => {
+    await postOtlpLogs({
+      request: makeLogsPostRequest(unlinkedLog),
+    } as any)
+
+    const response = await getLogList({
+      url: makeUrl('/api/logs', { limit: '1' }),
+    } as any)
+    const logs = await response.json()
+
+    expect(logs).toHaveLength(1)
+  })
+
+  it('returns logs sorted newest-first', async () => {
+    await postOtlpLogs({
+      request: makeLogsPostRequest(unlinkedLog),
+    } as any)
+
+    const response = await getLogList({ url: makeUrl('/api/logs') } as any)
+    const logs = await response.json()
+
+    for (let i = 1; i < logs.length; i++) {
+      const prev = BigInt(logs[i - 1].timeUnixNano || logs[i - 1].observedTimeUnixNano || '0')
+      const curr = BigInt(logs[i].timeUnixNano || logs[i].observedTimeUnixNano || '0')
+      expect(prev >= curr).toBe(true)
+    }
+  })
+
+  it('each log item has required LogListItem fields', async () => {
+    await postOtlpLogs({
+      request: makeLogsPostRequest(unlinkedLog),
+    } as any)
+
+    const response = await getLogList({ url: makeUrl('/api/logs') } as any)
+    const [log] = await response.json()
+
+    expect(typeof log.id).toBe('string')
+    expect(log.traceId === null || typeof log.traceId === 'string').toBe(true)
+    expect(log.spanId === null || typeof log.spanId === 'string').toBe(true)
+    expect(typeof log.timeUnixNano).toBe('string')
+    expect(typeof log.observedTimeUnixNano).toBe('string')
+    expect(typeof log.severityNumber).toBe('number')
+    expect(typeof log.severityText).toBe('string')
+    expect(typeof log.serviceName).toBe('string')
+  })
+})
+
+// ─── DELETE /api/logs ────────────────────────────────────────────────────────
+
+describe('DELETE /api/logs', () => {
+  it('clears all logs when called with no body', async () => {
+    await postOtlpLogs({ request: makeLogsPostRequest(simpleLog) } as any)
+    await postOtlpLogs({ request: makeLogsPostRequest(unlinkedLog) } as any)
+
+    const clearResponse = await deleteLogs({} as any)
+    const body = await clearResponse.json()
+    expect(body.success).toBe(true)
+    expect(body.mode).toBe('all')
+
+    const listResponse = await getLogList({ url: makeUrl('/api/logs') } as any)
+    const logs = await listResponse.json()
+    expect(logs).toHaveLength(0)
+  })
+
+  it('deletes only selected log IDs when logIds are provided', async () => {
+    await postOtlpLogs({ request: makeLogsPostRequest(simpleLog) } as any)
+    await postOtlpLogs({ request: makeLogsPostRequest(unlinkedLog) } as any)
+
+    const listResponse = await getLogList({ url: makeUrl('/api/logs') } as any)
+    const logs = await listResponse.json()
+    expect(logs.length).toBeGreaterThan(1)
+
+    const idToDelete = logs[0].id
+
+    const deleteRequest = new Request('http://localhost/api/logs', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ logIds: [idToDelete] }),
+    })
+
+    const deleteResponse = await deleteLogs({ request: deleteRequest } as any)
+    const deleteBody = await deleteResponse.json()
+
+    expect(deleteResponse.status).toBe(200)
+    expect(deleteBody.success).toBe(true)
+    expect(deleteBody.mode).toBe('selected')
+    expect(deleteBody.deletedCount).toBe(1)
+
+    const afterResponse = await getLogList({ url: makeUrl('/api/logs') } as any)
+    const remaining = await afterResponse.json()
+    expect(remaining).toHaveLength(logs.length - 1)
+    expect(remaining.find((l: any) => l.id === idToDelete)).toBeUndefined()
+  })
+
+  it('does not affect traces when clearing logs', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+    await postOtlpLogs({ request: makeLogsPostRequest(simpleLog) } as any)
+
+    await deleteLogs({} as any)
+
+    const traceListResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const traces = await traceListResponse.json()
+    expect(traces).toHaveLength(1)
+  })
+
+  it('returns 400 for malformed JSON body', async () => {
+    const deleteRequest = new Request('http://localhost/api/logs', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{bad json',
+    })
+
+    const response = await deleteLogs({ request: deleteRequest } as any)
+    const body = await response.json()
+    expect(response.status).toBe(400)
+    expect(body.error).toMatch(/malformed json/i)
   })
 })

@@ -300,9 +300,8 @@ export function createInternalTraceStore(
     return buildServiceMap(tracesToProcess)
   }
 
-  function clear(): void {
+  function clearTraces(): void {
     traces.clear()
-    logs.clear()
     notifyListeners()
   }
 
@@ -377,6 +376,11 @@ export function createInternalTraceStore(
     return { id: logId, ...log }
   }
 
+  function clearLogs(): void {
+    logs.clear()
+    notifyListeners()
+  }
+
   function deleteLogs(logIds: string[]): number {
     if (!Array.isArray(logIds) || logIds.length === 0) return 0
 
@@ -419,8 +423,9 @@ export function createInternalTraceStore(
     getLogList,
     getTraceLogs,
     getLog,
+    clearLogs,
     deleteLogs,
-    clear,
+    clearTraces,
     subscribe,
     listAllTraces,
     replaceAllTraces,
