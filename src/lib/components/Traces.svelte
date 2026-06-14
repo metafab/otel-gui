@@ -598,6 +598,7 @@
                   >
                 </button>
               </th>
+              <th>Logs</th>
               <th aria-sort={getAriaSort('time')}>
                 <button
                   type="button"
@@ -663,6 +664,7 @@
                   >{formattedDuration.simple}</td
                 >
                 <td class="span-count">{trace.spanCount}</td>
+                <td class="span-count">{trace.logCount ?? 0}</td>
                 <td class="timestamp" title={trace.startTime}>
                   {new Date(trace.startTime).toLocaleString()}
                 </td>
@@ -949,9 +951,12 @@
     width: 90px;
   }
   th:nth-child(6) {
-    width: 175px;
+    width: 90px;
   }
   th:nth-child(7) {
+    width: 175px;
+  }
+  th:nth-child(8) {
     width: 95px;
   }
 

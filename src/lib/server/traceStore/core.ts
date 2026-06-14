@@ -54,6 +54,8 @@ export function createInternalTraceStore(
 ): InternalTraceStore {
   const traces = new Map<string, StoredTrace>()
   const logs = new Map<string, StoredLog>()
+  const traceLogCounts = new Map<string, number>()
+  const logTraceIdByLogId = new Map<string, string>()
   const listeners = new Set<() => void>()
 
   function notifyListeners() {
@@ -68,6 +70,29 @@ export function createInternalTraceStore(
       if (!oldestTraceId) break
       traces.delete(oldestTraceId)
     }
+  }
+
+  function setTraceLogCount(traceId: string) {
+    const trace = traces.get(traceId)
+    if (!trace) return
+    trace.logCount = traceLogCounts.get(traceId) || 0
+  }
+
+  function incrementTraceLogCount(traceId: string) {
+    if (!traceId) return
+    traceLogCounts.set(traceId, (traceLogCounts.get(traceId) || 0) + 1)
+    setTraceLogCount(traceId)
+  }
+
+  function decrementTraceLogCount(traceId: string) {
+    if (!traceId) return
+    const next = (traceLogCounts.get(traceId) || 0) - 1
+    if (next > 0) {
+      traceLogCounts.set(traceId, next)
+    } else {
+      traceLogCounts.delete(traceId)
+    }
+    setTraceLogCount(traceId)
   }
 
   function ingestSpans(resourceSpans: any[]): void {
@@ -100,6 +125,7 @@ export function createInternalTraceStore(
               updatedAt: now,
               spanCount: 0,
               hasError: false,
+              logCount: traceLogCounts.get(traceId) || 0,
               spans: new Map(),
             }
             traces.set(traceId, trace)
@@ -212,11 +238,30 @@ export function createInternalTraceStore(
           }
 
           const logId = createLogId(logRecord, index)
+
+          const previousTraceId = logTraceIdByLogId.get(logId)
+          if (previousTraceId) {
+            decrementTraceLogCount(previousTraceId)
+            logTraceIdByLogId.delete(logId)
+          }
+
           logs.set(logId, storedLog)
+
+          if (traceId) {
+            logTraceIdByLogId.set(logId, traceId)
+            incrementTraceLogCount(traceId)
+          }
 
           if (logs.size > maxLogs) {
             const oldestId = logs.keys().next().value
-            if (oldestId) logs.delete(oldestId)
+            if (oldestId) {
+              logs.delete(oldestId)
+              const evictedTraceId = logTraceIdByLogId.get(oldestId)
+              if (evictedTraceId) {
+                decrementTraceLogCount(evictedTraceId)
+                logTraceIdByLogId.delete(oldestId)
+              }
+            }
           }
 
           if (!traceId) continue
@@ -233,6 +278,7 @@ export function createInternalTraceStore(
               updatedAt: now,
               spanCount: 0,
               hasError: false,
+              logCount: traceLogCounts.get(traceId) || 0,
               spans: new Map(),
             }
             traces.set(traceId, trace)
@@ -283,6 +329,7 @@ export function createInternalTraceStore(
       ),
       durationMs: getDurationMs(trace.startTimeUnixNano, trace.endTimeUnixNano),
       spanCount: trace.spanCount,
+      logCount: traceLogCounts.get(trace.traceId) ?? trace.logCount ?? 0,
       hasError: trace.hasError,
       startTime: formatTimestamp(trace.startTimeUnixNano),
       updatedAt: trace.updatedAt,
@@ -378,6 +425,11 @@ export function createInternalTraceStore(
 
   function clearLogs(): void {
     logs.clear()
+    logTraceIdByLogId.clear()
+    traceLogCounts.clear()
+    for (const trace of traces.values()) {
+      trace.logCount = 0
+    }
     notifyListeners()
   }
 
@@ -386,7 +438,14 @@ export function createInternalTraceStore(
 
     let deleted = 0
     for (const id of logIds) {
-      if (logs.delete(id)) deleted++
+      if (logs.delete(id)) {
+        deleted++
+        const traceId = logTraceIdByLogId.get(id)
+        if (traceId) {
+          decrementTraceLogCount(traceId)
+          logTraceIdByLogId.delete(id)
+        }
+      }
     }
 
     if (deleted > 0) notifyListeners()

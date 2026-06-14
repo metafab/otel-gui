@@ -190,9 +190,11 @@ describe('traceStore.ingestLogs', () => {
     traceStore.ingestLogs(simpleLog.resourceLogs)
 
     const traceId = traceStore.getTraceList()[0].traceId
+    const traceItem = traceStore.getTraceList().find((item) => item.traceId === traceId)
     const logs = traceStore.getTraceLogs(traceId)
 
     expect(logs).toHaveLength(1)
+    expect(traceItem?.logCount).toBe(1)
 
     const [log] = logs
     expect(log.traceId).toBe('5B8EFFF798038103D269B633813FC60C')
@@ -206,6 +208,7 @@ describe('traceStore.ingestLogs', () => {
     expect(traceItem).toBeDefined()
     expect(traceItem.traceId).toBe('5B8EFFF798038103D269B633813FC60C')
     expect(traceItem.serviceName).toBe('frontend')
+    expect(traceItem.logCount).toBe(1)
   })
 
   it('sets hasError when log severity is error or above', () => {
@@ -227,14 +230,36 @@ describe('traceStore.ingestLogs', () => {
   })
 
   it('supports deleting selected global logs and clearing all logs', () => {
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
     traceStore.ingestLogs(unlinkedLog.resourceLogs)
+    traceStore.ingestLogs(simpleLog.resourceLogs)
+
+    const correlatedTraceId = traceStore.getTraceList()[0].traceId
+    expect(
+      traceStore.getTraceList().find((trace) => trace.traceId === correlatedTraceId)
+        ?.logCount,
+    ).toBe(1)
 
     const initial = traceStore.getLogList(10)
-    expect(initial).toHaveLength(3)
+    expect(initial).toHaveLength(4)
 
     const deletedCount = traceStore.deleteLogs([initial[0].id])
     expect(deletedCount).toBe(1)
-    expect(traceStore.getLogList(10)).toHaveLength(2)
+    expect(traceStore.getLogList(10)).toHaveLength(3)
+
+    const remainingCorrelated = traceStore
+      .getLogList(10)
+      .find((log) => log.traceId === correlatedTraceId)
+    expect(remainingCorrelated).toBeDefined()
+
+    if (remainingCorrelated) {
+      traceStore.deleteLogs([remainingCorrelated.id])
+    }
+
+    expect(
+      traceStore.getTraceList().find((trace) => trace.traceId === correlatedTraceId)
+        ?.logCount,
+    ).toBe(0)
 
     traceStore.clearLogs()
     expect(traceStore.getLogList(10)).toHaveLength(0)

@@ -150,6 +150,8 @@ describe('traces/[traceId] page search UI', () => {
       expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
     })
 
+    expect(screen.getByText('0 logs')).toBeInTheDocument()
+
     await waitFor(() => {
       expect(
         container.querySelector('[data-span-id="child-hidden-span"]'),

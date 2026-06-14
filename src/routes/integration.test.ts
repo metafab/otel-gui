@@ -382,6 +382,22 @@ describe('GET /api/traces/:traceId', () => {
     expect(trace.traceId).toBe(traceId)
     expect(typeof trace.spans).toBe('object')
     expect(Object.keys(trace.spans)).toHaveLength(1)
+    expect(trace.logCount).toBe(0)
+  })
+
+  it('returns trace detail with correlated logCount', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+    await postOtlpLogs({ request: makeLogsPostRequest(simpleLog) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const [{ traceId }] = await listResponse.json()
+
+    const response = await getTrace({ params: { traceId } } as any)
+    const trace = await response.json()
+
+    expect(trace.logCount).toBe(1)
   })
 
   it('includes resolved rootSpanName in the response', async () => {

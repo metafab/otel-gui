@@ -49,6 +49,7 @@ export interface TraceListItem {
   serviceName: string
   durationMs: number
   spanCount: number
+  logCount?: number
   hasError: boolean
   startTime: string // ISO timestamp for display
   updatedAt: number // epoch ms, copied from StoredTrace

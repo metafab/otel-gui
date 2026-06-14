@@ -46,6 +46,8 @@
       >{trace.spanCount} span{trace.spanCount !== 1 ? 's' : ''}</span
     >
     <span class="separator">•</span>
+    <span class="logs">{trace.logCount ?? 0} log{(trace.logCount ?? 0) !== 1 ? 's' : ''}</span>
+    <span class="separator">•</span>
     <span class="services"
       >{serviceCount} service{serviceCount !== 1 ? 's' : ''}</span
     >
