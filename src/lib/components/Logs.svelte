@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import LogsFilter from '$lib/components/LogsFilter.svelte'
   import type { LogListItem } from '$lib/types'
   import { formatTimestampLocal } from '$lib/utils/time'
@@ -78,6 +79,18 @@
 
     try {
       return formatTimestampLocal(ts)
+    } catch {
+      return '-'
+    }
+  }
+
+  function formatLogTimeTitle(log: LogListItem): string {
+    const ts = log.timeUnixNano || log.observedTimeUnixNano
+    if (!ts) return '-'
+
+    try {
+      const ms = Number(BigInt(ts) / 1_000_000n)
+      return new Date(ms).toISOString()
     } catch {
       return '-'
     }
@@ -315,8 +328,8 @@
                     aria-label={`Select log ${log.id}`}
                   />
                 </td>
-                <td class="timestamp">{formatLogTime(log)}</td>
-                <td>{log.serviceName || 'unknown'}</td>
+                <td class="timestamp" title={formatLogTimeTitle(log)}>{formatLogTime(log)}</td>
+                <td><ServiceBadge serviceName={log.serviceName || 'unknown'} /></td>
                 <td>
                   <span
                     class={`severity-badge severity-${severityBucket(log)}`}
@@ -348,7 +361,7 @@
   .logs-panel {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0;
     min-height: 0;
     flex: 1;
   }
