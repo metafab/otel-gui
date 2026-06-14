@@ -1,6 +1,7 @@
 <script lang="ts">
   import ChevronIcon from '$lib/components/ChevronIcon.svelte'
   import CopyButton from '$lib/components/CopyButton.svelte'
+  import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import ServiceMap from '$lib/components/ServiceMap.svelte'
   import { formatTimestamp, formatTimestampLocal } from '$lib/utils/time'
   import type { StoredTrace, ServiceMapData } from '$lib/types'
@@ -37,7 +38,7 @@
     />
   </div>
   <div class="trace-meta">
-    <span class="service">{trace.serviceName}</span>
+    <ServiceBadge serviceName={trace.serviceName} />
     <span class="separator">•</span>
     <span class="root-span">{trace.rootSpanName}</span>
     <span class="separator">•</span>
@@ -250,11 +251,6 @@
 
   .separator {
     color: var(--border-sep);
-  }
-
-  .service {
-    font-weight: 600;
-    color: var(--accent);
   }
 
   .root-span {

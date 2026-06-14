@@ -462,7 +462,6 @@ a:hover {
   line-height: 1;
 }
 
-/* Shared: keyboard shortcut help button (appears in both pages) */
 .shortcut-help-btn {
   padding: 0.5rem 0.75rem;
   background: var(--bg-surface);

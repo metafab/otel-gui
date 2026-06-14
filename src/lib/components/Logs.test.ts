@@ -154,9 +154,23 @@ describe('Logs', () => {
     const searchInput = screen.getByLabelText('Search logs') as HTMLInputElement
     expect(searchInput.value).toBe('worker')
 
-    const severitySelect = screen.getByLabelText('Severity') as HTMLSelectElement
+    const severitySelect = screen.getByLabelText(
+      'Severity',
+    ) as HTMLSelectElement
     expect(severitySelect.value).toBe('info')
 
     window.history.replaceState(window.history.state, '', originalUrl)
+  })
+
+  it('renders span links to trace details with spanId query', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleLogs,
+    } as Response)
+
+    render(Logs)
+
+    const spanLink = await screen.findByRole('link', { name: 'span-1' })
+    expect(spanLink).toHaveAttribute('href', '/traces/trace-1?spanId=span-1')
   })
 })

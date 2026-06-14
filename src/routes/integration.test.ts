@@ -15,6 +15,7 @@ import { GET as getServiceMap } from './api/service-map/+server'
 import { GET as getMetrics } from './metrics/+server'
 import { GET as getConfig } from './api/config/+server'
 import { GET as getLogList, DELETE as deleteLogs } from './api/logs/+server'
+import { GET as getLog } from './api/logs/[logId]/+server'
 import { POST as postOtlpMetrics } from './v1/metrics/+server'
 import { POST as postOtlpLogs } from './v1/logs/+server'
 import { traceStore } from '$lib/server/traceStore'
@@ -1101,6 +1102,35 @@ describe('GET /api/logs', () => {
     expect(typeof log.severityNumber).toBe('number')
     expect(typeof log.severityText).toBe('string')
     expect(typeof log.serviceName).toBe('string')
+  })
+})
+
+// ─── GET /api/logs/:logId ─────────────────────────────────────────────────────
+
+describe('GET /api/logs/:logId', () => {
+  it('returns 404 for unknown logId', async () => {
+    await expect(
+      getLog({
+        params: { logId: 'missing-log-id' },
+      } as any),
+    ).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('returns full log detail payload for existing log', async () => {
+    await postOtlpLogs({ request: makeLogsPostRequest(simpleLog) } as any)
+
+    const listResponse = await getLogList({
+      url: makeUrl('/api/logs'),
+    } as any)
+    const logs = await listResponse.json()
+
+    const response = await getLog({
+      params: { logId: logs[0].id },
+    } as any)
+    const detail = await response.json()
+
+    expect(detail.id).toBe(logs[0].id)
+    expect(detail.attributes['retry_count']).toBe(2)
   })
 })
 

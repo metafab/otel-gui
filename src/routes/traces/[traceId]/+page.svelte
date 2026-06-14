@@ -7,6 +7,7 @@
   import TraceHeader from '$lib/components/TraceHeader.svelte'
   import WaterfallRow from '$lib/components/WaterfallRow.svelte'
   import { traceStore } from '$lib/stores/traces.svelte'
+  import { shouldUseHistoryBack } from '$lib/utils/backNavigation'
   import { isInputFocused } from '$lib/utils/keyboard'
   import { buildSpanTree, flattenSpanTree } from '$lib/utils/spans'
   import { findMatchingSpanIds } from '$lib/utils/spanSearch'
@@ -572,19 +573,15 @@
 
   function handleBack() {
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-      try {
-        if (document.referrer) {
-          const referrer = new URL(document.referrer)
-          if (
-            referrer.origin === window.location.origin &&
-            referrer.pathname === '/'
-          ) {
-            window.history.back()
-            return
-          }
-        }
-      } catch {
-        // Fall through to the plain list route when the referrer is invalid.
+      if (
+        shouldUseHistoryBack(
+          document.referrer,
+          window.location.origin,
+          '/',
+        )
+      ) {
+        window.history.back()
+        return
       }
     }
 

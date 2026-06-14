@@ -294,4 +294,42 @@ describe('traces/[traceId] page search UI', () => {
 
     expect(mockGoto).toHaveBeenCalledWith('/')
   })
+
+  it('navigates back to trace list on Esc when no referrer is available', async () => {
+    Object.defineProperty(document, 'referrer', {
+      configurable: true,
+      get: () => '',
+    })
+
+    render(TracePage)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+    })
+
+    await fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(mockGoto).toHaveBeenCalledWith('/')
+  })
+
+  it('clears focused span search on Esc before navigating back', async () => {
+    render(TracePage)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+    })
+
+    const searchInput = screen.getByPlaceholderText('Search spans...')
+    await fireEvent.input(searchInput, {
+      target: { value: 'select products' },
+    })
+
+    expect((searchInput as HTMLInputElement).value).toBe('select products')
+
+    searchInput.focus()
+    await fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect((searchInput as HTMLInputElement).value).toBe('')
+    expect(mockGoto).not.toHaveBeenCalled()
+  })
 })

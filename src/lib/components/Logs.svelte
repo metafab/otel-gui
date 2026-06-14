@@ -413,6 +413,10 @@
     sortOrder = column === 'time' ? 'desc' : 'asc'
   }
 
+  function handleRowClick(logId: string) {
+    window.location.href = `/logs/${logId}`
+  }
+
   function toggleLogSelection(logId: string) {
     if (selectedLogIdSet.has(logId)) {
       selectedLogIds = selectedLogIds.filter((id) => id !== logId)
@@ -581,8 +585,14 @@
           </thead>
           <tbody>
             {#each sortedLogs as log (log.id)}
-              <tr class:selected={selectedLogIdSet.has(log.id)}>
-                <td class="select-col">
+              <tr
+                onclick={() => handleRowClick(log.id)}
+                class:selected={selectedLogIdSet.has(log.id)}
+              >
+                <td
+                  class="select-col"
+                  onclick={(event) => event.stopPropagation()}
+                >
                   <input
                     type="checkbox"
                     class="row-checkbox"
@@ -611,12 +621,28 @@
                 >
                 <td class="mono">
                   {#if log.traceId}
-                    <a href={`/traces/${log.traceId}`}>{log.traceId}</a>
+                    <a
+                      href={`/traces/${log.traceId}`}
+                      onclick={(event) => event.stopPropagation()}
+                    >
+                      {log.traceId}
+                    </a>
                   {:else}
                     <span class="muted">Unlinked</span>
                   {/if}
                 </td>
-                <td class="mono">{log.spanId || '-'}</td>
+                <td class="mono">
+                  {#if log.traceId && log.spanId}
+                    <a
+                      href={`/traces/${log.traceId}?spanId=${encodeURIComponent(log.spanId)}`}
+                      onclick={(event) => event.stopPropagation()}
+                    >
+                      {log.spanId}
+                    </a>
+                  {:else}
+                    {log.spanId || '-'}
+                  {/if}
+                </td>
               </tr>
             {/each}
           </tbody>
@@ -699,13 +725,21 @@
 
   .log-body {
     max-width: 520px;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   .muted {
     color: var(--text-secondary);
+  }
+
+  tbody tr {
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  tbody tr:hover {
+    background: var(--bg-surface-hover);
   }
 
   .severity-badge {
