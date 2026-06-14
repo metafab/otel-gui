@@ -76,9 +76,12 @@ export const POST: RequestHandler = async ({ request }) => {
       contentType.includes('application/x-protobuf') ||
       contentType.includes('application/protobuf')
     ) {
+      const responseContentType = contentType.includes('application/protobuf')
+        ? 'application/protobuf'
+        : 'application/x-protobuf'
       return new Response(new Uint8Array(0), {
         status: 200,
-        headers: { 'Content-Type': 'application/x-protobuf' },
+        headers: { 'Content-Type': responseContentType },
       })
     }
 
