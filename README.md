@@ -23,6 +23,8 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `t`/`l` to jump to Traces/Logs tabs, `m` to toggle Traces/Service Map, escape key to clear search and go back to the trace list, `?` for shortcuts help
 - **Error navigation** — jump between error spans with one key
 - **Span details** — attributes, events with timeline markers, resource attributes, instrumentation scope, span links, correlated logs
+- **Global logs workflow** — browse all logs in a dedicated tab, open full log details, and jump from logs to the owning trace/span
+- **Trace and log counts** — the trace list shows both span and correlated log counts, and trace detail summarizes correlated logs alongside spans/services/depth
 - **Collapse/expand** — hide subtrees in the waterfall for cleaner viewing
 - **Resizable panels** — drag splitters to resize the waterfall name column and the span details sidebar
 - **Dark mode** — toggle between light and dark themes
@@ -50,6 +52,10 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 ### Correlated logs
 
 ![Correlated logs](docs/screenshots/correlated-logs.png)
+
+### Global logs
+
+![Global logs](docs/screenshots/global-logs.png)
 
 ## 🛠️ Quick Start
 
