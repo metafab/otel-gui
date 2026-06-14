@@ -95,11 +95,28 @@
     if (e.key === '?' && !isInputFocused()) {
       e.preventDefault()
       showShortcuts = !showShortcuts
+      return
     }
+
+    // 't': switch directly to Traces tab
+    if (e.key === 't' && !isInputFocused()) {
+      e.preventDefault()
+      activeTab = 'traces'
+      return
+    }
+
+    // 'l': switch directly to Logs tab
+    if (e.key === 'l' && !isInputFocused()) {
+      e.preventDefault()
+      activeTab = 'logs'
+      return
+    }
+
     // 'm': toggle between Traces and Map tabs
     if (e.key === 'm' && !isInputFocused()) {
       e.preventDefault()
       activeTab = activeTab === 'traces' ? 'map' : 'traces'
+      return
     }
   }
 </script>
@@ -221,6 +238,8 @@
         keys: [isMac ? 'Option+⌫' : 'Alt+Delete'],
         description: 'Clear all traces (opens confirm dialog)',
       },
+      { keys: ['t'], description: 'Switch to Traces tab' },
+      { keys: ['l'], description: 'Switch to Logs tab' },
       { keys: ['m'], description: 'Toggle Traces / Service Map tab' },
       { keys: ['?'], description: 'Toggle keyboard shortcuts help' },
     ]}
