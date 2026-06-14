@@ -14,6 +14,29 @@
   // Connect to SSE stream for real-time trace updates
   traceStore.connectSSE()
 
+  function connectLogsCountSSE() {
+    $effect(() => {
+      if (typeof EventSource === 'undefined') return
+
+      const es = new EventSource('/api/logs/stream')
+
+      es.addEventListener('logs-count', (event: MessageEvent) => {
+        const parsed = Number.parseInt(event.data, 10)
+        if (!Number.isNaN(parsed)) {
+          logsBadgeTotal = parsed
+        }
+      })
+
+      es.onerror = () => {
+        // EventSource auto-reconnects.
+      }
+
+      return () => es.close()
+    })
+  }
+
+  connectLogsCountSSE()
+
   // Reactive state from store (for tab count badge only)
   const traces = $derived(traceStore.traces)
 
@@ -82,6 +105,7 @@
     triggerDeleteSelected: () => void
   } | null = $state(null)
   let logsTotal = $state(0)
+  let logsBadgeTotal = $state(0)
   let logsSelected = $state(0)
   let logsDeleting = $state(false)
 
@@ -153,7 +177,10 @@
         aria-selected={activeTab === 'logs'}
         class="tab-btn"
         class:active={activeTab === 'logs'}
-        onclick={() => (activeTab = 'logs')}>Logs</button
+        onclick={() => (activeTab = 'logs')}
+        >Logs {#if logsBadgeTotal > 0}<span class="tab-count"
+            >{logsBadgeTotal}</span
+          >{/if}</button
       >
       <button
         role="tab"

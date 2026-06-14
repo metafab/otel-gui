@@ -389,6 +389,29 @@
     void loadLogs()
   })
 
+  $effect(() => {
+    if (typeof EventSource === 'undefined') return
+
+    const es = new EventSource('/api/logs/stream')
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null
+
+    es.addEventListener('logs-count', () => {
+      if (refreshTimer !== null) clearTimeout(refreshTimer)
+      refreshTimer = setTimeout(() => {
+        void loadLogs()
+      }, 75)
+    })
+
+    es.onerror = () => {
+      // EventSource auto-reconnects.
+    }
+
+    return () => {
+      if (refreshTimer !== null) clearTimeout(refreshTimer)
+      es.close()
+    }
+  })
+
   export function triggerClearAll() {
     void clearAllLogs()
   }
