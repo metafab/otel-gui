@@ -188,4 +188,19 @@ describe('trace list page URL filters', () => {
     expect(url.searchParams.get('sort')).toBe('rootService')
     expect(url.searchParams.get('order')).toBe('asc')
   })
+
+  it('syncs logs tab selection into the URL', async () => {
+    render(Page)
+
+    mockReplaceState.mockClear()
+
+    await fireEvent.click(screen.getByRole('tab', { name: 'Logs' }))
+
+    await waitFor(() => {
+      expect(mockReplaceState).toHaveBeenCalled()
+    })
+
+    const url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
+    expect(url.searchParams.get('tab')).toBe('logs')
+  })
 })

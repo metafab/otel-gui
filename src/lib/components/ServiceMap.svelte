@@ -135,11 +135,22 @@
       ? Math.max(...layout.edges.map((e) => e.callCount))
       : 1,
   )
+
+  const otlpEndpoint = $derived.by(() => {
+    if (typeof window !== 'undefined') {
+      const { protocol, hostname, port } = window.location
+      return `${protocol}//${hostname}${port ? ':' + port : ''}/v1/traces`
+    }
+    return 'http://localhost:4318/v1/traces'
+  })
 </script>
 
 {#if data.nodes.length === 0}
-  <div class="empty-map">
-    <p>No service data yet — send traces to see the service map.</p>
+  <div class="empty">
+    <p>No traces received yet.</p>
+    <p class="hint">
+      Send OTLP traces to <code>{otlpEndpoint}</code>.
+    </p>
   </div>
 {:else}
   <div class="service-map-wrap" class:mini>
@@ -378,22 +389,6 @@
 
   .service-map-wrap.mini {
     border-radius: 6px;
-  }
-
-  .empty-map {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem 2rem;
-    color: var(--text-muted);
-    font-size: 0.875rem;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-  }
-
-  .empty-map p {
-    margin: 0;
   }
 
   svg {
