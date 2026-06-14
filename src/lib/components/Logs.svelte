@@ -385,6 +385,11 @@
     selectedLogIds = [...selectedLogIds, logId]
   }
 
+  function handleClearFilters() {
+    searchQuery = ''
+    severityFilter = 'all'
+  }
+
   $effect(() => {
     void loadLogs()
   })
@@ -445,6 +450,9 @@
     {#if sortedLogs.length === 0}
       <div class="empty">
         <p>No logs match the current filters.</p>
+        <button onclick={handleClearFilters} class="clear-filters-btn">
+          Clear Filters
+        </button>
       </div>
     {:else}
       <div class="table-wrapper">
@@ -687,6 +695,23 @@
     color: var(--text-secondary);
     background: var(--bg-surface-hover);
     border-color: var(--border);
+  }
+
+  .clear-filters-btn {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
+  }
+
+  .clear-filters-btn:hover {
+    background: var(--bg-muted);
+    border-color: var(--accent);
   }
 
   @media (max-width: 1024px) {

@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/svelte'
 import Logs from './Logs.svelte'
 
 const sampleLogs = [
@@ -97,5 +103,33 @@ describe('Logs', () => {
     await waitFor(() => {
       expect(screen.queryByText('checkout failed')).not.toBeInTheDocument()
     })
+  })
+
+  it('clears filters from filtered empty state', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleLogs,
+    } as Response)
+
+    render(Logs)
+
+    const searchInput = await screen.findByLabelText('Search logs')
+    await fireEvent.input(searchInput, { target: { value: 'no-match' } })
+
+    expect(
+      await screen.findByText('No logs match the current filters.'),
+    ).toBeInTheDocument()
+
+    const emptyState = screen
+      .getByText('No logs match the current filters.')
+      .closest('.empty')
+    expect(emptyState).not.toBeNull()
+
+    const clearButton = within(emptyState as HTMLElement).getByRole('button', {
+      name: 'Clear Filters',
+    })
+    await fireEvent.click(clearButton)
+
+    expect(await screen.findByText('checkout failed')).toBeInTheDocument()
   })
 })
