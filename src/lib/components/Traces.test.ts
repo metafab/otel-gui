@@ -120,7 +120,7 @@ describe('Traces', () => {
     expect(durationHeader).toHaveAttribute('aria-sort', 'none')
   })
 
-  it('syncs sort edits back into the URL', async () => {
+  it('syncs duration sort edits back into the URL', async () => {
     render(Traces)
 
     mockReplaceState.mockClear()
@@ -167,6 +167,33 @@ describe('Traces', () => {
     const url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
     expect(url.searchParams.get('sort')).toBe('rootService')
     expect(url.searchParams.get('order')).toBe('asc')
+  })
+
+  it('syncs logs sort edits back into the URL', async () => {
+    render(Traces)
+
+    mockReplaceState.mockClear()
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Sort by logs' }))
+
+    await waitFor(() => {
+      expect(mockReplaceState).toHaveBeenCalled()
+    })
+
+    let url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
+    expect(url.searchParams.get('sort')).toBe('logs')
+    expect(url.searchParams.get('order')).toBe('asc')
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Sort by logs' }))
+
+    await waitFor(() => {
+      const latestUrl = mockReplaceState.mock.calls.at(-1)?.[0] as URL
+      expect(latestUrl.searchParams.get('order')).toBe('desc')
+    })
+
+    url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
+    expect(url.searchParams.get('sort')).toBe('logs')
+    expect(url.searchParams.get('order')).toBe('desc')
   })
 
   it('shows traces retention footer', () => {

@@ -33,6 +33,7 @@
     | 'rootName'
     | 'duration'
     | 'spans'
+    | 'logs'
     | 'time'
     | 'status'
   type TraceSortOrder = 'asc' | 'desc'
@@ -46,6 +47,7 @@
       case 'rootName':
       case 'duration':
       case 'spans':
+      case 'logs':
       case 'time':
       case 'status':
         return rawValue
@@ -189,6 +191,9 @@
           break
         case 'spans':
           directionlessResult = a.spanCount - b.spanCount
+          break
+        case 'logs':
+          directionlessResult = (a.logCount ?? 0) - (b.logCount ?? 0)
           break
         case 'time':
           directionlessResult = a.startTime.localeCompare(b.startTime)
@@ -577,7 +582,17 @@
                   >
                 </button>
               </th>
-              <th>Logs</th>
+              <th aria-sort={getAriaSort('logs')}>
+                <button
+                  type="button"
+                  class="sortable-header"
+                  onclick={() => handleSort('logs')}
+                  aria-label="Sort by logs"
+                >
+                  Logs
+                  <span class="sort-indicator">{getSortIndicator('logs')}</span>
+                </button>
+              </th>
               <th aria-sort={getAriaSort('time')}>
                 <button
                   type="button"
