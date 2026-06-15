@@ -4,7 +4,11 @@ import { shouldUseHistoryBack } from './backNavigation'
 describe('shouldUseHistoryBack', () => {
   it('returns true for same-origin root referrers', () => {
     expect(
-      shouldUseHistoryBack('http://localhost/?search=checkout', 'http://localhost', '/'),
+      shouldUseHistoryBack(
+        'http://localhost/?search=checkout',
+        'http://localhost',
+        '/',
+      ),
     ).toBe(true)
   })
 
@@ -20,7 +24,11 @@ describe('shouldUseHistoryBack', () => {
       shouldUseHistoryBack('https://example.com/', 'http://localhost', '/'),
     ).toBe(false)
     expect(
-      shouldUseHistoryBack('http://localhost/traces/123', 'http://localhost', '/'),
+      shouldUseHistoryBack(
+        'http://localhost/traces/123',
+        'http://localhost',
+        '/',
+      ),
     ).toBe(false)
   })
 })

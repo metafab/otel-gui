@@ -574,11 +574,7 @@
   function handleBack() {
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       if (
-        shouldUseHistoryBack(
-          document.referrer,
-          window.location.origin,
-          '/',
-        )
+        shouldUseHistoryBack(document.referrer, window.location.origin, '/')
       ) {
         window.history.back()
         return

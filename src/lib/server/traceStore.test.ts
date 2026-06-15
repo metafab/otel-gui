@@ -190,7 +190,9 @@ describe('traceStore.ingestLogs', () => {
     traceStore.ingestLogs(simpleLog.resourceLogs)
 
     const traceId = traceStore.getTraceList()[0].traceId
-    const traceItem = traceStore.getTraceList().find((item) => item.traceId === traceId)
+    const traceItem = traceStore
+      .getTraceList()
+      .find((item) => item.traceId === traceId)
     const logs = traceStore.getTraceLogs(traceId)
 
     expect(logs).toHaveLength(1)
@@ -236,8 +238,9 @@ describe('traceStore.ingestLogs', () => {
 
     const correlatedTraceId = traceStore.getTraceList()[0].traceId
     expect(
-      traceStore.getTraceList().find((trace) => trace.traceId === correlatedTraceId)
-        ?.logCount,
+      traceStore
+        .getTraceList()
+        .find((trace) => trace.traceId === correlatedTraceId)?.logCount,
     ).toBe(1)
 
     const initial = traceStore.getLogList(10)
@@ -257,8 +260,9 @@ describe('traceStore.ingestLogs', () => {
     }
 
     expect(
-      traceStore.getTraceList().find((trace) => trace.traceId === correlatedTraceId)
-        ?.logCount,
+      traceStore
+        .getTraceList()
+        .find((trace) => trace.traceId === correlatedTraceId)?.logCount,
     ).toBe(0)
 
     traceStore.clearLogs()

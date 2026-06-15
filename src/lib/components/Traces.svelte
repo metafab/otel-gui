@@ -121,7 +121,9 @@
   }
 
   const initialFilterUrl =
-    typeof window !== 'undefined' ? new URL(window.location.href) : new URL('http://localhost/')
+    typeof window !== 'undefined'
+      ? new URL(window.location.href)
+      : new URL('http://localhost/')
   const initialFilters = readFilterParams(initialFilterUrl)
 
   let searchQuery = $state(initialFilters.searchQuery)
