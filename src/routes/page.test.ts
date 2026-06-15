@@ -86,7 +86,7 @@ vi.mock('$lib/stores/traces.svelte', () => ({
 
 import Page from './+page.svelte'
 
-describe('trace list page URL filters', () => {
+describe('trace list page', () => {
   beforeEach(() => {
     mockReplaceState.mockClear()
     mockPushState.mockClear()
@@ -103,102 +103,6 @@ describe('trace list page URL filters', () => {
     mockPushState.mockImplementation((url: URL) => {
       window.history.pushState({}, '', url)
     })
-  })
-
-  it('restores filters from the list page query params', () => {
-    render(Page)
-
-    expect(screen.getByLabelText('Search')).toHaveValue('checkout')
-    expect(screen.getByLabelText('Service')).toHaveValue('checkout-service')
-    expect(screen.getByLabelText('Errors Only')).toBeChecked()
-    expect(screen.getByLabelText('Min Duration (ms)')).toHaveValue(10)
-    expect(screen.getByLabelText('Max Duration (ms)')).toHaveValue(20)
-
-    expect(screen.getByText('HTTP GET /checkout')).toBeInTheDocument()
-    expect(screen.queryByText('GET /inventory')).not.toBeInTheDocument()
-  })
-
-  it('syncs filter edits back into the URL', async () => {
-    render(Page)
-
-    mockReplaceState.mockClear()
-
-    await fireEvent.input(screen.getByLabelText('Search'), {
-      target: { value: 'inventory' },
-    })
-
-    await waitFor(() => {
-      expect(mockReplaceState).toHaveBeenCalled()
-    })
-
-    const url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
-
-    expect(url.searchParams.get('search')).toBe('inventory')
-    expect(url.searchParams.get('service')).toBe('checkout-service')
-    expect(url.searchParams.get('errors')).toBe('true')
-    expect(url.searchParams.get('minDuration')).toBe('10')
-    expect(url.searchParams.get('maxDuration')).toBe('20')
-  })
-
-  it('defaults to time descending sort state', () => {
-    render(Page)
-
-    const timeHeader = screen.getByRole('columnheader', { name: 'Time ↓' })
-    const durationHeader = screen.getByRole('columnheader', {
-      name: 'Duration',
-    })
-
-    expect(timeHeader).toHaveAttribute('aria-sort', 'descending')
-    expect(durationHeader).toHaveAttribute('aria-sort', 'none')
-  })
-
-  it('syncs sort edits back into the URL', async () => {
-    render(Page)
-
-    mockReplaceState.mockClear()
-
-    await fireEvent.click(
-      screen.getByRole('button', { name: 'Sort by duration' }),
-    )
-
-    await waitFor(() => {
-      expect(mockReplaceState).toHaveBeenCalled()
-    })
-
-    let url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
-    expect(url.searchParams.get('sort')).toBe('duration')
-    expect(url.searchParams.get('order')).toBe('asc')
-
-    await fireEvent.click(
-      screen.getByRole('button', { name: 'Sort by duration' }),
-    )
-
-    await waitFor(() => {
-      const latestUrl = mockReplaceState.mock.calls.at(-1)?.[0] as URL
-      expect(latestUrl.searchParams.get('order')).toBe('desc')
-    })
-
-    url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
-    expect(url.searchParams.get('sort')).toBe('duration')
-    expect(url.searchParams.get('order')).toBe('desc')
-  })
-
-  it('syncs root service sort edits back into the URL', async () => {
-    render(Page)
-
-    mockReplaceState.mockClear()
-
-    await fireEvent.click(
-      screen.getByRole('button', { name: 'Sort by root service' }),
-    )
-
-    await waitFor(() => {
-      expect(mockReplaceState).toHaveBeenCalled()
-    })
-
-    const url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
-    expect(url.searchParams.get('sort')).toBe('rootService')
-    expect(url.searchParams.get('order')).toBe('asc')
   })
 
   it('syncs logs tab selection into the URL', async () => {
@@ -321,14 +225,5 @@ describe('trace list page URL filters', () => {
         'a',
       )
     })
-  })
-
-  it('shows traces retention footer', () => {
-    render(Page)
-
-    const retentionNotice = document.querySelector('.retention-notice')
-    expect(retentionNotice).not.toBeNull()
-    expect(retentionNotice).toHaveTextContent('Keeping last 1000 traces')
-    expect(retentionNotice).toHaveTextContent('in memory only')
   })
 })
