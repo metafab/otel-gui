@@ -6,6 +6,7 @@ import { getPersistenceStatus, traceStore } from '$lib/server/traceStore'
 export const GET: RequestHandler = async () => {
   return json({
     maxTraces: traceStore.maxTraces,
+    maxLogs: traceStore.maxLogs,
     persistence: getPersistenceStatus(),
   })
 }

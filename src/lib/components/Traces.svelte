@@ -3,10 +3,10 @@
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import TraceFilters from '$lib/components/TraceFilters.svelte'
   import TraceImportModal from '$lib/components/TraceImportModal.svelte'
+  import VersionInfo from '$lib/components/VersionInfo.svelte'
   import { traceStore } from '$lib/stores/traces.svelte'
   import { isInputFocused } from '$lib/utils/keyboard'
   import { formatDurationFromMs } from '$lib/utils/time'
-  import { checkForUpdate, dismissUpdate } from '$lib/utils/updateCheck'
 
   // Bindable props so parent can read reactive state for header action buttons
   let {
@@ -14,27 +14,6 @@
     selectedCount = $bindable(0),
     isExportingBound = $bindable(false),
   } = $props()
-
-  const CURRENT_VERSION = import.meta.env.PACKAGE_VERSION
-
-  let latestVersion = $state<string | null>(null)
-  let updateDismissed = $state(false)
-
-  function handleDismissUpdate() {
-    if (latestVersion) {
-      dismissUpdate(latestVersion)
-    }
-    updateDismissed = true
-  }
-
-  $effect(() => {
-    checkForUpdate(CURRENT_VERSION).then((tag) => {
-      if (tag) {
-        latestVersion = tag
-        updateDismissed = false
-      }
-    })
-  })
 
   const traces = $derived(traceStore.traces)
   const error = $derived(traceStore.error)
@@ -684,25 +663,7 @@
   {/if}
 
   <div class="bottom-bar">
-    <span class="update-notice" role="status">
-      <span class="current-version">v{CURRENT_VERSION}</span>
-      {#if latestVersion && !updateDismissed}
-        <span class="update-available">
-          → v{latestVersion} available —
-          <a
-            href="https://github.com/metafab/otel-gui/releases"
-            target="_blank"
-            rel="noopener noreferrer">release notes</a
-          >
-          <button
-            class="update-dismiss"
-            onclick={handleDismissUpdate}
-            aria-label="Dismiss update notice"
-            title="Dismiss">[×]</button
-          >
-        </span>
-      {/if}
-    </span>
+    <VersionInfo />
     <p class="retention-notice">
       Keeping last
       <span
@@ -811,8 +772,10 @@
   }
 
   .table-wrapper {
+    border: 1px solid var(--border);
     border-radius: 8px;
     box-shadow: 0 1px 3px var(--shadow);
+    background: var(--bg-surface);
     overflow-y: auto;
     flex: 1;
     min-height: 0;
@@ -831,62 +794,6 @@
     font-size: 0.75rem;
     color: var(--text-muted);
     margin: 0;
-  }
-
-  @keyframes update-blink {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.25;
-    }
-  }
-
-  .update-notice {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    white-space: nowrap;
-  }
-
-  .current-version {
-    color: var(--text-muted);
-  }
-
-  .update-available {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    animation: update-blink 1.2s ease-in-out 1;
-  }
-
-  .update-notice a {
-    color: var(--accent);
-    text-decoration: none;
-  }
-
-  .update-notice a:hover {
-    text-decoration: underline;
-  }
-
-  .update-dismiss {
-    background: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    cursor: pointer;
-    font-size: 0.75rem;
-    line-height: 1;
-    color: var(--text-muted);
-    flex-shrink: 0;
-    transition: color 0.15s;
-  }
-
-  .update-dismiss:hover {
-    color: var(--text-secondary);
   }
 
   .retention-limit {

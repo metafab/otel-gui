@@ -68,6 +68,7 @@ vi.mock('$lib/stores/traces.svelte', () => ({
     error: null,
     isLoading: false,
     maxTraces: 1000,
+    maxLogs: 1000,
     persistence: {
       mode: 'memory',
       enabled: false,
@@ -320,5 +321,14 @@ describe('trace list page URL filters', () => {
         'a',
       )
     })
+  })
+
+  it('shows traces retention footer', () => {
+    render(Page)
+
+    const retentionNotice = document.querySelector('.retention-notice')
+    expect(retentionNotice).not.toBeNull()
+    expect(retentionNotice).toHaveTextContent('Keeping last 1000 traces')
+    expect(retentionNotice).toHaveTextContent('in memory only')
   })
 })

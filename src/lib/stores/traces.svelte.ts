@@ -23,6 +23,7 @@ let selectedId = $state<string | null>(null)
 let isLoading = $state<boolean>(false)
 let error = $state<string | null>(null)
 let maxTraces = $state<number>(1000)
+let maxLogs = $state<number>(1000)
 let persistence = $state<PersistenceConfig>({
   mode: 'memory',
   enabled: false,
@@ -45,6 +46,7 @@ function connectSSE() {
       .then((r) => r.json())
       .then((cfg) => {
         if (typeof cfg.maxTraces === 'number') maxTraces = cfg.maxTraces
+        if (typeof cfg.maxLogs === 'number') maxLogs = cfg.maxLogs
         if (cfg.persistence && typeof cfg.persistence === 'object') {
           persistence = {
             mode: cfg.persistence.mode === 'pglite' ? 'pglite' : 'memory',
@@ -251,6 +253,9 @@ export const traceStore = {
   },
   get maxTraces() {
     return maxTraces
+  },
+  get maxLogs() {
+    return maxLogs
   },
   get persistence() {
     return persistence

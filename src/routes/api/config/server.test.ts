@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('$lib/server/traceStore', () => ({
   traceStore: {
     maxTraces: 1000,
+    maxLogs: 1000,
   },
   getPersistenceStatus: mocks.getPersistenceStatus,
 }))
@@ -36,6 +37,7 @@ describe('GET /api/config', () => {
 
     const body = await response.json()
     expect(body.maxTraces).toBe(1000)
+    expect(body.maxLogs).toBe(1000)
     expect(body.persistence.unavailableReason).toBe(
       'backend-unavailable-in-oss-build',
     )

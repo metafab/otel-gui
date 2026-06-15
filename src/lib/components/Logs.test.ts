@@ -9,6 +9,29 @@ import {
 } from '@testing-library/svelte'
 import Logs from './Logs.svelte'
 
+// Mock the trace store
+vi.mock('$lib/stores/traces.svelte', () => ({
+  traceStore: {
+    maxLogs: 1000,
+    persistence: {
+      mode: 'memory',
+      enabled: false,
+      backend: null,
+      path: null,
+      flushMs: null,
+      lastRestoreAt: null,
+      restoredTraceCount: 0,
+      pendingFlushCount: 0,
+    },
+  },
+}))
+
+// Mock updateCheck so VersionInfo doesn't consume the fetch mock
+vi.mock('$lib/utils/updateCheck', () => ({
+  checkForUpdate: vi.fn().mockResolvedValue(null),
+  dismissUpdate: vi.fn(),
+}))
+
 const sampleLogs = [
   {
     id: 'log-1',
@@ -172,5 +195,20 @@ describe('Logs', () => {
 
     const spanLink = await screen.findByRole('link', { name: 'span-1' })
     expect(spanLink).toHaveAttribute('href', '/traces/trace-1?spanId=span-1')
+  })
+
+  it('shows logs retention footer', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleLogs,
+    } as Response)
+
+    render(Logs)
+
+    expect(await screen.findByText('checkout failed')).toBeInTheDocument()
+    const retentionNotice = document.querySelector('.retention-notice')
+    expect(retentionNotice).not.toBeNull()
+    expect(retentionNotice).toHaveTextContent('Keeping last 1000 logs')
+    expect(retentionNotice).toHaveTextContent('in memory only')
   })
 })
