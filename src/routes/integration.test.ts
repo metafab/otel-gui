@@ -156,20 +156,37 @@ describe('POST /v1/traces', () => {
     expect(traces[0].hasError).toBe(true)
   })
 
-  it('returns 200 with empty body and matching content-type for protobuf request', async () => {
+  it.each(['application/x-protobuf', 'application/protobuf'])(
+    'returns 200 with empty body and matching content-type for %s requests',
+    async (contentType) => {
+      const request = new Request('http://localhost:4318/v1/traces', {
+        method: 'POST',
+        headers: { 'Content-Type': contentType },
+        body: new Uint8Array(0),
+      })
+
+      const response = await POST({ request } as any)
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('content-type')).toBe(contentType)
+
+      const body = await response.arrayBuffer()
+      expect(body.byteLength).toBe(0)
+    },
+  )
+
+  it('returns 200 with {} body and application/json content-type for application/json requests', async () => {
     const request = new Request('http://localhost:4318/v1/traces', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-protobuf' },
-      body: new Uint8Array(0),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resourceSpans: [] }),
     })
 
     const response = await POST({ request } as any)
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('content-type')).toBe('application/x-protobuf')
-
-    const body = await response.arrayBuffer()
-    expect(body.byteLength).toBe(0)
+    expect(response.headers.get('content-type')).toContain('application/json')
+    expect(await response.json()).toEqual({})
   })
 })
 
@@ -198,20 +215,37 @@ describe('POST /v1/logs', () => {
     expect(response.status).toBe(400)
   })
 
-  it('returns 200 with empty body and matching content-type for protobuf request', async () => {
+  it.each(['application/x-protobuf', 'application/protobuf'])(
+    'returns 200 with empty body and matching content-type for %s log requests',
+    async (contentType) => {
+      const request = new Request('http://localhost:4318/v1/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': contentType },
+        body: new Uint8Array(0),
+      })
+
+      const response = await postOtlpLogs({ request } as any)
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('content-type')).toBe(contentType)
+
+      const body = await response.arrayBuffer()
+      expect(body.byteLength).toBe(0)
+    },
+  )
+
+  it('returns 200 with {} body and application/json content-type for application/json log requests', async () => {
     const request = new Request('http://localhost:4318/v1/logs', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-protobuf' },
-      body: new Uint8Array(0),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resourceLogs: [] }),
     })
 
     const response = await postOtlpLogs({ request } as any)
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('content-type')).toBe('application/x-protobuf')
-
-    const body = await response.arrayBuffer()
-    expect(body.byteLength).toBe(0)
+    expect(response.headers.get('content-type')).toContain('application/json')
+    expect(await response.json()).toEqual({})
   })
 })
 
