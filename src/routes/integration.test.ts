@@ -155,6 +155,22 @@ describe('POST /v1/traces', () => {
 
     expect(traces[0].hasError).toBe(true)
   })
+
+  it('returns 200 with empty body and matching content-type for protobuf request', async () => {
+    const request = new Request('http://localhost:4318/v1/traces', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-protobuf' },
+      body: new Uint8Array(0),
+    })
+
+    const response = await POST({ request } as any)
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('application/x-protobuf')
+
+    const body = await response.arrayBuffer()
+    expect(body.byteLength).toBe(0)
+  })
 })
 
 describe('POST /v1/logs', () => {
@@ -180,6 +196,22 @@ describe('POST /v1/logs', () => {
     })
     const response = await postOtlpLogs({ request } as any)
     expect(response.status).toBe(400)
+  })
+
+  it('returns 200 with empty body and matching content-type for protobuf request', async () => {
+    const request = new Request('http://localhost:4318/v1/logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-protobuf' },
+      body: new Uint8Array(0),
+    })
+
+    const response = await postOtlpLogs({ request } as any)
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('application/x-protobuf')
+
+    const body = await response.arrayBuffer()
+    expect(body.byteLength).toBe(0)
   })
 })
 
