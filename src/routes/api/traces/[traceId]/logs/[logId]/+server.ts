@@ -11,7 +11,7 @@ export const GET: RequestHandler = async ({ params }) => {
   }
 
   const log = traceStore.getLog(logId)
-  if (!log) {
+  if (!log || log.traceId !== traceId) {
     throw error(404, 'Log not found')
   }
 

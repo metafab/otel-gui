@@ -831,6 +831,67 @@ describe('GET /api/traces/:traceId/logs/:logId', () => {
     ).rejects.toMatchObject({ status: 404 })
   })
 
+  it('returns 404 when logId points to an unlinked/global log', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+    await postOtlpLogs({ request: makeLogsPostRequest(unlinkedLog) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const [{ traceId }] = await listResponse.json()
+
+    const logsResponse = await getLogList({
+      url: makeUrl('/api/logs'),
+    } as any)
+    const logs = await logsResponse.json()
+    const unlinked = logs.find((log: { traceId: string | null }) => !log.traceId)
+
+    expect(unlinked).toBeDefined()
+
+    await expect(
+      getTraceLog({
+        params: { traceId, logId: unlinked.id },
+      } as any),
+    ).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('returns 404 when logId belongs to a different trace', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+    await POST({ request: makePostRequest(multiServiceTrace) } as any)
+
+    const traceListResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const traces = await traceListResponse.json()
+
+    expect(traces.length).toBeGreaterThanOrEqual(2)
+    const firstTraceId = traces[0].traceId
+    const secondTraceId = traces[1].traceId
+
+    const foreignLogPayload = JSON.parse(JSON.stringify(simpleLog)) as any
+    foreignLogPayload.resourceLogs[0].scopeLogs[0].logRecords[0].traceId =
+      secondTraceId
+    foreignLogPayload.resourceLogs[0].scopeLogs[0].logRecords[0].spanId = ''
+
+    await postOtlpLogs({
+      request: makeLogsPostRequest(foreignLogPayload),
+    } as any)
+
+    const secondTraceLogsResponse = await getTraceLogs({
+      params: { traceId: secondTraceId },
+      url: makeUrl(`/api/traces/${secondTraceId}/logs`),
+    } as any)
+    const secondTraceLogs = await secondTraceLogsResponse.json()
+
+    expect(secondTraceLogs.length).toBeGreaterThan(0)
+
+    await expect(
+      getTraceLog({
+        params: { traceId: firstTraceId, logId: secondTraceLogs[0].id },
+      } as any),
+    ).rejects.toMatchObject({ status: 404 })
+  })
+
   it('returns full log detail payload', async () => {
     await POST({ request: makePostRequest(simpleTrace) } as any)
     await postOtlpLogs({ request: makeLogsPostRequest(simpleLog) } as any)
