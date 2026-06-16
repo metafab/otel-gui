@@ -20,9 +20,11 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Search & filter** — filter trace list by text, service, status, and duration range; search spans inside a trace based on attributes, events, and span name and id
 - **Import/export traces** — export one trace, filtered traces, or selected traces as OTLP JSON envelope; import from OTLP JSON or otel-gui export files with metadata preview before confirmation
 - **Bulk list actions** — trace list supports multi-select export and split delete actions (`Clear All` + `Delete Selected (n)`)
-- **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `m` to toggle service map, escape key to clear search and go back to the trace list, `?` for shortcuts help
+- **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `t`/`l` to jump to Traces/Logs tabs, `m` to toggle Traces/Service Map, escape key to clear search and go back to the trace list, `?` for shortcuts help
 - **Error navigation** — jump between error spans with one key
 - **Span details** — attributes, events with timeline markers, resource attributes, instrumentation scope, span links, correlated logs
+- **Global logs workflow** — browse all logs in a dedicated tab, open full log details, and jump from logs to the owning trace/span
+- **Trace and log counts** — the trace list shows both span and correlated log counts, and trace detail summarizes correlated logs alongside spans/services/depth
 - **Collapse/expand** — hide subtrees in the waterfall for cleaner viewing
 - **Resizable panels** — drag splitters to resize the waterfall name column and the span details sidebar
 - **Dark mode** — toggle between light and dark themes
@@ -50,6 +52,10 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 ### Correlated logs
 
 ![Correlated logs](docs/screenshots/correlated-logs.png)
+
+### Global logs
+
+![Global logs](docs/screenshots/global-logs.png)
 
 ## 🛠️ Quick Start
 
@@ -265,6 +271,7 @@ See [SAMPLE_TRACES.md](./samples/SAMPLE_TRACES.md) for a full feature exploratio
 | ------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`                                | `4318`             | HTTP port the server listens on                                                                                                                                                                                                                                                 |
 | `OTEL_GUI_MAX_TRACES`                 | `1000`             | Maximum number of traces kept in memory (1–10 000). Oldest traces are evicted first when the limit is reached. Requires a restart.                                                                                                                                              |
+| `OTEL_GUI_MAX_LOGS`                   | `1000`             | Maximum number of log records kept in memory (1–10 000). Oldest records are evicted first when the limit is reached. Requires a restart.                                                                                                                                        |
 | `OTEL_GUI_PERSISTENCE_MODE`           | `memory`           | Persistence backend mode. Use `memory` (default, no disk writes) or `pglite` (requires an external backend module, typically enterprise).                                                                                                                                       |
 | `OTEL_GUI_PERSISTENCE_PATH`           | `.otel-gui/pglite` | Directory path for local PGlite data when persistence mode is `pglite`.                                                                                                                                                                                                         |
 | `OTEL_GUI_PERSISTENCE_FLUSH_MS`       | `750`              | Debounce interval for batched persistence flushes in milliseconds (50–60000).                                                                                                                                                                                                   |
@@ -388,7 +395,7 @@ GET  /api/traces/stream  ← SSE stream (real-time push)
 GET  /api/service-map    ← aggregated service graph
 ```
 
-Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limit defaults to 1000 traces and is configurable via `OTEL_GUI_MAX_TRACES`.
+Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limit defaults to 1000 traces (`OTEL_GUI_MAX_TRACES`) and 1000 log records (`OTEL_GUI_MAX_LOGS`).
 <br />
 SSE subscribers are notified on every write and receive a debounced `event: traces` message.
 <br />

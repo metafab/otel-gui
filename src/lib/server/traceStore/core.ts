@@ -1,4 +1,5 @@
 import type {
+  LogListItem,
   ServiceMapData,
   StoredLog,
   StoredSpan,
@@ -49,8 +50,12 @@ function getLogTimestamp(logRecord: any): string {
 
 export function createInternalTraceStore(
   maxTraces: number,
+  maxLogs: number,
 ): InternalTraceStore {
   const traces = new Map<string, StoredTrace>()
+  const logs = new Map<string, StoredLog>()
+  const traceLogCounts = new Map<string, number>()
+  const logTraceIdByLogId = new Map<string, string>()
   const listeners = new Set<() => void>()
 
   function notifyListeners() {
@@ -67,7 +72,30 @@ export function createInternalTraceStore(
     }
   }
 
-  function ingest(resourceSpans: any[]): void {
+  function setTraceLogCount(traceId: string) {
+    const trace = traces.get(traceId)
+    if (!trace) return
+    trace.logCount = traceLogCounts.get(traceId) || 0
+  }
+
+  function incrementTraceLogCount(traceId: string) {
+    if (!traceId) return
+    traceLogCounts.set(traceId, (traceLogCounts.get(traceId) || 0) + 1)
+    setTraceLogCount(traceId)
+  }
+
+  function decrementTraceLogCount(traceId: string) {
+    if (!traceId) return
+    const next = (traceLogCounts.get(traceId) || 0) - 1
+    if (next > 0) {
+      traceLogCounts.set(traceId, next)
+    } else {
+      traceLogCounts.delete(traceId)
+    }
+    setTraceLogCount(traceId)
+  }
+
+  function ingestSpans(resourceSpans: any[]): void {
     if (!resourceSpans || !Array.isArray(resourceSpans)) {
       return
     }
@@ -97,6 +125,7 @@ export function createInternalTraceStore(
               updatedAt: now,
               spanCount: 0,
               hasError: false,
+              logCount: traceLogCounts.get(traceId) || 0,
               spans: new Map(),
             }
             traces.set(traceId, trace)
@@ -185,35 +214,10 @@ export function createInternalTraceStore(
         const logRecords = sl.logRecords || []
 
         for (const [index, logRecord] of logRecords.entries()) {
-          const traceId = logRecord.traceId
-          if (!traceId) continue
-
+          const traceId = logRecord.traceId || ''
           const now = Date.now()
           const timestamp = getLogTimestamp(logRecord)
           if (!timestamp) continue
-
-          let trace = traces.get(traceId)
-          if (!trace) {
-            trace = {
-              traceId,
-              rootSpanName: 'unknown',
-              serviceName,
-              startTimeUnixNano: timestamp,
-              endTimeUnixNano: timestamp,
-              updatedAt: now,
-              spanCount: 0,
-              hasError: false,
-              spans: new Map(),
-              logs: new Map(),
-              logCount: 0,
-            }
-            traces.set(traceId, trace)
-            evictOverflow()
-          }
-
-          if (!trace.logs) {
-            trace.logs = new Map()
-          }
 
           const storedLog: StoredLog = {
             traceId,
@@ -234,8 +238,53 @@ export function createInternalTraceStore(
           }
 
           const logId = createLogId(logRecord, index)
-          trace.logs.set(logId, storedLog)
-          trace.logCount = trace.logs.size
+
+          const previousTraceId = logTraceIdByLogId.get(logId)
+          if (previousTraceId) {
+            decrementTraceLogCount(previousTraceId)
+            logTraceIdByLogId.delete(logId)
+          }
+
+          logs.set(logId, storedLog)
+
+          if (traceId) {
+            logTraceIdByLogId.set(logId, traceId)
+            incrementTraceLogCount(traceId)
+          }
+
+          if (logs.size > maxLogs) {
+            const oldestId = logs.keys().next().value
+            if (oldestId) {
+              logs.delete(oldestId)
+              const evictedTraceId = logTraceIdByLogId.get(oldestId)
+              if (evictedTraceId) {
+                decrementTraceLogCount(evictedTraceId)
+                logTraceIdByLogId.delete(oldestId)
+              }
+            }
+          }
+
+          if (!traceId) continue
+
+          // Ensure a trace shell exists and update its metadata
+          let trace = traces.get(traceId)
+          if (!trace) {
+            trace = {
+              traceId,
+              rootSpanName: 'unknown',
+              serviceName,
+              startTimeUnixNano: timestamp,
+              endTimeUnixNano: timestamp,
+              updatedAt: now,
+              spanCount: 0,
+              hasError: false,
+              logCount: traceLogCounts.get(traceId) || 0,
+              spans: new Map(),
+            }
+            traces.set(traceId, trace)
+            evictOverflow()
+          }
+
           trace.updatedAt = now
 
           if (isBeforeNano(timestamp, trace.startTimeUnixNano)) {
@@ -280,10 +329,15 @@ export function createInternalTraceStore(
       ),
       durationMs: getDurationMs(trace.startTimeUnixNano, trace.endTimeUnixNano),
       spanCount: trace.spanCount,
+      logCount: traceLogCounts.get(trace.traceId) ?? trace.logCount ?? 0,
       hasError: trace.hasError,
       startTime: formatTimestamp(trace.startTimeUnixNano),
       updatedAt: trace.updatedAt,
     }))
+  }
+
+  function getTraceCount(): number {
+    return traces.size
   }
 
   function getTrace(traceId: string): StoredTrace | undefined {
@@ -297,7 +351,7 @@ export function createInternalTraceStore(
     return buildServiceMap(tracesToProcess)
   }
 
-  function clear(): void {
+  function clearTraces(): void {
     traces.clear()
     notifyListeners()
   }
@@ -321,6 +375,91 @@ export function createInternalTraceStore(
     return deletedCount
   }
 
+  function getLogList(limit = 500): LogListItem[] {
+    const all = Array.from(logs.entries())
+
+    all.sort(([, a], [, b]) => {
+      const aTs = BigInt(a.timeUnixNano || a.observedTimeUnixNano || '0')
+      const bTs = BigInt(b.timeUnixNano || b.observedTimeUnixNano || '0')
+      return bTs > aTs ? 1 : bTs < aTs ? -1 : 0
+    })
+
+    return all.slice(0, limit).map(([id, log]) => ({
+      id,
+      traceId: log.traceId || null,
+      spanId: log.spanId || null,
+      timeUnixNano: log.timeUnixNano,
+      observedTimeUnixNano: log.observedTimeUnixNano,
+      severityNumber: log.severityNumber,
+      severityText: log.severityText,
+      body: log.body,
+      serviceName: (log.resource['service.name'] as string) || 'unknown',
+    }))
+  }
+
+  function getLogCount(): number {
+    return logs.size
+  }
+
+  function getTraceLogs(traceId: string, limit = 100): LogListItem[] {
+    const entries = Array.from(logs.entries()).filter(
+      ([, log]) => log.traceId === traceId,
+    )
+
+    entries.sort(([, a], [, b]) => {
+      const aTs = BigInt(a.timeUnixNano || a.observedTimeUnixNano || '0')
+      const bTs = BigInt(b.timeUnixNano || b.observedTimeUnixNano || '0')
+      return bTs > aTs ? 1 : bTs < aTs ? -1 : 0
+    })
+
+    return entries.slice(0, limit).map(([id, log]) => ({
+      id,
+      traceId: log.traceId || null,
+      spanId: log.spanId || null,
+      timeUnixNano: log.timeUnixNano,
+      observedTimeUnixNano: log.observedTimeUnixNano,
+      severityNumber: log.severityNumber,
+      severityText: log.severityText,
+      body: log.body,
+      serviceName: (log.resource['service.name'] as string) || 'unknown',
+    }))
+  }
+
+  function getLog(logId: string) {
+    const log = logs.get(logId)
+    if (!log) return undefined
+    return { id: logId, ...log }
+  }
+
+  function clearLogs(): void {
+    logs.clear()
+    logTraceIdByLogId.clear()
+    traceLogCounts.clear()
+    for (const trace of traces.values()) {
+      trace.logCount = 0
+    }
+    notifyListeners()
+  }
+
+  function deleteLogs(logIds: string[]): number {
+    if (!Array.isArray(logIds) || logIds.length === 0) return 0
+
+    let deleted = 0
+    for (const id of logIds) {
+      if (logs.delete(id)) {
+        deleted++
+        const traceId = logTraceIdByLogId.get(id)
+        if (traceId) {
+          decrementTraceLogCount(traceId)
+          logTraceIdByLogId.delete(id)
+        }
+      }
+    }
+
+    if (deleted > 0) notifyListeners()
+    return deleted
+  }
+
   function subscribe(fn: () => void): () => void {
     listeners.add(fn)
     return () => {
@@ -342,18 +481,28 @@ export function createInternalTraceStore(
   }
 
   return {
-    ingest,
+    ingestSpans,
     ingestLogs,
     getTraceList,
+    getTraceCount,
     getTrace,
     getServiceMap,
-    clear,
     deleteTraces,
+    getLogList,
+    getLogCount,
+    getTraceLogs,
+    getLog,
+    clearLogs,
+    deleteLogs,
+    clearTraces,
     subscribe,
     listAllTraces,
     replaceAllTraces,
     get maxTraces() {
       return maxTraces
+    },
+    get maxLogs() {
+      return maxLogs
     },
   }
 }

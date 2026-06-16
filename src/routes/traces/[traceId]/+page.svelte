@@ -7,11 +7,11 @@
   import TraceHeader from '$lib/components/TraceHeader.svelte'
   import WaterfallRow from '$lib/components/WaterfallRow.svelte'
   import { traceStore } from '$lib/stores/traces.svelte'
+  import { shouldUseHistoryBack } from '$lib/utils/backNavigation'
   import { isInputFocused } from '$lib/utils/keyboard'
   import { buildSpanTree, flattenSpanTree } from '$lib/utils/spans'
   import { findMatchingSpanIds } from '$lib/utils/spanSearch'
   import { formatDuration } from '$lib/utils/time'
-  import { onMount } from 'svelte'
 
   import type {
     ServiceMapData,
@@ -25,7 +25,7 @@
   traceStore.connectSSE()
 
   // Get trace ID from URL
-  const traceId = $derived($page.params.traceId)
+  const traceId = $derived($page.params.traceId ?? '')
   const spanIdFromUrl = $derived($page.url.searchParams.get('spanId'))
   const logIdFromUrl = $derived($page.url.searchParams.get('logId'))
 
@@ -218,16 +218,15 @@
     currentErrorIndex = errorIndex
   })
 
-  // Load trace data on mount
-  onMount(async () => {
-    await loadTrace()
-  })
-
-  // Reload trace when URL changes (for hyperlink navigation)
+  // Reload when route/query selection changes
   $effect(() => {
-    // Watch for changes in traceId or spanIdFromUrl
+    // Read these values so this effect re-runs when params/search params change.
+    const _spanId = spanIdFromUrl
+    const _logId = logIdFromUrl
     if (traceId) {
-      loadTrace()
+      void _spanId
+      void _logId
+      void loadTrace()
     }
   })
 
@@ -572,19 +571,11 @@
 
   function handleBack() {
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-      try {
-        if (document.referrer) {
-          const referrer = new URL(document.referrer)
-          if (
-            referrer.origin === window.location.origin &&
-            referrer.pathname === '/'
-          ) {
-            window.history.back()
-            return
-          }
-        }
-      } catch {
-        // Fall through to the plain list route when the referrer is invalid.
+      if (
+        shouldUseHistoryBack(document.referrer, window.location.origin, '/')
+      ) {
+        window.history.back()
+        return
       }
     }
 

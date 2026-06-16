@@ -1,4 +1,4 @@
-// SSE endpoint — pushes trace list updates to the client in real-time
+// SSE endpoint — pushes log count updates to the client in real-time
 import { traceStore } from '$lib/server/traceStore'
 import type { RequestHandler } from './$types'
 
@@ -18,25 +18,21 @@ export const GET: RequestHandler = async () => {
 
   const stream = new ReadableStream({
     start(controller) {
-      // Send current state immediately on connect
-      const initial =
-        traceStore.getTraceCount() === 0
-          ? '[]'
-          : JSON.stringify(traceStore.getTraceList(traceStore.maxTraces))
-      controller.enqueue(encoder.encode(`event: traces\ndata: ${initial}\n\n`))
+      // Send current state immediately on connect.
+      const initialCount = traceStore.getLogCount()
+      controller.enqueue(
+        encoder.encode(`event: logs-count\ndata: ${initialCount}\n\n`),
+      )
 
-      // Debounce rapid-fire ingestion (batched exports can arrive all at once)
+      // Debounce rapid-fire ingestion (batched exports can arrive all at once).
       let debounceTimer: ReturnType<typeof setTimeout> | null = null
       unsubscribe = traceStore.subscribe(() => {
         if (debounceTimer !== null) clearTimeout(debounceTimer)
         debounceTimer = setTimeout(() => {
           try {
-            const data =
-              traceStore.getTraceCount() === 0
-                ? '[]'
-                : JSON.stringify(traceStore.getTraceList(traceStore.maxTraces))
+            const count = traceStore.getLogCount()
             controller.enqueue(
-              encoder.encode(`event: traces\ndata: ${data}\n\n`),
+              encoder.encode(`event: logs-count\ndata: ${count}\n\n`),
             )
           } catch {
             // Controller already closed (client disconnected)
@@ -44,7 +40,7 @@ export const GET: RequestHandler = async () => {
         }, 100)
       })
 
-      // Heartbeat every 30 s — keeps proxies/load-balancers from closing the connection
+      // Heartbeat every 30 s — keeps proxies/load-balancers from closing the connection.
       heartbeatTimer = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(`: heartbeat\n\n`))

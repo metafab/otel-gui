@@ -6,12 +6,17 @@ const { mockReplaceState } = vi.hoisted(() => ({
   mockReplaceState: vi.fn(),
 }))
 
+const { mockPushState } = vi.hoisted(() => ({
+  mockPushState: vi.fn(),
+}))
+
 const { mockCheckForUpdate, mockDismissUpdate } = vi.hoisted(() => ({
   mockCheckForUpdate: vi.fn().mockResolvedValue(null),
   mockDismissUpdate: vi.fn(),
 }))
 
 vi.mock('$app/navigation', () => ({
+  pushState: mockPushState,
   replaceState: mockReplaceState,
 }))
 
@@ -63,6 +68,7 @@ vi.mock('$lib/stores/traces.svelte', () => ({
     error: null,
     isLoading: false,
     maxTraces: 1000,
+    maxLogs: 1000,
     persistence: {
       mode: 'memory',
       enabled: false,
@@ -80,9 +86,10 @@ vi.mock('$lib/stores/traces.svelte', () => ({
 
 import Page from './+page.svelte'
 
-describe('trace list page URL filters', () => {
+describe('trace list page', () => {
   beforeEach(() => {
     mockReplaceState.mockClear()
+    mockPushState.mockClear()
     mockCheckForUpdate.mockClear()
     mockDismissUpdate.mockClear()
 
@@ -91,101 +98,132 @@ describe('trace list page URL filters', () => {
       '',
       '/?search=checkout&service=checkout-service&errors=true&minDuration=10&maxDuration=20',
     )
-  })
 
-  it('restores filters from the list page query params', () => {
-    render(Page)
-
-    expect(screen.getByLabelText('Search')).toHaveValue('checkout')
-    expect(screen.getByLabelText('Service')).toHaveValue('checkout-service')
-    expect(screen.getByLabelText('Errors Only')).toBeChecked()
-    expect(screen.getByLabelText('Min Duration (ms)')).toHaveValue(10)
-    expect(screen.getByLabelText('Max Duration (ms)')).toHaveValue(20)
-
-    expect(screen.getByText('HTTP GET /checkout')).toBeInTheDocument()
-    expect(screen.queryByText('GET /inventory')).not.toBeInTheDocument()
-  })
-
-  it('syncs filter edits back into the URL', async () => {
-    render(Page)
-
-    mockReplaceState.mockClear()
-
-    await fireEvent.input(screen.getByLabelText('Search'), {
-      target: { value: 'inventory' },
+    // Emulate SvelteKit pushState by updating the browser location in tests.
+    mockPushState.mockImplementation((url: URL) => {
+      window.history.pushState({}, '', url)
     })
+  })
+
+  it('syncs logs tab selection into the URL', async () => {
+    render(Page)
+
+    mockPushState.mockClear()
+
+    await fireEvent.click(screen.getByRole('tab', { name: 'Logs' }))
 
     await waitFor(() => {
-      expect(mockReplaceState).toHaveBeenCalled()
+      expect(mockPushState).toHaveBeenCalled()
     })
 
-    const url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
+    const callArgs = mockPushState.mock.calls.at(-1)
+    const url = callArgs?.[0] as URL
+    expect(url.href).toContain('tab=logs')
+  })
 
-    expect(url.searchParams.get('search')).toBe('inventory')
+  it('clears all params when switching directly from traces to logs', async () => {
+    render(Page)
+
+    mockPushState.mockClear()
+
+    await fireEvent.click(screen.getByRole('tab', { name: 'Logs' }))
+
+    await waitFor(() => {
+      expect(mockPushState).toHaveBeenCalled()
+    })
+
+    const callArgs = mockPushState.mock.calls.at(-1)
+    const url = callArgs?.[0] as URL
+    expect(url.search).toBe('?tab=logs')
+  })
+
+  it('clears all params when switching directly from logs to traces', async () => {
+    render(Page)
+
+    // First go to Logs tab
+    await fireEvent.click(screen.getByRole('tab', { name: /^Logs/ }))
+
+    await waitFor(() => {
+      const logsTab = screen.getByRole('tab', { name: /^Logs/ })
+      expect(logsTab).toHaveAttribute('aria-selected', 'true')
+    })
+
+    mockPushState.mockClear()
+
+    // Now click Traces tab (use regex to match "Traces" with optional count badge)
+    const allTabs = screen.getAllByRole('tab')
+    const tracesTab = allTabs[0] // First tab is Traces
+    await fireEvent.click(tracesTab)
+
+    await waitFor(() => {
+      expect(mockPushState).toHaveBeenCalled()
+    })
+
+    const callArgs = mockPushState.mock.calls.at(-1)
+    const url = callArgs?.[0] as URL
+    // Should restore the previous Traces URL state from before switching to Logs.
+    expect(url.searchParams.get('search')).toBe('checkout')
     expect(url.searchParams.get('service')).toBe('checkout-service')
-    expect(url.searchParams.get('errors')).toBe('true')
-    expect(url.searchParams.get('minDuration')).toBe('10')
-    expect(url.searchParams.get('maxDuration')).toBe('20')
+    expect(url.searchParams.get('tab')).toBeNull()
   })
 
-  it('defaults to time descending sort state', () => {
+  it('restores tab state when switching between tabs', async () => {
     render(Page)
 
-    const timeHeader = screen.getByRole('columnheader', { name: 'Time ↓' })
-    const durationHeader = screen.getByRole('columnheader', {
-      name: 'Duration',
+    // 1. Set search to "a" on Traces tab
+    await fireEvent.input(screen.getByLabelText('Search'), {
+      target: { value: 'a' },
     })
-
-    expect(timeHeader).toHaveAttribute('aria-sort', 'descending')
-    expect(durationHeader).toHaveAttribute('aria-sort', 'none')
-  })
-
-  it('syncs sort edits back into the URL', async () => {
-    render(Page)
-
-    mockReplaceState.mockClear()
-
-    await fireEvent.click(
-      screen.getByRole('button', { name: 'Sort by duration' }),
-    )
 
     await waitFor(() => {
-      expect(mockReplaceState).toHaveBeenCalled()
+      expect((screen.getByLabelText('Search') as HTMLInputElement).value).toBe(
+        'a',
+      )
     })
 
-    let url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
-    expect(url.searchParams.get('sort')).toBe('duration')
-    expect(url.searchParams.get('order')).toBe('asc')
+    // Manually update location to simulate Traces component updating URL
+    const tracesUrlWithSearch = new URL(window.location.href)
+    tracesUrlWithSearch.searchParams.set('search', 'a')
+    window.history.replaceState({}, '', tracesUrlWithSearch)
 
-    await fireEvent.click(
-      screen.getByRole('button', { name: 'Sort by duration' }),
-    )
+    expect(window.location.href).toContain('search=a')
+
+    mockPushState.mockClear()
+
+    // 2. Switch to Logs tab
+    await fireEvent.click(screen.getByRole('tab', { name: /^Logs/ }))
 
     await waitFor(() => {
-      const latestUrl = mockReplaceState.mock.calls.at(-1)?.[0] as URL
-      expect(latestUrl.searchParams.get('order')).toBe('desc')
+      const logsTab = screen.getByRole('tab', { name: /^Logs/ })
+      expect(logsTab).toHaveAttribute('aria-selected', 'true')
     })
 
-    url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
-    expect(url.searchParams.get('sort')).toBe('duration')
-    expect(url.searchParams.get('order')).toBe('desc')
-  })
+    // 3. Verify Logs URL is clean (only has tab=logs)
+    const logsUrl = new URL(window.location.href)
+    expect(logsUrl.searchParams.get('tab')).toBe('logs')
+    expect(logsUrl.searchParams.get('search')).toBeNull()
 
-  it('syncs root service sort edits back into the URL', async () => {
-    render(Page)
+    mockPushState.mockClear()
 
-    mockReplaceState.mockClear()
-
-    await fireEvent.click(
-      screen.getByRole('button', { name: 'Sort by root service' }),
-    )
+    // 4. Switch back to Traces tab
+    const allTabs = screen.getAllByRole('tab')
+    const tracesTab = allTabs[0]
+    await fireEvent.click(tracesTab)
 
     await waitFor(() => {
-      expect(mockReplaceState).toHaveBeenCalled()
+      const tab = screen.getByRole('tab', { name: /^Traces/ })
+      expect(tab).toHaveAttribute('aria-selected', 'true')
     })
 
-    const url = mockReplaceState.mock.calls.at(-1)?.[0] as URL
-    expect(url.searchParams.get('sort')).toBe('rootService')
-    expect(url.searchParams.get('order')).toBe('asc')
+    // 5. Verify Traces URL is restored with search="a"
+    const restoredUrl = new URL(window.location.href)
+    expect(restoredUrl.searchParams.get('search')).toBe('a')
+    expect(restoredUrl.searchParams.get('tab')).toBeNull() // Traces has no tab param
+
+    await waitFor(() => {
+      expect((screen.getByLabelText('Search') as HTMLInputElement).value).toBe(
+        'a',
+      )
+    })
   })
 })

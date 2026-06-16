@@ -30,7 +30,7 @@ pnpm run format:check
 
 ## Architecture
 
-- **Routes**: `/v1/traces` + `/v1/logs` (OTLP receivers), `/api/traces` (list + clear/delete-selected), `/api/traces/:id` (detail), `/api/traces/:id/export` (single export), `/api/traces/export` (bulk export), `/api/traces/import/preview` + `/api/traces/import` (import flow), `/api/service-map` (service graph), `/api/config` (runtime config + persistence status)
+- **Routes**: `/v1/traces` + `/v1/logs` (OTLP receivers), `/api/traces` (list + clear/delete-selected), `/api/traces/:id` (detail), `/api/traces/:id/export` (single export), `/api/traces/export` (bulk export), `/api/traces/import/preview` + `/api/traces/import` (import flow), `/api/traces/:id/logs` (trace-scoped logs), `/api/traces/:id/logs/:logId` (log detail), `/api/logs` (global log list + clear/delete-selected), `/api/service-map` (service graph), `/api/config` (runtime config + persistence status)
 - **Server-only code**: `$lib/server/` — never bundled for client
 - **Utilities**: `$lib/utils/` — shared helpers for OTLP data transformation
 - **Types**: `$lib/types.ts` — all interfaces (use `import type`)
@@ -64,6 +64,8 @@ Use `flattenAttributes()` from `@otel-gui/core` ([packages/core/src/attributes.t
 
 **Span merging**: Traces arrive incrementally across multiple POST requests. Store merges spans by `traceId`, handles out-of-order root spans. The merge logic lives in [core.ts](src/lib/server/traceStore/core.ts) and is used by swappable backends.
 
+**Per-trace log counts**: correlated logs maintain an incremental `logCount` per trace in [core.ts](src/lib/server/traceStore/core.ts). The trace list and trace detail header both display this count, so updates to log ingestion, eviction, or deletion must keep it in sync.
+
 ## Optional Persistence (PGlite)
 
 `traceStore` now supports pluggable backends:
@@ -73,6 +75,8 @@ Use `flattenAttributes()` from `@otel-gui/core` ([packages/core/src/attributes.t
 
 Environment variables used by the bootstrap layer in `traceStore.ts`:
 
+- `OTEL_GUI_MAX_TRACES`: max traces in memory (integer 1-10 000, default 1000)
+- `OTEL_GUI_MAX_LOGS`: max logs in memory (integer 1-10 000, default 1000)
 - `OTEL_GUI_PERSISTENCE_MODE`: `memory` or `pglite` (invalid values warn and fall back to `memory`)
 - `OTEL_GUI_PERSISTENCE_PATH`: local PGlite data path (default `.otel-gui/pglite`)
 - `OTEL_GUI_PERSISTENCE_FLUSH_MS`: flush debounce in ms (50-60000, default `750`)
@@ -103,7 +107,7 @@ $effect(() => {
 
 ## Testing
 
-**Current status**: 284 unit + integration/component tests, all passing. Run with `pnpm run test`.
+**Current status**: 328 unit + integration/component tests, all passing. Run with `pnpm run test`.
 
 **Test files**:
 
@@ -114,6 +118,7 @@ $effect(() => {
 | [spans.test.ts](src/lib/utils/spans.test.ts)                                      | Tree building, orphans, circular refs, child sort order                                                                              |
 | [traceStore.test.ts](src/lib/server/traceStore.test.ts)                           | Ingestion, span merging, FIFO eviction, subscribe/unsubscribe, selected trace deletion (`resolveRootSpanName` from `@otel-gui/core`) |
 | [integration.test.ts](src/routes/integration.test.ts)                             | Full route coverage including import preview/import, single+bulk export, selected deletion, service map, correlated logs             |
+| [Logs.test.ts](src/lib/components/Logs.test.ts)                                   | Global logs table rendering, URL state restore, selection/delete flows, trace/span deep links                                        |
 | [ChevronIcon.test.ts](src/lib/components/ChevronIcon.test.ts)                     | SVG render, rotation transform, size prop, aria-hidden                                                                               |
 | [ServiceBadge.test.ts](src/lib/components/ServiceBadge.test.ts)                   | Service name text, element/attribute structure, background color                                                                     |
 | [AttributeItem.test.ts](src/lib/components/AttributeItem.test.ts)                 | Key/value rendering, all 8 type labels, copy button, truncation, onFullscreen callback                                               |
@@ -160,7 +165,11 @@ Shortcuts implemented:
 |-----|-----------|--------------|
 | `/` | Focus search | Focus span search |
 | `Esc` | Clear search (if focused) | Clear search or go back |
-| `Alt/⌥+⌫` | Clear all traces | — || `m` | Toggle Traces/Map tab | Toggle mini service map || `Enter` / `Shift+Enter` | — | Next / prev match (when search focused) |
+| `Alt/⌥+⌫` | Clear all traces | — |
+| `t` | Switch to Traces tab | — |
+| `l` | Switch to Logs tab | — |
+| `m` | Toggle Traces/Map tab | Toggle mini service map |
+| `Enter` / `Shift+Enter` | — | Next / prev match (when search focused) |
 | `n` / `Shift+N` | — | Next / prev search match |
 | `e` / `Shift+E` | — | Next / prev error span |
 | `↑↓←→` / `Enter` | — | Waterfall tree navigation |
@@ -172,7 +181,7 @@ Shortcuts implemented:
 2. **adapter-node required** — In-memory `Map` must persist across requests
 3. **Protobuf and JSON supported** — Both `application/json` and `application/x-protobuf` content types accepted
 4. **Gzip request bodies supported** — OTLP receivers accept gzip-compressed payloads
-5. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1-10 000, default 1000). FIFO eviction. Read via `$env/dynamic/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000.
+5. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1-10 000, default 1000). FIFO eviction. Read via `$env/dynamic/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000. Logs have an independent `OTEL_GUI_MAX_LOGS` env var (same range/defaults), exposed as `traceStore.maxLogs`.
 6. **Persistence is optional** — OSS always has `memory`; `pglite` requires a registered backend (usually via `OTEL_GUI_PERSISTENCE_BACKEND_MODULE`). If unavailable, runtime falls back to memory with `persistence.unavailableReason` in `GET /api/config`.
 7. **Update availability check** — On mount, the page fetches `https://api.github.com/repos/metafab/otel-gui/releases/latest` (GitHub API) and compares `tag_name` to `import.meta.env.PACKAGE_VERSION` (embedded at build time from `package.json` via Vite `define`). If a newer semver is found, a non-intrusive notice is shown in the bottom-left of the trace list, next to the retention notice. The notice links to `https://github.com/metafab/otel-gui/releases` and can be dismissed per-version via `localStorage`. The result is cached in `localStorage` (`update-check-cache`) for 1 hour to avoid hitting the GitHub rate limit (60 unauthenticated req/h). Network failures are silent and do not affect the UI.
 8. **Import/export UX contract** — list page provides Import, Export Filtered, Export Selected, and split delete actions (`Clear All` + dropdown `Delete Selected (n)`); import always previews metadata before confirmation.
@@ -197,6 +206,8 @@ Shortcuts implemented:
 - [ServiceMap.svelte](src/lib/components/ServiceMap.svelte) — SVG service map component (full + mini mode); nodes are service/database/messaging shapes; edges show call count, error rate, p50/p99 latency
 - [types.ts](src/lib/types.ts) — Complete OTLP data model + `ServiceMapNode`, `ServiceMapEdge`, `ServiceMapData`
 - [stream/+server.ts](src/routes/api/traces/stream/+server.ts) — SSE endpoint (debounced, heartbeat)
+- [Traces.svelte](src/lib/components/Traces.svelte) — trace list grid, filters/sort state, row navigation, per-trace span/log counts
+- [TraceHeader.svelte](src/lib/components/TraceHeader.svelte) — trace detail metadata header (service, root span, span/log/service counts, depth)
 - [export/+server.ts](src/routes/api/traces/export/+server.ts) — `POST /api/traces/export` bulk export endpoint
 - [[traceId]/export/+server.ts](src/routes/api/traces/[traceId]/export/+server.ts) — `GET /api/traces/:traceId/export` endpoint
 - [import/preview/+server.ts](src/routes/api/traces/import/preview/+server.ts) — import metadata preview endpoint

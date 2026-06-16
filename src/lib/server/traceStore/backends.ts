@@ -17,6 +17,7 @@ export interface PersistenceStatus {
 
 export interface TraceStoreBackendConfig {
   maxTraces: number
+  maxLogs: number
   persistencePath: string
   flushMs: number
 }
@@ -42,7 +43,10 @@ export interface TraceStoreBackendModule {
 const backendFactories = new Map<PersistenceMode, TraceStoreBackendFactory>()
 
 backendFactories.set('memory', async (config) => {
-  const store = createMemoryTraceStore({ maxTraces: config.maxTraces })
+  const store = createMemoryTraceStore({
+    maxTraces: config.maxTraces,
+    maxLogs: config.maxLogs,
+  })
   return {
     ...store,
     getPersistenceStatus: () => ({

@@ -67,7 +67,7 @@ export const POST: RequestHandler = async ({ request }) => {
     }
 
     // Ingest spans
-    traceStore.ingest(body.resourceSpans)
+    traceStore.ingestSpans(body.resourceSpans)
 
     // Return successful response. OTLP HTTP spec requires the response
     // Content-Type to match the request Content-Type. An empty message

@@ -1,0 +1,46 @@
+{
+  "resourceLogs": [
+    {
+      "resource": {
+        "attributes": [
+          { "key": "service.name", "value": { "stringValue": "scheduler" } },
+          { "key": "host.name", "value": { "stringValue": "scheduler-01" } }
+        ]
+      },
+      "scopeLogs": [
+        {
+          "scope": { "name": "scheduler-logger", "version": "1.0.0" },
+          "logRecords": [
+            {
+              "timeUnixNano": "1700000010000000000",
+              "observedTimeUnixNano": "1700000010001000000",
+              "severityNumber": 9,
+              "severityText": "INFO",
+              "body": { "stringValue": "Scheduler started" },
+              "attributes": [
+                {
+                  "key": "cron.expression",
+                  "value": { "stringValue": "0 * * * *" }
+                }
+              ]
+            },
+            {
+              "timeUnixNano": "1700000020000000000",
+              "observedTimeUnixNano": "1700000020001000000",
+              "severityNumber": 17,
+              "severityText": "ERROR",
+              "body": { "stringValue": "Job queue full — dropping task" },
+              "attributes": [
+                { "key": "queue.size", "value": { "intValue": "1000" } },
+                {
+                  "key": "task.type",
+                  "value": { "stringValue": "email-digest" }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
