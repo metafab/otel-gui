@@ -6,6 +6,7 @@
   import SpanDetailsSidebar from '$lib/components/SpanDetailsSidebar.svelte'
   import TraceHeader from '$lib/components/TraceHeader.svelte'
   import WaterfallRow from '$lib/components/WaterfallRow.svelte'
+  import type { PageProps } from './$types'
   import { traceStore } from '$lib/stores/traces.svelte'
   import { shouldUseHistoryBack } from '$lib/utils/backNavigation'
   import { isInputFocused } from '$lib/utils/keyboard'
@@ -26,7 +27,9 @@
   traceStore.connectSSE()
 
   // Get trace ID from URL
-  const traceId = $derived($page.params.traceId)
+  const traceId = $derived(
+    ($page.params as PageProps['params']).traceId,
+  )
   const spanIdFromUrl = $derived($page.url.searchParams.get('spanId'))
   const logIdFromUrl = $derived($page.url.searchParams.get('logId'))
 

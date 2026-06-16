@@ -1,22 +1,21 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
-  import { page } from '$app/stores'
   import AttributeItem from '$lib/components/AttributeItem.svelte'
   import CopyButton from '$lib/components/CopyButton.svelte'
   import FullscreenValueModal from '$lib/components/FullscreenValueModal.svelte'
   import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
+  import type { PageProps } from './$types'
   import type { TraceLogDetail } from '$lib/types'
   import { shouldUseHistoryBack } from '$lib/utils/backNavigation'
   import { isInputFocused } from '$lib/utils/keyboard'
   import { formatTimestamp, formatTimestampLocal } from '$lib/utils/time'
   import { onMount } from 'svelte'
 
-  const logId = $derived($page.params.logId)
+  let { params }: PageProps = $props()
+  const logId = $derived(params.logId)
 
-  const pageTitle = $derived(
-    logId ? `otel-gui - Log ${logId.slice(0, 8)}` : 'otel-gui - Log',
-  )
+  const pageTitle = $derived(`otel-gui - Log ${logId.slice(0, 8)}`)
 
   let logDetail = $state<TraceLogDetail | null>(null)
   let isLoading = $state(true)
