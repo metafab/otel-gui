@@ -805,6 +805,55 @@ describe('GET /api/traces/:traceId/logs', () => {
 
     expect(logs).toEqual([])
   })
+
+  it('applies spanId filtering before limit', async () => {
+    await POST({ request: makePostRequest(simpleTrace) } as any)
+
+    const listResponse = await getTraceList({
+      url: makeUrl('/api/traces'),
+    } as any)
+    const [{ traceId }] = await listResponse.json()
+
+    const payload = JSON.parse(JSON.stringify(simpleLog)) as any
+    const base = payload.resourceLogs[0].scopeLogs[0].logRecords[0]
+    payload.resourceLogs[0].scopeLogs[0].logRecords = [
+      {
+        ...base,
+        traceId,
+        spanId: 'target-span',
+        timeUnixNano: '1544712660000000000',
+        observedTimeUnixNano: '1544712660000000000',
+      },
+      {
+        ...base,
+        traceId,
+        spanId: 'other-span',
+        timeUnixNano: '1544712662000000000',
+        observedTimeUnixNano: '1544712662000000000',
+      },
+      {
+        ...base,
+        traceId,
+        spanId: 'other-span',
+        timeUnixNano: '1544712663000000000',
+        observedTimeUnixNano: '1544712663000000000',
+      },
+    ]
+
+    await postOtlpLogs({ request: makeLogsPostRequest(payload) } as any)
+
+    const response = await getTraceLogs({
+      params: { traceId },
+      url: makeUrl(`/api/traces/${traceId}/logs`, {
+        spanId: 'target-span',
+        limit: '1',
+      }),
+    } as any)
+    const logs = await response.json()
+
+    expect(logs).toHaveLength(1)
+    expect(logs[0].spanId).toBe('target-span')
+  })
 })
 
 describe('GET /api/traces/:traceId/logs/:logId', () => {

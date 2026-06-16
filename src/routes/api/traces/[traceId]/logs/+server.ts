@@ -24,10 +24,12 @@ export const GET: RequestHandler = async ({ params, url }) => {
     }
   }
 
-  const logs = traceStore.getTraceLogs(traceId, limit)
-  const filtered = spanIdFilter
-    ? logs.filter((log) => log.spanId === spanIdFilter)
-    : logs
+  if (spanIdFilter) {
+    const logs = traceStore.getTraceLogs(traceId, MAX_LIMIT)
+    const filtered = logs.filter((log) => log.spanId === spanIdFilter)
+    return json(filtered.slice(0, limit))
+  }
 
-  return json(filtered)
+  const logs = traceStore.getTraceLogs(traceId, limit)
+  return json(logs)
 }
