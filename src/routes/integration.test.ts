@@ -893,7 +893,9 @@ describe('GET /api/traces/:traceId/logs/:logId', () => {
       url: makeUrl('/api/logs'),
     } as any)
     const logs = await logsResponse.json()
-    const unlinked = logs.find((log: { traceId: string | null }) => !log.traceId)
+    const unlinked = logs.find(
+      (log: { traceId: string | null }) => !log.traceId,
+    )
 
     expect(unlinked).toBeDefined()
 
