@@ -10,7 +10,6 @@
   import { shouldUseHistoryBack } from '$lib/utils/backNavigation'
   import { isInputFocused } from '$lib/utils/keyboard'
   import { formatTimestamp, formatTimestampLocal } from '$lib/utils/time'
-  import { onMount } from 'svelte'
 
   let { params }: PageProps = $props()
   const logId = $derived(params.logId)
@@ -168,10 +167,7 @@
     }
   }
 
-  onMount(async () => {
-    await loadLog()
-  })
-
+  // Reload when route/query selection changes
   $effect(() => {
     if (logId) {
       void loadLog()

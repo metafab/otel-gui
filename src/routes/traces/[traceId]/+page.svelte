@@ -13,7 +13,6 @@
   import { buildSpanTree, flattenSpanTree } from '$lib/utils/spans'
   import { findMatchingSpanIds } from '$lib/utils/spanSearch'
   import { formatDuration } from '$lib/utils/time'
-  import { onMount } from 'svelte'
 
   import type {
     ServiceMapData,
@@ -27,9 +26,7 @@
   traceStore.connectSSE()
 
   // Get trace ID from URL
-  const traceId = $derived(
-    ($page.params as PageProps['params']).traceId,
-  )
+  const traceId = $derived(($page.params as PageProps['params']).traceId)
   const spanIdFromUrl = $derived($page.url.searchParams.get('spanId'))
   const logIdFromUrl = $derived($page.url.searchParams.get('logId'))
 
@@ -222,16 +219,15 @@
     currentErrorIndex = errorIndex
   })
 
-  // Load trace data on mount
-  onMount(async () => {
-    await loadTrace()
-  })
-
-  // Reload trace when URL changes (for hyperlink navigation)
+  // Reload when route/query selection changes
   $effect(() => {
-    // Watch for changes in traceId or spanIdFromUrl
+    // Read these values so this effect re-runs when params/search params change.
+    const _spanId = spanIdFromUrl
+    const _logId = logIdFromUrl
     if (traceId) {
-      loadTrace()
+      void _spanId
+      void _logId
+      void loadTrace()
     }
   })
 
