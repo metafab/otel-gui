@@ -336,6 +336,10 @@ export function createInternalTraceStore(
     }))
   }
 
+  function getTraceCount(): number {
+    return traces.size
+  }
+
   function getTrace(traceId: string): StoredTrace | undefined {
     return traces.get(traceId)
   }
@@ -391,6 +395,10 @@ export function createInternalTraceStore(
       body: log.body,
       serviceName: (log.resource['service.name'] as string) || 'unknown',
     }))
+  }
+
+  function getLogCount(): number {
+    return logs.size
   }
 
   function getTraceLogs(traceId: string, limit = 100): LogListItem[] {
@@ -476,10 +484,12 @@ export function createInternalTraceStore(
     ingestSpans,
     ingestLogs,
     getTraceList,
+    getTraceCount,
     getTrace,
     getServiceMap,
     deleteTraces,
     getLogList,
+    getLogCount,
     getTraceLogs,
     getLog,
     clearLogs,

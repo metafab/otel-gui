@@ -87,6 +87,7 @@ export interface TraceStore {
   ingestLogs(resourceLogs: any[]): void
 
   // Trace reads
+  getTraceCount(): number
   getTraceList(limit?: number): TraceListItem[]
   getTrace(traceId: string): StoredTrace | undefined
   getServiceMap(traceId?: string): ServiceMapData
@@ -96,6 +97,7 @@ export interface TraceStore {
   deleteTraces(traceIds: string[]): number
 
   // Log reads
+  getLogCount(): number
   getLogList(limit?: number): LogListItem[]
   getTraceLogs(traceId: string, limit?: number): LogListItem[]
   getLog(logId: string): TraceLogDetail | undefined

@@ -19,7 +19,7 @@ export const GET: RequestHandler = async () => {
   const stream = new ReadableStream({
     start(controller) {
       // Send current state immediately on connect.
-      const initialCount = traceStore.getLogList(traceStore.maxLogs).length
+      const initialCount = traceStore.getLogCount()
       controller.enqueue(
         encoder.encode(`event: logs-count\ndata: ${initialCount}\n\n`),
       )
@@ -30,7 +30,7 @@ export const GET: RequestHandler = async () => {
         if (debounceTimer !== null) clearTimeout(debounceTimer)
         debounceTimer = setTimeout(() => {
           try {
-            const count = traceStore.getLogList(traceStore.maxLogs).length
+            const count = traceStore.getLogCount()
             controller.enqueue(
               encoder.encode(`event: logs-count\ndata: ${count}\n\n`),
             )

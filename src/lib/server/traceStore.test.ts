@@ -129,6 +129,7 @@ describe('traceStore.ingestSpans / getTraceList', () => {
     traceStore.ingestSpans(simpleTrace.resourceSpans)
     const [item] = traceStore.getTraceList()
     expect(item.spanCount).toBe(1)
+    expect(traceStore.getTraceCount()).toBe(1)
   })
 
   it('ignores ingestion of non-array resourceSpans', () => {
@@ -224,6 +225,7 @@ describe('traceStore.ingestLogs', () => {
 
     const logs = traceStore.getLogList(10)
     expect(logs).toHaveLength(3)
+    expect(traceStore.getLogCount()).toBe(3)
     expect(logs.every((log) => log.traceId === null)).toBe(true)
     expect(logs.every((log) => log.spanId === null)).toBe(true)
     expect(logs.every((log) => log.serviceName === 'background-worker')).toBe(
