@@ -223,7 +223,7 @@ jobs:
               libexec.install "otel-gui", "build", "proto", "node_modules"
               (bin/"otel-gui").write <<~EOS
                 #!/bin/bash
-                exec "#{libexec}/otel-gui" "$@"
+                exec "#{libexec}/otel-gui" "\$@"
               EOS
             end
 
