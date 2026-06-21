@@ -367,19 +367,19 @@ Notes:
 
 ## ⌨️ Keyboard Shortcuts
 
-| Key              | Where        | Action                          |
-| ---------------- | ------------ | ------------------------------- |
-| `/`              | Everywhere   | Focus search                    |
-| `Esc`            | Everywhere   | Clear search / go back          |
-| `t`              | Everywhere   | Switch to Traces tab            |
-| `l`              | Everywhere   | Switch to Logs tab              |
-| `m`              | Trace list   | Switch to Service Map tab       |
-| `m`              | Trace detail | Toggle Service Map              |
-| `Alt+Backspace`  | Trace list   | Clear all traces                |
-| `↑↓←→` / `Enter` | Trace detail | Navigate span tree              |
-| `n` / `N`        | Trace detail | Next / prev search match        |
-| `e` / `E`        | Trace detail | Next / prev error span          |
-| `?`              | Everywhere   | Toggle shortcuts overlay        |
+| Key              | Where        | Action                    |
+| ---------------- | ------------ | ------------------------- |
+| `/`              | Everywhere   | Focus search              |
+| `Esc`            | Everywhere   | Clear search / go back    |
+| `t`              | Everywhere   | Switch to Traces tab      |
+| `l`              | Everywhere   | Switch to Logs tab        |
+| `m`              | Trace list   | Switch to Service Map tab |
+| `m`              | Trace detail | Toggle Service Map        |
+| `Alt+Backspace`  | Trace list   | Clear all traces          |
+| `↑↓←→` / `Enter` | Trace detail | Navigate span tree        |
+| `n` / `N`        | Trace detail | Next / prev search match  |
+| `e` / `E`        | Trace detail | Next / prev error span    |
+| `?`              | Everywhere   | Toggle shortcuts overlay  |
 
 ## 📐 Architecture
 

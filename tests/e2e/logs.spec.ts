@@ -34,7 +34,9 @@ test.describe('Logs flow', () => {
     })
     expect(ingest.ok()).toBeTruthy()
 
-    const logRow = page.locator('tbody tr', { hasText: 'database timeout' }).first()
+    const logRow = page
+      .locator('tbody tr', { hasText: 'database timeout' })
+      .first()
     await expect(logRow).toContainText('frontend')
   })
 
@@ -49,7 +51,9 @@ test.describe('Logs flow', () => {
 
     await page.goto('/?tab=logs')
 
-    const logRow = page.locator('tbody tr', { hasText: 'database timeout' }).first()
+    const logRow = page
+      .locator('tbody tr', { hasText: 'database timeout' })
+      .first()
     await expect(logRow).toContainText('frontend')
 
     await logRow.click()
@@ -82,7 +86,10 @@ test.describe('Logs flow', () => {
     })
 
     await page.goto('/?tab=logs')
-    await page.locator('tbody tr', { hasText: 'database timeout' }).first().click()
+    await page
+      .locator('tbody tr', { hasText: 'database timeout' })
+      .first()
+      .click()
 
     const spanLink = page.getByRole('link', { name: /span EEE19B7EC3C1B174/i })
     await expect(spanLink).toHaveAttribute(
@@ -97,7 +104,9 @@ test.describe('Logs flow', () => {
     )
     await expect(page.getByText('Trace Details')).toBeVisible()
     await expect(
-      page.locator('.span-details .detail-row', { hasText: 'Name:' }).locator('.value'),
+      page
+        .locator('.span-details .detail-row', { hasText: 'Name:' })
+        .locator('.value'),
     ).toHaveText('GET /')
   })
 
