@@ -8,12 +8,13 @@
  * Usage:  pnpm run sea:bundle   (run `pnpm run build` first)
  * Output: dist/sea-launcher.cjs
  */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
+const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
 
 if (!existsSync(join(root, 'build', 'index.js'))) {
   console.error('build/index.js not found. Run `pnpm run build` first.')
@@ -28,6 +29,17 @@ mkdirSync(join(root, 'dist'), { recursive: true })
 const launcher = `\
 'use strict';
 const path = require('node:path');
+const APP_VERSION = ${JSON.stringify(version)};
+const argv = process.argv.slice(2);
+
+if (argv.includes('-v') || argv.includes('--version')) {
+  process.stdout.write('otel-gui ' + APP_VERSION + '\\n');
+  process.stdout.write(
+    'platform: ' + process.platform + ' ' + process.arch + '\\n',
+  );
+  process.stdout.write('runtime: node ' + process.version + '\\n');
+  process.exit(0);
+}
 // Default port to 4318 (OTLP/HTTP standard) if not already set
 process.env.PORT ??= '4318';
 // Load the ESM SvelteKit server next to this binary via the ESM loader.
