@@ -20,7 +20,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Search & filter** — filter trace list by text, service, status, and duration range; search spans inside a trace based on attributes, events, and span name and id
 - **Import/export traces** — export one trace, filtered traces, or selected traces as OTLP JSON envelope; import from OTLP JSON or otel-gui export files with metadata preview before confirmation
 - **Bulk list actions** — trace list supports multi-select export and split delete actions (`Clear All` + `Delete Selected (n)`)
-- **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `t`/`l` to jump to Traces/Logs tabs, `m` to toggle Traces/Service Map, escape key to clear search and go back to the trace list, `?` for shortcuts help
+- **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `t`/`l`/`m` to jump to Traces/Logs/Service Map tabs, escape key to clear search and go back to the trace list, `?` for shortcuts help
 - **Error navigation** — jump between error spans with one key
 - **Span details** — attributes, events with timeline markers, resource attributes, instrumentation scope, span links, correlated logs
 - **Global logs workflow** — browse all logs in a dedicated tab, open full log details, and jump from logs to the owning trace/span
@@ -371,7 +371,10 @@ Notes:
 | ---------------- | ------------ | ------------------------------- |
 | `/`              | Everywhere   | Focus search                    |
 | `Esc`            | Everywhere   | Clear search / go back          |
-| `m`              | Everywhere   | Toggle Traces / Service Map tab |
+| `t`              | Everywhere   | Switch to Traces tab            |
+| `l`              | Everywhere   | Switch to Logs tab              |
+| `m`              | Trace list   | Switch to Service Map tab       |
+| `m`              | Trace detail | Toggle Service Map              |
 | `Alt+Backspace`  | Trace list   | Clear all traces                |
 | `↑↓←→` / `Enter` | Trace detail | Navigate span tree              |
 | `n` / `N`        | Trace detail | Next / prev search match        |

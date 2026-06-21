@@ -179,10 +179,10 @@
       return
     }
 
-    // 'm': toggle between Traces and Map tabs
+    // 'm': switch to Map tab
     if (e.key === 'm' && !isInputFocused()) {
       e.preventDefault()
-      switchTab(activeTab === 'traces' ? 'map' : 'traces')
+      switchTab('map')
       return
     }
   }
