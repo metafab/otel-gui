@@ -30,7 +30,7 @@ const launcher = `\
 'use strict';
 const path = require('node:path');
 const APP_VERSION = ${JSON.stringify(version)};
-const argv = process.argv.slice(2);
+const argv = process.argv.slice(1);
 
 if (argv.includes('-v') || argv.includes('--version')) {
   process.stdout.write('otel-gui ' + APP_VERSION + '\\n');
