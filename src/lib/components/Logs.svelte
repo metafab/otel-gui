@@ -15,7 +15,9 @@
   } = $props()
 
   let logs = $state.raw<LogListItem[]>([])
-  let isLoading = $state(false)
+  // Only true until the first snapshot (or fallback load) arrives. Background
+  // delta updates never toggle this, so the table is never torn down/remounted.
+  let isLoading = $state(true)
   let loadError = $state<string | null>(null)
   type LogSortBy = 'time' | 'service' | 'severity' | 'body' | 'trace' | 'span'
   type LogSortOrder = 'asc' | 'desc'
@@ -298,6 +300,8 @@
     }
   })
 
+  // Fallback for environments without EventSource — the live view is otherwise
+  // driven entirely by the SSE snapshot/append stream (see the $effect below).
   async function loadLogs() {
     isLoading = true
     loadError = null
@@ -314,6 +318,32 @@
     } finally {
       isLoading = false
     }
+  }
+
+  function logTimeNano(log: LogListItem): bigint {
+    return BigInt(log.timeUnixNano || log.observedTimeUnixNano || '0')
+  }
+
+  // Merge newly-streamed logs into the existing list (upsert by id) without
+  // refetching everything, then cap to maxLogs to mirror the server's eviction.
+  function applyAppend(incoming: LogListItem[]) {
+    if (incoming.length === 0) return
+
+    const byId = new Map<string, LogListItem>()
+    for (const log of logs) byId.set(log.id, log)
+    for (const log of incoming) byId.set(log.id, log)
+
+    let merged = Array.from(byId.values())
+    if (merged.length > maxLogs) {
+      merged.sort((a, b) => {
+        const at = logTimeNano(a)
+        const bt = logTimeNano(b)
+        return bt > at ? 1 : bt < at ? -1 : 0
+      })
+      merged = merged.slice(0, maxLogs)
+    }
+
+    logs = merged
   }
 
   async function clearAllLogs() {
@@ -437,28 +467,43 @@
   }
 
   $effect(() => {
-    void loadLogs()
-  })
-
-  $effect(() => {
-    if (typeof EventSource === 'undefined') return
+    // No EventSource (SSR/legacy) — fall back to a one-shot REST load.
+    if (typeof EventSource === 'undefined') {
+      void loadLogs()
+      return
+    }
 
     const es = new EventSource('/api/logs/stream')
-    let refreshTimer: ReturnType<typeof setTimeout> | null = null
 
-    es.addEventListener('logs-count', () => {
-      if (refreshTimer !== null) clearTimeout(refreshTimer)
-      refreshTimer = setTimeout(() => {
-        void loadLogs()
-      }, 75)
+    // Full list: sent on connect and after any clear/delete (re-sync).
+    es.addEventListener('logs-snapshot', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data)
+        logs = Array.isArray(data.logs) ? data.logs : []
+        loadError = null
+      } catch {
+        // Ignore malformed payloads; the next snapshot will re-sync.
+      } finally {
+        isLoading = false
+      }
+    })
+
+    // Incremental: only logs ingested since the last cursor. Merged in place so
+    // the table updates without a full re-render (no flash).
+    es.addEventListener('logs-append', (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (Array.isArray(data.logs)) applyAppend(data.logs)
+      } catch {
+        // Ignore malformed payloads.
+      }
     })
 
     es.onerror = () => {
-      // EventSource auto-reconnects.
+      // EventSource auto-reconnects; the reconnect replays a fresh snapshot.
     }
 
     return () => {
-      if (refreshTimer !== null) clearTimeout(refreshTimer)
       es.close()
     }
   })

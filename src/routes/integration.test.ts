@@ -17,6 +17,11 @@ import { GET as getConfig } from './api/config/+server'
 import { GET as getLogList, DELETE as deleteLogs } from './api/logs/+server'
 import { GET as getLog } from './api/logs/[logId]/+server'
 import { POST as postOtlpMetrics } from './v1/metrics/+server'
+import {
+  GET as getMetricList,
+  DELETE as deleteMetrics,
+} from './api/metrics/+server'
+import { GET as getMetric } from './api/metrics/[metricId]/+server'
 import { POST as postOtlpLogs } from './v1/logs/+server'
 import { traceStore } from '$lib/server/traceStore'
 import simpleTrace from '../../tests/fixtures/simple-trace.json'
@@ -50,6 +55,17 @@ function makeLogsPostRequest(
   })
 }
 
+function makeMetricsPostRequest(
+  body: unknown,
+  contentType = 'application/json',
+): Request {
+  return new Request('http://localhost:4318/v1/metrics', {
+    method: 'POST',
+    headers: { 'Content-Type': contentType },
+    body: JSON.stringify(body),
+  })
+}
+
 function makeUrl(path: string, params: Record<string, string> = {}): URL {
   const url = new URL(`http://localhost${path}`)
   for (const [k, v] of Object.entries(params)) {
@@ -69,6 +85,7 @@ function makeJsonRequest(path: string, body: unknown): Request {
 beforeEach(() => {
   traceStore.clearTraces()
   traceStore.clearLogs()
+  traceStore.clearMetrics()
 })
 
 // ─── POST /v1/traces ─────────────────────────────────────────────────────────
@@ -1120,14 +1137,644 @@ describe('Unimplemented endpoints', () => {
     const body = await response.json()
     expect(body.error).toMatch(/not implemented/i)
   })
+})
 
-  it('returns 501 for POST /v1/metrics', async () => {
-    const request = makePostRequest({ resourceMetrics: [] })
-    const response = await postOtlpMetrics({ request } as any)
-    expect(response.status).toBe(501)
+// ─── POST /v1/metrics ─────────────────────────────────────────────────────────
 
+function gaugeMetricPayload(): any {
+  return {
+    resourceMetrics: [
+      {
+        resource: {
+          attributes: [
+            { key: 'service.name', value: { stringValue: 'cart-service' } },
+          ],
+        },
+        scopeMetrics: [
+          {
+            scope: { name: 'test-scope' },
+            metrics: [
+              {
+                name: 'process.memory.usage',
+                description: 'Resident memory',
+                unit: 'By',
+                gauge: {
+                  dataPoints: [
+                    {
+                      attributes: [
+                        { key: 'state', value: { stringValue: 'used' } },
+                      ],
+                      timeUnixNano: '1700000000000000000',
+                      asInt: '1048576',
+                    },
+                    {
+                      attributes: [
+                        { key: 'state', value: { stringValue: 'used' } },
+                      ],
+                      timeUnixNano: '1700000001000000000',
+                      asInt: '2097152',
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+function sumMetricPayload(): any {
+  return {
+    resourceMetrics: [
+      {
+        resource: {
+          attributes: [
+            { key: 'service.name', value: { stringValue: 'cart-service' } },
+          ],
+        },
+        scopeMetrics: [
+          {
+            scope: { name: 'test-scope' },
+            metrics: [
+              {
+                name: 'http.server.request.count',
+                description: 'Request count',
+                unit: '1',
+                sum: {
+                  aggregationTemporality: 2,
+                  isMonotonic: true,
+                  dataPoints: [
+                    {
+                      attributes: [
+                        { key: 'route', value: { stringValue: '/a' } },
+                      ],
+                      timeUnixNano: '1700000000000000000',
+                      asDouble: 5,
+                    },
+                    {
+                      attributes: [
+                        { key: 'route', value: { stringValue: '/b' } },
+                      ],
+                      timeUnixNano: '1700000000000000000',
+                      asDouble: 9,
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+function histogramMetricPayload(): any {
+  return {
+    resourceMetrics: [
+      {
+        resource: {
+          attributes: [
+            { key: 'service.name', value: { stringValue: 'hist-service' } },
+          ],
+        },
+        scopeMetrics: [
+          {
+            scope: { name: 'test-scope' },
+            metrics: [
+              {
+                name: 'http.server.duration',
+                description: 'Latency distribution',
+                unit: 'ms',
+                histogram: {
+                  aggregationTemporality: 2,
+                  dataPoints: [
+                    {
+                      timeUnixNano: '1700000000000000000',
+                      count: '3',
+                      sum: 42,
+                      bucketCounts: ['1', '1', '1'],
+                      explicitBounds: [10, 50],
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+function expHistogramMetricPayload(): any {
+  return {
+    resourceMetrics: [
+      {
+        resource: {
+          attributes: [
+            { key: 'service.name', value: { stringValue: 'expo-service' } },
+          ],
+        },
+        scopeMetrics: [
+          {
+            scope: { name: 'test-scope' },
+            metrics: [
+              {
+                name: 'rpc.duration',
+                description: 'Exponential latency',
+                unit: 'ms',
+                exponentialHistogram: {
+                  aggregationTemporality: 2,
+                  dataPoints: [
+                    {
+                      timeUnixNano: '1700000000000000000',
+                      count: '7',
+                      sum: 100,
+                      scale: 2,
+                      zeroCount: '1',
+                      positive: { offset: 0, bucketCounts: ['2', '3', '1'] },
+                      negative: { offset: 0, bucketCounts: [] },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+function summaryMetricPayload(): any {
+  return {
+    resourceMetrics: [
+      {
+        resource: {
+          attributes: [
+            { key: 'service.name', value: { stringValue: 'summary-service' } },
+          ],
+        },
+        scopeMetrics: [
+          {
+            scope: { name: 'test-scope' },
+            metrics: [
+              {
+                name: 'rpc.client.duration',
+                description: 'Legacy summary',
+                unit: 'ms',
+                summary: {
+                  dataPoints: [
+                    {
+                      timeUnixNano: '1700000000000000000',
+                      count: '10',
+                      sum: 123,
+                      quantileValues: [
+                        { quantile: 0.5, value: 10 },
+                        { quantile: 0.99, value: 50 },
+                      ],
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+// Cumulative monotonic Sum across two timestamps 1s apart (5 -> 8) on one
+// series, used to exercise the server-side rate projection on the wire.
+function cumulativeSumPayload(): any {
+  return {
+    resourceMetrics: [
+      {
+        resource: {
+          attributes: [
+            { key: 'service.name', value: { stringValue: 'rate-service' } },
+          ],
+        },
+        scopeMetrics: [
+          {
+            scope: { name: 'test-scope' },
+            metrics: [
+              {
+                name: 'http.requests',
+                unit: '1',
+                sum: {
+                  aggregationTemporality: 2,
+                  isMonotonic: true,
+                  dataPoints: [
+                    {
+                      attributes: [],
+                      timeUnixNano: '1700000000000000000',
+                      asDouble: 5,
+                    },
+                    {
+                      attributes: [],
+                      timeUnixNano: '1700000001000000000',
+                      asDouble: 8,
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+describe('POST /v1/metrics', () => {
+  it('returns 200 for valid JSON payload', async () => {
+    const response = await postOtlpMetrics({
+      request: makeMetricsPostRequest(gaugeMetricPayload()),
+    } as any)
+    expect(response.status).toBe(200)
+  })
+
+  it('returns 400 when resourceMetrics is missing', async () => {
+    const response = await postOtlpMetrics({
+      request: makeMetricsPostRequest({ wrongKey: [] }),
+    } as any)
+    expect(response.status).toBe(400)
     const body = await response.json()
-    expect(body.error).toMatch(/not implemented/i)
+    expect(body.error).toMatch(/resourceMetrics/i)
+  })
+
+  it('returns 400 for unsupported content type', async () => {
+    const request = new Request('http://localhost:4318/v1/metrics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: 'hello',
+    })
+    const response = await postOtlpMetrics({ request } as any)
+    expect(response.status).toBe(400)
+  })
+
+  it('ingests a Gauge metric so it appears in GET /api/metrics', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(gaugeMetricPayload()),
+    } as any)
+
+    const response = await getMetricList({
+      url: makeUrl('/api/metrics'),
+    } as any)
+    const metrics = await response.json()
+
+    expect(metrics).toHaveLength(1)
+    expect(metrics[0].name).toBe('process.memory.usage')
+    expect(metrics[0].type).toBe('gauge')
+    expect(metrics[0].serviceName).toBe('cart-service')
+    expect(metrics[0].unit).toBe('By')
+    expect(metrics[0].seriesCount).toBe(1)
+    expect(metrics[0].sparkline).toEqual([1048576, 2097152])
+  })
+
+  it('ingests a Sum metric with one series per attribute set', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(sumMetricPayload()),
+    } as any)
+
+    const response = await getMetricList({
+      url: makeUrl('/api/metrics'),
+    } as any)
+    const metrics = await response.json()
+
+    expect(metrics).toHaveLength(1)
+    expect(metrics[0].name).toBe('http.server.request.count')
+    expect(metrics[0].type).toBe('sum')
+    expect(metrics[0].seriesCount).toBe(2)
+  })
+
+  it('ingests a histogram metric (Phase 2) and lists it', async () => {
+    const response = await postOtlpMetrics({
+      request: makeMetricsPostRequest(histogramMetricPayload()),
+    } as any)
+    expect(response.status).toBe(200)
+
+    const listResponse = await getMetricList({
+      url: makeUrl('/api/metrics'),
+    } as any)
+    const metrics = await listResponse.json()
+    expect(metrics).toHaveLength(1)
+    expect(metrics[0].name).toBe('http.server.duration')
+    expect(metrics[0].type).toBe('histogram')
+    // Sparkline of a histogram is a count proxy (never crashes on bucket points).
+    expect(metrics[0].sparkline).toEqual([3])
+  })
+
+  it.each(['application/x-protobuf', 'application/protobuf'])(
+    'returns 200 with empty body and matching content-type for %s metric requests',
+    async (contentType) => {
+      const request = new Request('http://localhost:4318/v1/metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': contentType },
+        body: new Uint8Array(0),
+      })
+
+      const response = await postOtlpMetrics({ request } as any)
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('content-type')).toBe(contentType)
+
+      const body = await response.arrayBuffer()
+      expect(body.byteLength).toBe(0)
+    },
+  )
+
+  it('ingests Gauge + Sum via protobuf and round-trips through GET /api/metrics', async () => {
+    const protobuf = await import('protobufjs')
+    const { fileURLToPath } = await import('node:url')
+    const { dirname, join } = await import('node:path')
+    const here = dirname(fileURLToPath(import.meta.url))
+    const protoRoot = join(here, '..', '..', 'proto')
+    const root = new protobuf.default.Root()
+    root.resolvePath = (_origin: string, target: string) => {
+      if (target.startsWith('opentelemetry/')) return join(protoRoot, target)
+      return target
+    }
+    await root.load(
+      'opentelemetry/proto/collector/metrics/v1/metrics_service.proto',
+    )
+    const ExportMetricsServiceRequest = root.lookupType(
+      'opentelemetry.proto.collector.metrics.v1.ExportMetricsServiceRequest',
+    )
+
+    const payload = {
+      resourceMetrics: [
+        {
+          resource: {
+            attributes: [
+              {
+                key: 'service.name',
+                value: { stringValue: 'pb-service' },
+              },
+            ],
+          },
+          scopeMetrics: [
+            {
+              scope: { name: 'pb-scope' },
+              metrics: [
+                {
+                  name: 'pb.gauge',
+                  unit: '1',
+                  gauge: {
+                    dataPoints: [
+                      { timeUnixNano: 1700000000000000000, asDouble: 3.5 },
+                    ],
+                  },
+                },
+                {
+                  name: 'pb.counter',
+                  unit: '1',
+                  sum: {
+                    aggregationTemporality: 2,
+                    isMonotonic: true,
+                    dataPoints: [
+                      { timeUnixNano: 1700000000000000000, asInt: 7 },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const buffer = ExportMetricsServiceRequest.encode(
+      ExportMetricsServiceRequest.fromObject(payload),
+    ).finish()
+
+    const request = new Request('http://localhost:4318/v1/metrics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-protobuf' },
+      body: new Uint8Array(buffer),
+    })
+
+    const response = await postOtlpMetrics({ request } as any)
+    expect(response.status).toBe(200)
+
+    const listResponse = await getMetricList({
+      url: makeUrl('/api/metrics'),
+    } as any)
+    const metrics = await listResponse.json()
+    const names = metrics.map((m: any) => m.name).sort()
+    expect(names).toEqual(['pb.counter', 'pb.gauge'])
+  })
+})
+
+// ─── GET /api/metrics ─────────────────────────────────────────────────────────
+
+describe('GET /api/metrics', () => {
+  it('returns empty array when no metrics ingested', async () => {
+    const response = await getMetricList({
+      url: makeUrl('/api/metrics'),
+    } as any)
+    expect(await response.json()).toEqual([])
+  })
+
+  it('respects the limit query param', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(gaugeMetricPayload()),
+    } as any)
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(sumMetricPayload()),
+    } as any)
+
+    const response = await getMetricList({
+      url: makeUrl('/api/metrics', { limit: '1' }),
+    } as any)
+    const metrics = await response.json()
+    expect(metrics).toHaveLength(1)
+  })
+})
+
+// ─── GET /api/metrics/:metricId ───────────────────────────────────────────────
+
+describe('GET /api/metrics/:metricId', () => {
+  it('returns 404 for unknown metricId', async () => {
+    await expect(
+      getMetric({ params: { metricId: 'nope' } } as any),
+    ).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('returns full series + points for an ingested metric', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(gaugeMetricPayload()),
+    } as any)
+
+    const listResponse = await getMetricList({
+      url: makeUrl('/api/metrics'),
+    } as any)
+    const [{ id }] = await listResponse.json()
+
+    const response = await getMetric({ params: { metricId: id } } as any)
+    const detail = await response.json()
+
+    expect(detail.id).toBe(id)
+    expect(detail.name).toBe('process.memory.usage')
+    expect(detail.type).toBe('gauge')
+    expect(Array.isArray(detail.series)).toBe(true)
+    expect(detail.series).toHaveLength(1)
+    expect(detail.series[0].points).toHaveLength(2)
+    expect(detail.series[0].points[0].v).toBe(1048576)
+    // Gauge points carry no rate.
+    expect(detail.series[0].points[0].rate).toBeUndefined()
+    expect(detail.series[0].points[1].rate).toBeUndefined()
+  })
+
+  it('attaches a per-second rate to cumulative Sum points (raw kept)', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(cumulativeSumPayload()),
+    } as any)
+
+    const [{ id }] = await (
+      await getMetricList({ url: makeUrl('/api/metrics') } as any)
+    ).json()
+    const detail = await (
+      await getMetric({ params: { metricId: id } } as any)
+    ).json()
+
+    const pts = detail.series[0].points
+    expect(pts).toHaveLength(2)
+    // First point of a series has no predecessor → no rate, raw retained.
+    expect(pts[0]).toMatchObject({ v: 5 })
+    expect(pts[0].rate).toBeUndefined()
+    // (8 - 5) / 1s = 3 per second; raw value still present.
+    expect(pts[1].v).toBe(8)
+    expect(pts[1].rate).toBeCloseTo(3, 10)
+  })
+
+  it('returns histogram bucketCounts + explicitBounds on the wire', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(histogramMetricPayload()),
+    } as any)
+
+    const [{ id }] = await (
+      await getMetricList({ url: makeUrl('/api/metrics') } as any)
+    ).json()
+    const detail = await (
+      await getMetric({ params: { metricId: id } } as any)
+    ).json()
+
+    expect(detail.type).toBe('histogram')
+    const p = detail.series[0].points[0]
+    expect(p.count).toBe(3)
+    expect(p.sum).toBe(42)
+    expect(p.bucketCounts).toEqual([1, 1, 1])
+    expect(p.explicitBounds).toEqual([10, 50])
+  })
+
+  it('returns exp-histogram scale + scaled buckets on the wire', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(expHistogramMetricPayload()),
+    } as any)
+
+    const [{ id }] = await (
+      await getMetricList({ url: makeUrl('/api/metrics') } as any)
+    ).json()
+    const detail = await (
+      await getMetric({ params: { metricId: id } } as any)
+    ).json()
+
+    expect(detail.type).toBe('exp_histogram')
+    const p = detail.series[0].points[0]
+    expect(p.scale).toBe(2)
+    expect(p.zeroCount).toBe(1)
+    expect(p.positive.bucketCounts).toEqual([2, 3, 1])
+  })
+
+  it('returns summary quantileValues on the wire', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(summaryMetricPayload()),
+    } as any)
+
+    const [{ id }] = await (
+      await getMetricList({ url: makeUrl('/api/metrics') } as any)
+    ).json()
+    const detail = await (
+      await getMetric({ params: { metricId: id } } as any)
+    ).json()
+
+    expect(detail.type).toBe('summary')
+    const p = detail.series[0].points[0]
+    expect(p.count).toBe(10)
+    expect(p.sum).toBe(123)
+    expect(p.quantileValues).toEqual([
+      { quantile: 0.5, value: 10 },
+      { quantile: 0.99, value: 50 },
+    ])
+  })
+})
+
+// ─── DELETE /api/metrics ──────────────────────────────────────────────────────
+
+describe('DELETE /api/metrics', () => {
+  it('clears all metrics when called with no body', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(gaugeMetricPayload()),
+    } as any)
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(sumMetricPayload()),
+    } as any)
+
+    const clearResponse = await deleteMetrics({} as any)
+    const body = await clearResponse.json()
+    expect(body.success).toBe(true)
+    expect(body.mode).toBe('all')
+
+    const listResponse = await getMetricList({
+      url: makeUrl('/api/metrics'),
+    } as any)
+    expect(await listResponse.json()).toHaveLength(0)
+  })
+
+  it('deletes only selected metric IDs when ids are provided', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(gaugeMetricPayload()),
+    } as any)
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(sumMetricPayload()),
+    } as any)
+
+    const listResponse = await getMetricList({
+      url: makeUrl('/api/metrics'),
+    } as any)
+    const metrics = await listResponse.json()
+    expect(metrics).toHaveLength(2)
+
+    const idToDelete = metrics[0].id
+
+    const deleteRequest = new Request('http://localhost/api/metrics', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [idToDelete] }),
+    })
+
+    const deleteResponse = await deleteMetrics({
+      request: deleteRequest,
+    } as any)
+    const deleteBody = await deleteResponse.json()
+
+    expect(deleteResponse.status).toBe(200)
+    expect(deleteBody.success).toBe(true)
+    expect(deleteBody.mode).toBe('selected')
+    expect(deleteBody.deletedCount).toBe(1)
+
+    const afterResponse = await getMetricList({
+      url: makeUrl('/api/metrics'),
+    } as any)
+    const remaining = await afterResponse.json()
+    expect(remaining).toHaveLength(1)
+    expect(remaining.find((m: any) => m.id === idToDelete)).toBeUndefined()
   })
 })
 

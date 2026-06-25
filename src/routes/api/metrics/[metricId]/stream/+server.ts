@@ -1,24 +1,19 @@
-// SSE endpoint — streams log updates to the client in real-time.
+// SSE endpoint — streams a single metric's series + points for the detail page.
 //
-// Three event types are emitted on a shared connection:
-//   - `logs-count`    : current log count (used by the tab badge)
-//   - `logs-snapshot` : full list + cursor; sent on connect and after any
-//                       explicit clear/delete so the client can re-sync
-//   - `logs-append`   : only the logs ingested since the client's last cursor
+// Phase-1 simplest correct form: on connect (and on each debounced ingest
+// notification) re-send the metric's current series + points via getMetric().
+// The payload is bounded by maxMetricPoints x seriesCount, so it stays small.
 //
-// Streaming deltas avoids re-sending (and re-rendering) the entire list on
-// every ingest, which is what previously caused the logs view to flash.
+//   - `metric-snapshot` : the full series+points for this metric
+//   - `metric-removed`  : the metric no longer exists (cleared/deleted/evicted)
 import { traceStore } from '$lib/server/traceStore'
 import type { RequestHandler } from './$types'
 
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ params }) => {
+  const metricId = params.metricId
   const encoder = new TextEncoder()
   let unsubscribe: (() => void) | null = null
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null
-
-  // Per-connection cursors.
-  let lastSeq = 0
-  let lastRemovalSeq = traceStore.getLogRemovalSeq()
 
   function cleanup() {
     unsubscribe?.()
@@ -29,6 +24,14 @@ export const GET: RequestHandler = async () => {
     }
   }
 
+  function serializeMetric() {
+    // getMetricDetail flattens series + attaches per-second `rate` to Sum
+    // points (cumulative w/ reset detection, or delta); other types pass
+    // through with their type-appropriate point shape. Same shape as the
+    // detail GET so the client can use one decoder for both.
+    return traceStore.getMetricDetail(metricId) ?? null
+  }
+
   const stream = new ReadableStream({
     start(controller) {
       const send = (event: string, data: string): boolean => {
@@ -36,33 +39,21 @@ export const GET: RequestHandler = async () => {
           controller.enqueue(encoder.encode(`event: ${event}\ndata: ${data}\n\n`))
           return true
         } catch {
-          // Controller already closed (client disconnected).
           cleanup()
           return false
         }
       }
 
-      const sendCount = () => send('logs-count', String(traceStore.getLogCount()))
-
       const sendSnapshot = () => {
-        const logs = traceStore.getLogList(traceStore.maxLogs)
-        lastSeq = traceStore.getMaxLogSeq()
-        lastRemovalSeq = traceStore.getLogRemovalSeq()
-        send('logs-snapshot', JSON.stringify({ logs }))
-      }
-
-      const sendAppend = () => {
-        const maxSeq = traceStore.getMaxLogSeq()
-        if (maxSeq <= lastSeq) return
-        const logs = traceStore.getLogsSince(lastSeq, traceStore.maxLogs)
-        lastSeq = maxSeq
-        if (logs.length > 0) {
-          send('logs-append', JSON.stringify({ logs }))
+        const metric = serializeMetric()
+        if (!metric) {
+          send('metric-removed', JSON.stringify({ id: metricId }))
+          return
         }
+        send('metric-snapshot', JSON.stringify(metric))
       }
 
       // Send current state immediately on connect.
-      sendCount()
       sendSnapshot()
 
       // Debounce rapid-fire ingestion (batched exports can arrive all at once).
@@ -70,14 +61,7 @@ export const GET: RequestHandler = async () => {
       unsubscribe = traceStore.subscribe(() => {
         if (debounceTimer !== null) clearTimeout(debounceTimer)
         debounceTimer = setTimeout(() => {
-          if (!sendCount()) return
-          // A clear/delete happened — the cursor model can't express removals,
-          // so re-snapshot. Otherwise stream only the new logs.
-          if (traceStore.getLogRemovalSeq() !== lastRemovalSeq) {
-            sendSnapshot()
-          } else {
-            sendAppend()
-          }
+          sendSnapshot()
         }, 100)
       })
 

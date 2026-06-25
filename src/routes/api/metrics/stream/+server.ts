@@ -1,13 +1,12 @@
-// SSE endpoint — streams log updates to the client in real-time.
+// SSE endpoint — streams metric-list updates to the client in real-time.
 //
 // Three event types are emitted on a shared connection:
-//   - `logs-count`    : current log count (used by the tab badge)
-//   - `logs-snapshot` : full list + cursor; sent on connect and after any
-//                       explicit clear/delete so the client can re-sync
-//   - `logs-append`   : only the logs ingested since the client's last cursor
+//   - `metrics-count`    : current metric count (used by the tab badge)
+//   - `metrics-snapshot` : full list + cursor; sent on connect and after any
+//                          explicit clear/delete so the client can re-sync
+//   - `metrics-append`   : only the metrics touched since the client's cursor
 //
-// Streaming deltas avoids re-sending (and re-rendering) the entire list on
-// every ingest, which is what previously caused the logs view to flash.
+// Mirrors the logs delta protocol so the list view streams flash-free.
 import { traceStore } from '$lib/server/traceStore'
 import type { RequestHandler } from './$types'
 
@@ -18,7 +17,7 @@ export const GET: RequestHandler = async () => {
 
   // Per-connection cursors.
   let lastSeq = 0
-  let lastRemovalSeq = traceStore.getLogRemovalSeq()
+  let lastRemovalSeq = traceStore.getMetricRemovalSeq()
 
   function cleanup() {
     unsubscribe?.()
@@ -42,22 +41,23 @@ export const GET: RequestHandler = async () => {
         }
       }
 
-      const sendCount = () => send('logs-count', String(traceStore.getLogCount()))
+      const sendCount = () =>
+        send('metrics-count', String(traceStore.getMetricCount()))
 
       const sendSnapshot = () => {
-        const logs = traceStore.getLogList(traceStore.maxLogs)
-        lastSeq = traceStore.getMaxLogSeq()
-        lastRemovalSeq = traceStore.getLogRemovalSeq()
-        send('logs-snapshot', JSON.stringify({ logs }))
+        const metrics = traceStore.getMetricList(traceStore.maxMetrics)
+        lastSeq = traceStore.getMaxMetricSeq()
+        lastRemovalSeq = traceStore.getMetricRemovalSeq()
+        send('metrics-snapshot', JSON.stringify({ metrics }))
       }
 
       const sendAppend = () => {
-        const maxSeq = traceStore.getMaxLogSeq()
+        const maxSeq = traceStore.getMaxMetricSeq()
         if (maxSeq <= lastSeq) return
-        const logs = traceStore.getLogsSince(lastSeq, traceStore.maxLogs)
+        const metrics = traceStore.getMetricsSince(lastSeq, traceStore.maxMetrics)
         lastSeq = maxSeq
-        if (logs.length > 0) {
-          send('logs-append', JSON.stringify({ logs }))
+        if (metrics.length > 0) {
+          send('metrics-append', JSON.stringify({ metrics }))
         }
       }
 
@@ -72,8 +72,8 @@ export const GET: RequestHandler = async () => {
         debounceTimer = setTimeout(() => {
           if (!sendCount()) return
           // A clear/delete happened — the cursor model can't express removals,
-          // so re-snapshot. Otherwise stream only the new logs.
-          if (traceStore.getLogRemovalSeq() !== lastRemovalSeq) {
+          // so re-snapshot. Otherwise stream only the changed metrics.
+          if (traceStore.getMetricRemovalSeq() !== lastRemovalSeq) {
             sendSnapshot()
           } else {
             sendAppend()
