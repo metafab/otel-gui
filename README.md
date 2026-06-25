@@ -4,11 +4,25 @@
 
 # otel-gui
 
-A lightweight, zero-config OpenTelemetry trace viewer for local development.
 
-Drop-in replacement for a collector endpoint — point your OTLP exporter at it and see traces immediately. No database required.
+[![Runs on any OS](https://img.shields.io/badge/runs%20on-macOS_%C2%B7_Windows_%C2%B7_Linux-2979ff?style=flat-square)](#%EF%B8%8F-quick-start)
+&nbsp;[![Docker ready](https://img.shields.io/badge/docker-ready-2496ed?style=flat-square&logo=docker&logoColor=white)](#docker-)
+&nbsp;![Privacy: local](https://img.shields.io/badge/privacy-100%_local-green?style=flat-square&logo=lock&logoColor=white)
+&nbsp;[![Latest release](https://img.shields.io/github/v/release/metafab/otel-gui?sort=semver&display_name=tag&label=latest&color=7c4dff&style=flat-square&logo=github&logoColor=white)](https://github.com/metafab/otel-gui/releases/latest)
+
+A lightweight, zero-config OpenTelemetry trace and log viewer for local development.
+
+Drop-in replacement for a collector endpoint — point your OTLP exporter at it and see traces and logs immediately. No database required.
 
 ![Trace list view](docs/screenshots/trace-detail.png)
+
+<div align="center">
+<strong>
+
+[Quick start](#%EF%B8%8F-quick-start) • [Screenshots](#-screenshots) • [Features](#-features)
+
+</strong>
+</div>
 
 ## ✨ Features
 
@@ -17,10 +31,10 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Real-time updates** — new traces appear instantly via SSE (Server-Sent Events), no polling
 - **Waterfall timeline** — Honeycomb-style span waterfall with resizable name column and sidebar
 - **Service map** — auto-generated graph of cross-service calls with error rates and latency (p50/p99)
-- **Search & filter** — filter trace list by text, service, status, and duration range; search spans inside a trace based on attributes, events, and span name and id
+- **Search & filter** — filter lists by text, service, status, and duration range; search spans inside a trace based on attributes, events, and span name or id
 - **Import/export traces** — export one trace, filtered traces, or selected traces as OTLP JSON envelope; import from OTLP JSON or otel-gui export files with metadata preview before confirmation
-- **Bulk list actions** — trace list supports multi-select export and split delete actions (`Clear All` + `Delete Selected (n)`)
-- **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `t`/`l`/`m` to jump to Traces/Logs/Service Map tabs, escape key to clear search and go back to the trace list, `?` for shortcuts help
+- **Bulk list actions** — trace and log lists support multi-select export and split delete actions (`Clear All` + `Delete Selected (n)`)
+- **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `t`/`l`/`m` to jump to Traces/Logs/Service Map tabs, escape key to clear search and go back to the list, `?` for shortcuts help
 - **Error navigation** — jump between error spans with one key
 - **Span details** — attributes, events with timeline markers, resource attributes, instrumentation scope, span links, correlated logs
 - **Global logs workflow** — browse all logs in a dedicated tab, open full log details, and jump from logs to the owning trace/span
@@ -58,30 +72,6 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 ![Global logs](docs/screenshots/global-logs.png)
 
 ## 🛠️ Quick Start
-
-**Requires**: Node.js ≥ 20, [pnpm](https://pnpm.io)
-
-```sh
-git clone https://github.com/metafab/otel-gui
-cd otel-gui
-pnpm install
-pnpm dev
-```
-
-### Development commands
-
-```sh
-pnpm run dev        # Start dev server on port 4318
-pnpm run lint       # Lint TypeScript, JavaScript, and Svelte files
-pnpm run format     # Format files with Prettier
-pnpm run format:check # Check formatting without writing changes
-pnpm run check      # TypeScript type-check
-pnpm run test       # Run unit tests (Vitest)
-pnpm run test:watch # Tests in watch mode
-pnpm run build      # Production build
-```
-
-Open [http://localhost:4318](http://localhost:4318) — the OTLP endpoint is live at the same address.
 
 ### Install with Homebrew
 
@@ -172,6 +162,32 @@ To use a different port:
 
 ```sh
 PORT=55681 docker compose up --build
+```
+
+### Local development
+
+**Requires**: Node.js ≥ 20, [pnpm](https://pnpm.io)
+
+```sh
+git clone https://github.com/metafab/otel-gui
+cd otel-gui
+pnpm install
+pnpm dev
+```
+
+Open [http://localhost:4318](http://localhost:4318) — the OTLP endpoint is live at the same address.
+
+### Development commands
+
+```sh
+pnpm run dev        # Start dev server on port 4318
+pnpm run lint       # Lint TypeScript, JavaScript, and Svelte files
+pnpm run format     # Format files with Prettier
+pnpm run format:check # Check formatting without writing changes
+pnpm run check      # TypeScript type-check
+pnpm run test       # Run unit tests (Vitest)
+pnpm run test:watch # Tests in watch mode
+pnpm run build      # Production build
 ```
 
 ### Sending Traces
@@ -408,7 +424,16 @@ Additional persistence backends (including `pglite`) are loaded via `OTEL_GUI_PE
 
 ## 💠 Tech Stack
 
-- [SvelteKit 5](https://kit.svelte.dev) with Svelte 5 runes (`$state`, `$derived`, `$effect`)
+[![Svelte](https://img.shields.io/badge/svelte-123?logo=svelte)](https://svelte.dev)
+[![SvelteKit](https://img.shields.io/badge/sveltekit-123?logo=svelte)](https://kit.svelte.dev)
+[![TypeScript](https://img.shields.io/badge/typescript-123?logo=typescript)](https://www.typescriptlang.org)
+[![Node.js](https://img.shields.io/badge/node.js-123?logo=node.js)](https://nodejs.org)
+[![Vite](https://img.shields.io/badge/vite-123?logo=vite)](https://vitejs.dev)
+[![Vitest](https://img.shields.io/badge/vitest-123?logo=vitest)](https://vitest.dev)
+[![HomeBrew](https://img.shields.io/badge/homebrew-123?logo=homebrew)](https://brew.sh)
+[![Docker](https://img.shields.io/badge/docker-123?logo=docker)](https://www.docker.com)
+
+- [SvelteKit 2](https://kit.svelte.dev) with Svelte 5 runes (`$state`, `$derived`, `$effect`)
 - [`@sveltejs/adapter-node`](https://kit.svelte.dev/docs/adapter-node) for persistent in-memory state
 - [`protobufjs`](https://github.com/protobufjs/protobuf.js) for Protobuf decoding
 - No UI library — custom waterfall, service map SVG, and all components from scratch
