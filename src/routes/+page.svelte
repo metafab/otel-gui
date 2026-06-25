@@ -11,14 +11,17 @@
   import TracesCommands from '$lib/components/TracesCommands.svelte'
   import Traces from '$lib/components/Traces.svelte'
   import { metricStore } from '$lib/stores/metrics.svelte'
+  import { serviceMapStore } from '$lib/stores/serviceMap.svelte'
   import { traceStore } from '$lib/stores/traces.svelte'
-  import type { ServiceMapData } from '$lib/types'
   import { isInputFocused, isMac } from '$lib/utils/keyboard'
 
   // Connect to SSE stream for real-time trace updates
   traceStore.connectSSE()
   // Connect to the metrics list stream — drives the tab count badge.
   metricStore.connectSSE()
+  // Connect to the service-map stream — pushes the cumulative map on change
+  // (replaces the old per-tick polling) and keeps the tab badge live.
+  serviceMapStore.connectSSE()
 
   function connectLogsCountSSE() {
     $effect(() => {
@@ -109,32 +112,6 @@
     window.addEventListener('popstate', handlePopState)
 
     return () => window.removeEventListener('popstate', handlePopState)
-  })
-
-  // Service map state
-  let serviceMapData = $state<ServiceMapData | null>(null)
-  let serviceMapLoading = $state(false)
-  let serviceMapError = $state<string | null>(null)
-
-  async function fetchServiceMap() {
-    serviceMapLoading = true
-    serviceMapError = null
-    try {
-      const res = await fetch('/api/service-map')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      serviceMapData = await res.json()
-    } catch (e) {
-      serviceMapError = e instanceof Error ? e.message : String(e)
-    } finally {
-      serviceMapLoading = false
-    }
-  }
-
-  $effect(() => {
-    if (activeTab === 'map') {
-      void traceStore.traces.length // reactive dependency
-      fetchServiceMap()
-    }
   })
 
   let tracesRef: {
@@ -337,13 +314,15 @@
   {:else}
     <!-- Service Map tab -->
     <div class="map-content">
-      {#if serviceMapLoading}
+      {#if serviceMapStore.isLoading && serviceMapStore.data.nodes.length === 0}
         <div class="map-status">Loading service map…</div>
-      {:else if serviceMapError}
-        <div class="map-error">{serviceMapError}</div>
-      {:else if serviceMapData}
+      {:else if serviceMapStore.error && serviceMapStore.data.nodes.length === 0}
+        <div class="map-error">{serviceMapStore.error}</div>
+      {:else}
+        <!-- Kept mounted across snapshots — the store streams updates in and the
+             component's sticky layout expands in place (no teardown, no reflow). -->
         <ServiceMap
-          data={serviceMapData}
+          data={serviceMapStore.data}
           onSelectService={handleMapNodeSelect}
         />
       {/if}

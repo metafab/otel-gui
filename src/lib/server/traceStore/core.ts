@@ -20,7 +20,13 @@ import type {
   TraceListItem,
   TraceStore,
 } from '$lib/types'
-import { buildServiceMap } from '@otel-gui/core'
+import {
+  buildServiceMap,
+  createServiceMapAggregate,
+  accumulateSpan,
+  projectServiceMap,
+  clearServiceMapAggregate,
+} from '@otel-gui/core'
 import { extractAnyValue, flattenAttributes } from '@otel-gui/core'
 import { formatTimestamp, getDurationMs } from '$lib/utils/time'
 import { SPAN_KIND_NAMES, STATUS_CODE_NAMES } from '$lib/utils/otlpEnums'
@@ -126,6 +132,15 @@ export function createInternalTraceStore(
   // re-snapshot the list rather than append.
   let metricRemovalSeq = 0
 
+  // Persistent, cumulative service-map aggregate. Spans are folded in as they
+  // are ingested and NEVER pruned by trace eviction — topology and call/error
+  // counts only grow (latency is windowed), so the map "never ages out". Reset
+  // only by clearTraces. `serviceMapSeq` bumps on any change and gates both the
+  // SSE stream and the memoised projection below.
+  const serviceMapAgg = createServiceMapAggregate()
+  let serviceMapSeq = 0
+  let serviceMapMemo: { seq: number; data: ServiceMapData } | null = null
+
   function notifyListeners() {
     for (const listener of listeners) {
       listener()
@@ -167,6 +182,8 @@ export function createInternalTraceStore(
     if (!resourceSpans || !Array.isArray(resourceSpans)) {
       return
     }
+
+    let mapTouched = false
 
     for (const rs of resourceSpans) {
       const resourceAttrs = flattenAttributes(rs.resource?.attributes)
@@ -235,6 +252,11 @@ export function createInternalTraceStore(
           trace.spanCount = trace.spans.size
           trace.rootSpanName = resolveRootSpanName(trace)
 
+          // Fold into the cumulative service-map aggregate (idempotent per span,
+          // resolves cross-service edges even when a parent arrives later).
+          accumulateSpan(serviceMapAgg, storedSpan)
+          mapTouched = true
+
           const rootServiceName = resolveRootServiceName(trace)
           if (rootServiceName !== 'unknown') {
             trace.serviceName = rootServiceName
@@ -261,6 +283,8 @@ export function createInternalTraceStore(
         }
       }
     }
+
+    if (mapTouched) serviceMapSeq++
 
     notifyListeners()
   }
@@ -415,14 +439,34 @@ export function createInternalTraceStore(
   }
 
   function getServiceMap(filterTraceId?: string): ServiceMapData {
-    const tracesToProcess = filterTraceId
-      ? ([traces.get(filterTraceId)].filter(Boolean) as StoredTrace[])
-      : Array.from(traces.values())
-    return buildServiceMap(tracesToProcess)
+    // Per-trace (mini-map) view: derive on demand from the single trace.
+    if (filterTraceId) {
+      const trace = traces.get(filterTraceId)
+      return buildServiceMap(trace ? [trace] : [])
+    }
+    // Global view: project the persistent cumulative aggregate, memoised by
+    // serviceMapSeq so repeated calls at the same seq (multiple SSE clients on
+    // one tick, plus the REST endpoint) reuse one projection.
+    if (serviceMapMemo && serviceMapMemo.seq === serviceMapSeq) {
+      return serviceMapMemo.data
+    }
+    const data = projectServiceMap(serviceMapAgg)
+    serviceMapMemo = { seq: serviceMapSeq, data }
+    return data
+  }
+
+  // Newest service-map change sequence; SSE clients track this as a cursor and
+  // re-snapshot whenever it advances.
+  function getServiceMapSeq(): number {
+    return serviceMapSeq
   }
 
   function clearTraces(): void {
     traces.clear()
+    // The cumulative map is reset alongside an explicit clear-all (it is the
+    // only thing that ever removes nodes/edges from the map).
+    clearServiceMapAggregate(serviceMapAgg)
+    serviceMapSeq++
     notifyListeners()
   }
 
@@ -964,6 +1008,15 @@ export function createInternalTraceStore(
       traces.set(trace.traceId, trace)
     }
     evictOverflow()
+    // Rebuild the cumulative aggregate from the restored set (this path bypasses
+    // ingestSpans, e.g. persistence restore) so the map reflects what's loaded.
+    clearServiceMapAggregate(serviceMapAgg)
+    for (const trace of traces.values()) {
+      for (const span of trace.spans.values()) {
+        accumulateSpan(serviceMapAgg, span)
+      }
+    }
+    serviceMapSeq++
     notifyListeners()
   }
 
@@ -974,6 +1027,7 @@ export function createInternalTraceStore(
     getTraceCount,
     getTrace,
     getServiceMap,
+    getServiceMapSeq,
     deleteTraces,
     getLogList,
     getLogCount,

@@ -110,6 +110,7 @@ export interface TraceStore {
   getTraceList(limit?: number): TraceListItem[]
   getTrace(traceId: string): StoredTrace | undefined
   getServiceMap(traceId?: string): ServiceMapData
+  getServiceMapSeq(): number
 
   // Trace writes
   clearTraces(): void

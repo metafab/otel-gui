@@ -227,3 +227,45 @@ export interface ServiceMapData {
   nodes: ServiceMapNode[]
   edges: ServiceMapEdge[]
 }
+
+// ─── Cumulative service-map aggregate ──────────────────────────────────────────
+// A persistent, session-lifetime accumulator the store folds spans into as they
+// are ingested. Unlike buildServiceMap (which re-derives from a window of live
+// traces), this is never pruned by trace eviction — topology and call/error
+// counts only grow, satisfying the map's "never age out" contract. Latency is
+// kept over a bounded rolling window so percentiles reflect recent behaviour.
+
+export interface ServiceMapEdgeAccum {
+  source: string
+  target: string
+  callCount: number // cumulative
+  errorCount: number // cumulative
+  durations: number[] // bounded rolling window of recent durations (ns)
+}
+
+// A child span whose cross-service edge cannot be resolved yet because its
+// parent span (and therefore the parent's service) has not been ingested. Held
+// until the parent arrives — parents (SERVER spans) commonly arrive after their
+// children, so this is the normal case, not an edge case.
+export interface PendingChildEdge {
+  childKey: string // `${traceId}|${spanId}` (edge-dedup guard)
+  childSvc: string
+  isError: boolean
+  durNs: number
+  // The child's CLIENT-external target, if any (used when the parent turns out
+  // to be same-service, mirroring buildServiceMap's attribute-edge fallback).
+  external: {
+    name: string
+    nodeType: ServiceMapNode['nodeType']
+    system?: string
+  } | null
+}
+
+export interface ServiceMapAggregate {
+  nodes: Map<string, ServiceMapNode>
+  edges: Map<string, ServiceMapEdgeAccum> // key `${source}||${target}`
+  spanService: Map<string, string> // `${traceId}|${spanId}` -> serviceName
+  countedNodeSpans: Set<string> // node stats counted (dedup)
+  resolvedEdgeSpans: Set<string> // edge contribution emitted (dedup)
+  pendingChildren: Map<string, PendingChildEdge[]> // `${traceId}|${parentSpanId}`
+}
