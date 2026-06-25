@@ -1,13 +1,13 @@
 <div align="center">
-  <img src="src/lib/assets/logo.svg" alt="otel-gui logo" width="80" />
+    <a href="#"><img src="src/lib/assets/logo.svg" alt="otel-gui logo" width="80" /></a>
 </div>
 
 # otel-gui
 
 [![Runs on any OS](https://img.shields.io/badge/runs%20on-macOS_%C2%B7_Windows_%C2%B7_Linux-2979ff?style=flat-square)](#%EF%B8%8F-quick-start)
 &nbsp;[![Docker ready](https://img.shields.io/badge/docker-ready-2496ed?style=flat-square&logo=docker&logoColor=white)](#docker-)
-&nbsp;![Privacy: local](https://img.shields.io/badge/privacy-100%25_local-green?style=flat-square&logo=lock&logoColor=white)
-&nbsp;[![Latest release](https://img.shields.io/github/v/release/metafab/otel-gui?sort=semver&display_name=tag&label=latest&color=7c4dff&style=flat-square&logo=github&logoColor=white)](https://github.com/metafab/otel-gui/releases/latest)
+&nbsp;[![Privacy: local](https://img.shields.io/badge/privacy-100%25_local-green?style=flat-square&logo=lock&logoColor=white)](#-features)
+&nbsp;[![Latest release](https://img.shields.io/github/v/release/metafab/otel-gui?sort=semver&display_name=tag&label=latest&color=7c4dff&style=flat-square&logo=github&logoColor=white)](releases/latest)
 
 A lightweight, zero-config OpenTelemetry trace and log viewer for local development.
 
