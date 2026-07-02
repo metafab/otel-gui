@@ -2,7 +2,7 @@
   import type { ServiceMapData } from '$lib/types'
   import { getServiceColor } from '$lib/utils/colors'
   import {
-    layoutGraph,
+    createStickyLayout,
     type LayoutNode,
     type LayoutEdge,
   } from '$lib/utils/graph'
@@ -20,7 +20,11 @@
 
   const theme = $derived(themeStore.current)
 
-  const layout = $derived(layoutGraph(data.nodes, data.edges))
+  // Sticky, expand-only layout: one instance per component, persistent across
+  // snapshots so placed nodes never move (only new ones are appended and the
+  // canvas grows). This is what stops the streaming map from reflowing/flashing.
+  const sticky = createStickyLayout()
+  const layout = $derived(sticky.update(data.nodes, data.edges))
 
   // Padding around the graph content
   const PAD = $derived(mini ? 16 : 32)
@@ -397,6 +401,16 @@
 
   .node-group {
     transition: opacity 0.15s ease;
+    animation: node-appear 0.3s ease;
+  }
+
+  @keyframes node-appear {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   .node-group.clickable {

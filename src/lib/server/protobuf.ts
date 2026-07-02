@@ -11,11 +11,14 @@ const __dirname = dirname(__filename)
 let root: protobuf.Root | null = null
 let ExportTraceServiceRequest: protobuf.Type | null = null
 let ExportLogsServiceRequest: protobuf.Type | null = null
+let ExportMetricsServiceRequest: protobuf.Type | null = null
 
 const TRACE_SERVICE_PROTO =
   'opentelemetry/proto/collector/trace/v1/trace_service.proto'
 const LOGS_SERVICE_PROTO =
   'opentelemetry/proto/collector/logs/v1/logs_service.proto'
+const METRICS_SERVICE_PROTO =
+  'opentelemetry/proto/collector/metrics/v1/metrics_service.proto'
 
 function resolveProtoRoot(): string {
   const candidates: string[] = []
@@ -96,6 +99,29 @@ async function initProtobufLogs() {
   )
 }
 
+async function initProtobufMetrics() {
+  if (root && ExportMetricsServiceRequest) {
+    return
+  }
+
+  const protoRoot = resolveProtoRoot()
+
+  if (!root) {
+    root = new protobuf.Root()
+    root.resolvePath = (origin: string, target: string) => {
+      if (target.startsWith('opentelemetry/')) {
+        return join(protoRoot, target)
+      }
+      return target
+    }
+  }
+
+  await root.load(METRICS_SERVICE_PROTO)
+  ExportMetricsServiceRequest = root.lookupType(
+    'opentelemetry.proto.collector.metrics.v1.ExportMetricsServiceRequest',
+  )
+}
+
 /**
  * Decode a protobuf OTLP trace request
  * @param buffer - Binary protobuf data
@@ -159,6 +185,37 @@ export async function decodeProtobufLogs(
   convertBytesToHex(obj)
 
   return obj as { resourceLogs: any[] }
+}
+
+/**
+ * Decode a protobuf OTLP metrics request
+ * @param buffer - Binary protobuf data
+ * @returns Decoded object with resourceMetrics array
+ */
+export async function decodeProtobufMetrics(
+  buffer: Uint8Array,
+): Promise<{ resourceMetrics: any[] }> {
+  await initProtobufMetrics()
+
+  if (!ExportMetricsServiceRequest) {
+    throw new Error('Protobuf metrics types not initialized')
+  }
+
+  const message = ExportMetricsServiceRequest.decode(buffer)
+
+  const obj = ExportMetricsServiceRequest.toObject(message, {
+    longs: String,
+    enums: Number,
+    bytes: String,
+    defaults: false,
+    arrays: true,
+    objects: true,
+    oneofs: true,
+  })
+
+  convertBytesToHex(obj)
+
+  return obj as { resourceMetrics: any[] }
 }
 
 /**

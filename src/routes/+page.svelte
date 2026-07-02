@@ -5,34 +5,35 @@
   import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
   import Logs from '$lib/components/Logs.svelte'
   import LogsCommands from '$lib/components/LogsCommands.svelte'
+  import Metrics from '$lib/components/Metrics.svelte'
+  import MetricsCommands from '$lib/components/MetricsCommands.svelte'
   import ServiceMap from '$lib/components/ServiceMap.svelte'
   import TracesCommands from '$lib/components/TracesCommands.svelte'
   import Traces from '$lib/components/Traces.svelte'
+  import { metricStore } from '$lib/stores/metrics.svelte'
+  import { serviceMapStore } from '$lib/stores/serviceMap.svelte'
+  import { onSSE } from '$lib/stores/sseClient'
   import { traceStore } from '$lib/stores/traces.svelte'
-  import type { ServiceMapData } from '$lib/types'
   import { isInputFocused, isMac } from '$lib/utils/keyboard'
 
   // Connect to SSE stream for real-time trace updates
   traceStore.connectSSE()
+  // Connect to the metrics list stream — drives the tab count badge.
+  metricStore.connectSSE()
+  // Connect to the service-map stream — pushes the cumulative map on change
+  // (replaces the old per-tick polling) and keeps the tab badge live.
+  serviceMapStore.connectSSE()
 
   function connectLogsCountSSE() {
     $effect(() => {
-      if (typeof EventSource === 'undefined') return
-
-      const es = new EventSource('/api/logs/stream')
-
-      es.addEventListener('logs-count', (event: MessageEvent) => {
+      // Only the badge count is needed here; the full Logs list stream is
+      // consumed by the Logs component. Both ride the shared SSE connection.
+      return onSSE('logs-count', (event: MessageEvent) => {
         const parsed = Number.parseInt(event.data, 10)
         if (!Number.isNaN(parsed)) {
           logsBadgeTotal = parsed
         }
       })
-
-      es.onerror = () => {
-        // EventSource auto-reconnects.
-      }
-
-      return () => es.close()
     })
   }
 
@@ -40,26 +41,32 @@
 
   // Reactive state from store (for tab count badge only)
   const traces = $derived(traceStore.traces)
+  const metricsBadgeTotal = $derived(metricStore.count)
 
   // Tab navigation
   const initialTab = $page.url.searchParams.get('tab')
-  let activeTab = $state<'traces' | 'logs' | 'map'>(
-    initialTab === 'map' || initialTab === 'logs' ? initialTab : 'traces',
+  let activeTab = $state<'traces' | 'logs' | 'metrics' | 'map'>(
+    initialTab === 'map' || initialTab === 'logs' || initialTab === 'metrics'
+      ? initialTab
+      : 'traces',
   )
 
   // Store the last URL for each tab to restore when switching back.
-  let tabUrlMap = $state<Record<'traces' | 'logs' | 'map', string>>({
-    traces: '/',
-    logs: '/?tab=logs',
-    map: '/?tab=map',
-  })
+  let tabUrlMap = $state<Record<'traces' | 'logs' | 'metrics' | 'map', string>>(
+    {
+      traces: '/',
+      logs: '/?tab=logs',
+      metrics: '/?tab=metrics',
+      map: '/?tab=map',
+    },
+  )
 
-  function tabFromUrl(url: URL): 'traces' | 'logs' | 'map' {
+  function tabFromUrl(url: URL): 'traces' | 'logs' | 'metrics' | 'map' {
     const tab = url.searchParams.get('tab')
-    return tab === 'map' || tab === 'logs' ? tab : 'traces'
+    return tab === 'map' || tab === 'logs' || tab === 'metrics' ? tab : 'traces'
   }
 
-  async function switchTab(nextTab: 'traces' | 'logs' | 'map') {
+  async function switchTab(nextTab: 'traces' | 'logs' | 'metrics' | 'map') {
     if (typeof window === 'undefined' || nextTab === activeTab) return
 
     // Let pending child effects flush URL filter changes before snapshotting.
@@ -100,32 +107,6 @@
     return () => window.removeEventListener('popstate', handlePopState)
   })
 
-  // Service map state
-  let serviceMapData = $state<ServiceMapData | null>(null)
-  let serviceMapLoading = $state(false)
-  let serviceMapError = $state<string | null>(null)
-
-  async function fetchServiceMap() {
-    serviceMapLoading = true
-    serviceMapError = null
-    try {
-      const res = await fetch('/api/service-map')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      serviceMapData = await res.json()
-    } catch (e) {
-      serviceMapError = e instanceof Error ? e.message : String(e)
-    } finally {
-      serviceMapLoading = false
-    }
-  }
-
-  $effect(() => {
-    if (activeTab === 'map') {
-      void traceStore.traces.length // reactive dependency
-      fetchServiceMap()
-    }
-  })
-
   let tracesRef: {
     setSelectedService: (name: string) => void
     openImportModal: () => void
@@ -149,6 +130,15 @@
   let logsBadgeTotal = $state(0)
   let logsSelected = $state(0)
   let logsDeleting = $state(false)
+
+  // Metrics ref and reactive state for MetricsCommands
+  let metricsRef: {
+    triggerClearAll: () => void
+    triggerDeleteSelected: () => void
+  } | null = $state(null)
+  let metricsTotal = $state(0)
+  let metricsSelected = $state(0)
+  let metricsDeleting = $state(false)
 
   function handleMapNodeSelect(serviceName: string) {
     switchTab('traces')
@@ -179,6 +169,13 @@
       return
     }
 
+    // 'c': switch directly to Metrics tab ("counters"; t/l/m are taken)
+    if (e.key === 'c' && !isInputFocused()) {
+      e.preventDefault()
+      switchTab('metrics')
+      return
+    }
+
     // 'm': switch to Map tab
     if (e.key === 'm' && !isInputFocused()) {
       e.preventDefault()
@@ -194,7 +191,9 @@
       ? 'Service Map'
       : activeTab === 'logs'
         ? 'Logs'
-        : 'Traces'}</title
+        : activeTab === 'metrics'
+          ? 'Metrics'
+          : 'Traces'}</title
   >
 </svelte:head>
 
@@ -205,7 +204,9 @@
     <div class="tab-bar" role="tablist">
       <button
         role="tab"
+        id="tab-traces"
         aria-selected={activeTab === 'traces'}
+        aria-controls="panel-traces"
         class="tab-btn"
         class:active={activeTab === 'traces'}
         onclick={() => switchTab('traces')}
@@ -215,7 +216,9 @@
       >
       <button
         role="tab"
+        id="tab-logs"
         aria-selected={activeTab === 'logs'}
+        aria-controls="panel-logs"
         class="tab-btn"
         class:active={activeTab === 'logs'}
         onclick={() => switchTab('logs')}
@@ -225,7 +228,21 @@
       >
       <button
         role="tab"
+        id="tab-metrics"
+        aria-selected={activeTab === 'metrics'}
+        aria-controls="panel-metrics"
+        class="tab-btn"
+        class:active={activeTab === 'metrics'}
+        onclick={() => switchTab('metrics')}
+        >Metrics {#if metricsBadgeTotal > 0}<span class="tab-count"
+            >{metricsBadgeTotal}</span
+          >{/if}</button
+      >
+      <button
+        role="tab"
+        id="tab-map"
         aria-selected={activeTab === 'map'}
+        aria-controls="panel-map"
         class="tab-btn"
         class:active={activeTab === 'map'}
         onclick={() => switchTab('map')}>Service Map</button
@@ -258,19 +275,34 @@
           onClearAll={() => logsRef?.triggerClearAll()}
           onDeleteSelected={() => logsRef?.triggerDeleteSelected()}
         />
+      {:else if activeTab === 'metrics'}
+        <MetricsCommands
+          totalCount={metricsTotal}
+          selectedCount={metricsSelected}
+          isDeleting={metricsDeleting}
+          onClearAll={() => metricsRef?.triggerClearAll()}
+          onDeleteSelected={() => metricsRef?.triggerDeleteSelected()}
+        />
       {/if}
     </div>
   </header>
 
   {#if activeTab === 'traces'}
-    <Traces
-      bind:this={tracesRef}
-      bind:filteredCount
-      bind:selectedCount
-      bind:isExportingBound={isExporting}
-    />
+    <div role="tabpanel" id="panel-traces" aria-labelledby="tab-traces">
+      <Traces
+        bind:this={tracesRef}
+        bind:filteredCount
+        bind:selectedCount
+        bind:isExportingBound={isExporting}
+      />
+    </div>
   {:else if activeTab === 'logs'}
-    <div class="logs-tab" role="region" aria-label="Logs">
+    <div
+      class="logs-tab"
+      role="tabpanel"
+      id="panel-logs"
+      aria-labelledby="tab-logs"
+    >
       <Logs
         bind:this={logsRef}
         bind:totalCount={logsTotal}
@@ -278,16 +310,37 @@
         bind:isDeletingBound={logsDeleting}
       />
     </div>
+  {:else if activeTab === 'metrics'}
+    <div
+      class="metrics-tab"
+      role="tabpanel"
+      id="panel-metrics"
+      aria-labelledby="tab-metrics"
+    >
+      <Metrics
+        bind:this={metricsRef}
+        bind:totalCount={metricsTotal}
+        bind:selectedCount={metricsSelected}
+        bind:isDeletingBound={metricsDeleting}
+      />
+    </div>
   {:else}
     <!-- Service Map tab -->
-    <div class="map-content">
-      {#if serviceMapLoading}
-        <div class="map-status">Loading service map…</div>
-      {:else if serviceMapError}
-        <div class="map-error">{serviceMapError}</div>
-      {:else if serviceMapData}
+    <div
+      class="map-content"
+      role="tabpanel"
+      id="panel-map"
+      aria-labelledby="tab-map"
+    >
+      {#if serviceMapStore.isLoading && serviceMapStore.data.nodes.length === 0}
+        <div class="map-status" role="status">Loading service map…</div>
+      {:else if serviceMapStore.error && serviceMapStore.data.nodes.length === 0}
+        <div class="map-error" role="alert">{serviceMapStore.error}</div>
+      {:else}
+        <!-- Kept mounted across snapshots — the store streams updates in and the
+             component's sticky layout expands in place (no teardown, no reflow). -->
         <ServiceMap
-          data={serviceMapData}
+          data={serviceMapStore.data}
           onSelectService={handleMapNodeSelect}
         />
       {/if}
@@ -309,6 +362,7 @@
       },
       { keys: ['t'], description: 'Switch to Traces tab' },
       { keys: ['l'], description: 'Switch to Logs tab' },
+      { keys: ['c'], description: 'Switch to Metrics tab' },
       { keys: ['m'], description: 'Toggle Traces / Service Map tab' },
       { keys: ['?'], description: 'Toggle keyboard shortcuts help' },
     ]}
@@ -417,7 +471,8 @@
     gap: 0.5rem;
   }
 
-  .logs-tab {
+  .logs-tab,
+  .metrics-tab {
     flex: 1;
     min-height: 0;
     display: flex;

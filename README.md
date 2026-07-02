@@ -9,9 +9,9 @@
 &nbsp;[![Privacy: local](https://img.shields.io/badge/privacy-100%25_local-green?style=flat-square&logo=lock&logoColor=white)](#-features)
 &nbsp;[![Latest release](https://img.shields.io/github/v/release/metafab/otel-gui?sort=semver&display_name=tag&label=latest&color=7c4dff&style=flat-square&logo=github&logoColor=white)](https://github.com/metafab/otel-gui/releases/latest)
 
-A lightweight, zero-config OpenTelemetry trace and log viewer for local development.
+A lightweight, zero-config OpenTelemetry viewer for local development — traces, logs, and metrics in one place.
 
-Drop-in replacement for a collector endpoint — point your OTLP exporter at it and see traces and logs immediately. No database required.
+Drop-in replacement for a collector endpoint — point your OTLP exporter at it and see your telemetry immediately. No database required.
 
 ![Trace list view](docs/screenshots/trace-detail.png)
 
@@ -27,13 +27,14 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 
 - **Zero config** — listens on port 4318, the standard OTLP/HTTP port. Most exporters work without changing a single setting
 - **OTLP JSON & Protobuf** — accepts both `application/json` and `application/x-protobuf` payloads
-- **Real-time updates** — new traces appear instantly via SSE (Server-Sent Events), no polling
+- **Real-time streaming** — traces, logs, metrics, and the service map all update live over SSE (Server-Sent Events) using an incremental snapshot + delta protocol, so views refresh in place without flicker or polling
+- **Metrics** — dedicated Metrics tab accepting OTLP metrics (`POST /v1/metrics`): gauges, sums (with server-computed per-second rates and counter-reset detection), histograms, exponential histograms, and summaries; flicker-free time-series charts (uPlot), histogram distribution + heatmap views, and per-series filtering
 - **Waterfall timeline** — Honeycomb-style span waterfall with resizable name column and sidebar
-- **Service map** — auto-generated graph of cross-service calls with error rates and latency (p50/p99)
+- **Service map** — auto-generated graph of cross-service calls with error rates and latency (p50/p99); streams live over SSE with a stable, **expand-only** layout (placed nodes never move — new services append and the canvas grows) over a cumulative topology that never ages out
 - **Search & filter** — filter lists by text, service, status, and duration range; search spans inside a trace based on attributes, events, and span name or id
 - **Import/export traces** — export one trace, filtered traces, or selected traces as OTLP JSON envelope; import from OTLP JSON or otel-gui export files with metadata preview before confirmation
 - **Bulk list actions** — trace and log lists support multi-select export and split delete actions (`Clear All` + `Delete Selected (n)`)
-- **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `t`/`l`/`m` to jump to Traces/Logs/Service Map tabs, escape key to clear search and go back to the list, `?` for shortcuts help
+- **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `t`/`l`/`c`/`m` to jump to Traces/Logs/Metrics/Service Map tabs, escape key to clear search and go back to the trace list, `?` for shortcuts help
 - **Error navigation** — jump between error spans with one key
 - **Span details** — attributes, events with timeline markers, resource attributes, instrumentation scope, span links, correlated logs
 - **Global logs workflow** — browse all logs in a dedicated tab, open full log details, and jump from logs to the owning trace/span
@@ -69,6 +70,10 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 ### Global logs
 
 ![Global logs](docs/screenshots/global-logs.png)
+
+### Metrics
+
+![Global Metrics](docs/screenshots/metrics-list.png)
 
 ## 🛠️ Quick Start
 
@@ -211,6 +216,16 @@ POST /v1/logs
 
 Use the same `traceId`/`spanId` values as your spans to get correlated logs in trace detail sidebar.
 
+### Sending Metrics
+
+The viewer also accepts OTLP metrics at:
+
+```sh
+POST /v1/metrics
+```
+
+Gauges, sums, histograms, exponential histograms, and summaries are all supported and appear in the **Metrics** tab. Sums get a server-computed per-second rate (with counter-reset detection); histograms render as both a distribution and a time/bucket heatmap.
+
 ### Try the demo
 
 Run the bundled e-commerce demo to see all features immediately:
@@ -282,17 +297,20 @@ See [SAMPLE_TRACES.md](./samples/SAMPLE_TRACES.md) for a full feature exploratio
 
 ## ⚙️ Configuration
 
-| Variable                              | Default            | Description                                                                                                                                                                                                                                                                     |
-| ------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORT`                                | `4318`             | HTTP port the server listens on                                                                                                                                                                                                                                                 |
-| `OTEL_GUI_MAX_TRACES`                 | `1000`             | Maximum number of traces kept in memory (1–10 000). Oldest traces are evicted first when the limit is reached. Requires a restart.                                                                                                                                              |
-| `OTEL_GUI_MAX_LOGS`                   | `1000`             | Maximum number of log records kept in memory (1–10 000). Oldest records are evicted first when the limit is reached. Requires a restart.                                                                                                                                        |
-| `OTEL_GUI_PERSISTENCE_MODE`           | `memory`           | Persistence backend mode. Use `memory` (default, no disk writes) or `pglite` (requires an external backend module, typically enterprise).                                                                                                                                       |
-| `OTEL_GUI_PERSISTENCE_PATH`           | `.otel-gui/pglite` | Directory path for local PGlite data when persistence mode is `pglite`.                                                                                                                                                                                                         |
-| `OTEL_GUI_PERSISTENCE_FLUSH_MS`       | `750`              | Debounce interval for batched persistence flushes in milliseconds (50–60000).                                                                                                                                                                                                   |
-| `OTEL_GUI_PERSISTENCE_BACKEND_MODULE` | _(empty)_          | Optional module id/path dynamically loaded at startup to register persistence backends. Relative file paths resolve from the `otel-gui` project root (examples: `@otel-gui/enterprise-persistence/register`, `../otel-gui-enterprise/enterprise-persistence/dist/register.js`). |
-| `OTEL_GUI_LICENSE_KEY`                | _(empty)_          | Optional enterprise license key consumed by private persistence backend modules.                                                                                                                                                                                                |
-| `OTEL_GUI_LICENSE_PUBLIC_KEY_PATH`    | _(empty)_          | Optional filesystem path to the PEM-encoded public key used by enterprise modules for offline license verification.                                                                                                                                                             |
+| Variable                              | Default            | Description                                                                                                                                                                                                                                                                              |
+| ------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                                | `4318`             | HTTP port the server listens on                                                                                                                                                                                                                                                          |
+| `OTEL_GUI_CORS_ORIGIN`                | `*`                | Allowed CORS origin(s) for the OTLP ingest (`/v1/*`) and read API (`/api/*`) endpoints, so browser-based OTLP exporters can post telemetry cross-origin. Use `*` to allow any origin, or a comma-separated list of exact origins (e.g. `https://app.example.com,http://localhost:5173`). |
+| `OTEL_GUI_MAX_TRACES`                 | `1000`             | Maximum number of traces kept in memory (1–10 000). Oldest traces are evicted first when the limit is reached. Requires a restart.                                                                                                                                                       |
+| `OTEL_GUI_MAX_LOGS`                   | `1000`             | Maximum number of log records kept in memory (1–10 000). Oldest records are evicted first when the limit is reached. Requires a restart.                                                                                                                                                 |
+| `OTEL_GUI_MAX_METRICS`                | `1000`             | Maximum number of metrics kept in memory (1–10 000). Oldest are evicted first when the limit is reached. Requires a restart.                                                                                                                                                             |
+| `OTEL_GUI_MAX_METRIC_POINTS`          | `600`              | Maximum number of data points retained per metric series (10–10 000). Oldest points are evicted first. Requires a restart.                                                                                                                                                               |
+| `OTEL_GUI_PERSISTENCE_MODE`           | `memory`           | Persistence backend mode. Use `memory` (default, no disk writes) or `pglite` (requires an external backend module, typically enterprise).                                                                                                                                                |
+| `OTEL_GUI_PERSISTENCE_PATH`           | `.otel-gui/pglite` | Directory path for local PGlite data when persistence mode is `pglite`.                                                                                                                                                                                                                  |
+| `OTEL_GUI_PERSISTENCE_FLUSH_MS`       | `750`              | Debounce interval for batched persistence flushes in milliseconds (50–60000).                                                                                                                                                                                                            |
+| `OTEL_GUI_PERSISTENCE_BACKEND_MODULE` | _(empty)_          | Optional module id/path dynamically loaded at startup to register persistence backends. Relative file paths resolve from the `otel-gui` project root (examples: `@otel-gui/enterprise-persistence/register`, `../otel-gui-enterprise/enterprise-persistence/dist/register.js`).          |
+| `OTEL_GUI_LICENSE_KEY`                | _(empty)_          | Optional enterprise license key consumed by private persistence backend modules.                                                                                                                                                                                                         |
+| `OTEL_GUI_LICENSE_PUBLIC_KEY_PATH`    | _(empty)_          | Optional filesystem path to the PEM-encoded public key used by enterprise modules for offline license verification.                                                                                                                                                                      |
 
 Copy [`.env.example`](./.env.example) to `.env` to customize:
 
@@ -390,6 +408,7 @@ Notes:
 | `Esc`            | Everywhere   | Clear search / go back    |
 | `t`              | Everywhere   | Switch to Traces tab      |
 | `l`              | Everywhere   | Switch to Logs tab        |
+| `c`              | Everywhere   | Switch to Metrics tab     |
 | `m`              | Trace list   | Switch to Service Map tab |
 | `m`              | Trace detail | Toggle Service Map        |
 | `Alt+Backspace`  | Trace list   | Clear all traces          |
@@ -403,6 +422,7 @@ Notes:
 ```
 POST /v1/traces          ← OTLP receiver (JSON + Protobuf)
 POST /v1/logs            ← OTLP logs receiver (JSON + Protobuf)
+POST /v1/metrics         ← OTLP metrics receiver (JSON + Protobuf)
 GET  /api/traces         ← trace list for the UI
 DELETE /api/traces       ← clear all traces or delete selected traceIds
 GET  /api/traces/:id     ← single trace
@@ -411,13 +431,19 @@ GET  /api/traces/:id/export ← export a single trace envelope
 POST /api/traces/export  ← export filtered/selected traceIds
 POST /api/traces/import/preview ← validate + preview import metadata
 POST /api/traces/import  ← import otel-gui envelope or raw OTLP JSON
-GET  /api/traces/stream  ← SSE stream (real-time push)
-GET  /api/service-map    ← aggregated service graph
+GET  /api/traces/stream  ← SSE trace stream (snapshot + delta)
+GET  /api/logs           ← log list for the UI
+GET  /api/logs/stream    ← SSE log stream (snapshot + delta)
+GET  /api/metrics        ← metric list for the UI
+GET  /api/metrics/:id    ← single metric detail (series + per-second rates)
+GET  /api/metrics/stream ← SSE metric-list stream (snapshot + delta)
+GET  /api/service-map    ← aggregated, cumulative service graph
+GET  /api/service-map/stream ← SSE service-map stream (cumulative snapshots)
 ```
 
-Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limit defaults to 1000 traces (`OTEL_GUI_MAX_TRACES`) and 1000 log records (`OTEL_GUI_MAX_LOGS`).
+Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. Retention limits default to 1000 traces (`OTEL_GUI_MAX_TRACES`), 1000 log records (`OTEL_GUI_MAX_LOGS`), and 1000 metrics (`OTEL_GUI_MAX_METRICS`).
 <br />
-SSE subscribers are notified on every write and receive a debounced `event: traces` message.
+All live views share one streaming pattern: each SSE endpoint sends a full snapshot on connect, then debounced incremental updates keyed off a per-store sequence cursor — so the UI updates in place rather than re-rendering (the source of the old flicker). The service map is a cumulative aggregate folded in as spans arrive (resolving cross-service edges even when a parent span arrives after its children) and is never pruned by trace eviction, so its topology and counts only grow until an explicit clear.
 <br />
 Additional persistence backends (including `pglite`) are loaded via `OTEL_GUI_PERSISTENCE_BACKEND_MODULE` and can be distributed separately (for example in an enterprise package).
 
@@ -435,6 +461,7 @@ Additional persistence backends (including `pglite`) are loaded via `OTEL_GUI_PE
 - [SvelteKit 2](https://kit.svelte.dev) with Svelte 5 runes (`$state`, `$derived`, `$effect`)
 - [`@sveltejs/adapter-node`](https://kit.svelte.dev/docs/adapter-node) for persistent in-memory state
 - [`protobufjs`](https://github.com/protobufjs/protobuf.js) for Protobuf decoding
+- [`uPlot`](https://github.com/leeoniya/uPlot) for fast, flicker-free metric time-series charts
 - No UI library — custom waterfall, service map SVG, and all components from scratch
 - TypeScript throughout
 

@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { traceStore } from '$lib/server/traceStore'
-import { resolveRootServiceName, resolveRootSpanName } from '@otel-gui/core'
-import type { StoredTrace } from '$lib/types'
+import { createInternalTraceStore } from '$lib/server/traceStore/core'
+import {
+  resolveRootServiceName,
+  resolveRootSpanName,
+  expoBoundsForBucket,
+} from '@otel-gui/core'
+import type { MetricPoint, StoredTrace } from '$lib/types'
 import simpleTrace from '../../../tests/fixtures/simple-trace.json'
 import simpleLog from '../../../tests/fixtures/simple-log.json'
 import unlinkedLog from '../../../tests/fixtures/log-unlinked.json'
@@ -12,6 +17,7 @@ import outOfOrderSpans from '../../../tests/fixtures/out-of-order-spans.json'
 beforeEach(() => {
   traceStore.clearTraces()
   traceStore.clearLogs()
+  traceStore.clearMetrics()
 })
 
 // ─── ingest + getTraceList ───────────────────────────────────────────────────
@@ -432,5 +438,470 @@ describe('traceStore.maxTraces', () => {
 
   it('defaults to 1000 when OTEL_GUI_MAX_TRACES is not set', () => {
     expect(traceStore.maxTraces).toBe(1000)
+  })
+})
+
+// ─── metrics ─────────────────────────────────────────────────────────────────
+
+// Builds a minimal OTLP resourceMetrics payload for one Gauge metric with the
+// supplied data points (each [timeUnixNano, value, attributes?]).
+function gaugePayload(
+  serviceName: string,
+  name: string,
+  points: Array<[string, number, Record<string, string>?]>,
+): any[] {
+  return [
+    {
+      resource: {
+        attributes: [
+          { key: 'service.name', value: { stringValue: serviceName } },
+        ],
+      },
+      scopeMetrics: [
+        {
+          scope: { name: 'unit-test' },
+          metrics: [
+            {
+              name,
+              unit: '1',
+              gauge: {
+                dataPoints: points.map(([timeUnixNano, value, attrs]) => ({
+                  timeUnixNano,
+                  asDouble: value,
+                  attributes: Object.entries(attrs ?? {}).map(([k, v]) => ({
+                    key: k,
+                    value: { stringValue: v },
+                  })),
+                })),
+              },
+            },
+          ],
+        },
+      ],
+    },
+  ]
+}
+
+describe('traceStore metrics — series fingerprinting', () => {
+  it('splits data points into one series per distinct attribute set', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+    store.ingestMetrics(
+      gaugePayload('svc', 'm', [
+        ['1700000000000000000', 1, { route: '/a' }],
+        ['1700000001000000000', 2, { route: '/b' }],
+        ['1700000002000000000', 3, { route: '/a' }],
+      ]),
+    )
+
+    const [item] = store.getMetricList()
+    expect(item.seriesCount).toBe(2)
+
+    const detail = store.getMetric(item.id)
+    const byRoute = new Map(
+      Array.from(detail!.series.values()).map((s) => [
+        s.attributes.route,
+        s.points.length,
+      ]),
+    )
+    expect(byRoute.get('/a')).toBe(2)
+    expect(byRoute.get('/b')).toBe(1)
+  })
+
+  it('merges points with identical attributes into the same series', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+    store.ingestMetrics(
+      gaugePayload('svc', 'm', [['1700000000000000000', 1, { x: '1' }]]),
+    )
+    store.ingestMetrics(
+      gaugePayload('svc', 'm', [['1700000001000000000', 2, { x: '1' }]]),
+    )
+
+    const [item] = store.getMetricList()
+    expect(item.seriesCount).toBe(1)
+    const detail = store.getMetric(item.id)
+    expect(Array.from(detail!.series.values())[0].points).toHaveLength(2)
+  })
+})
+
+describe('traceStore metrics — point-ring trimming', () => {
+  it('trims a series to maxMetricPoints, dropping oldest first', () => {
+    const maxMetricPoints = 5
+    const store = createInternalTraceStore(10, 10, 100, maxMetricPoints)
+
+    for (let i = 0; i < 12; i++) {
+      store.ingestMetrics(
+        gaugePayload('svc', 'm', [[`${1700000000000000000 + i}`, i]]),
+      )
+    }
+
+    const [item] = store.getMetricList()
+    const detail = store.getMetric(item.id)
+    const points = Array.from(detail!.series.values())[0]
+      .points as MetricPoint[]
+    expect(points).toHaveLength(maxMetricPoints)
+    // Oldest (0..6) dropped; newest five values (7..11) retained.
+    expect(points.map((p) => p.v)).toEqual([7, 8, 9, 10, 11])
+  })
+})
+
+describe('traceStore metrics — eviction at maxMetrics', () => {
+  it('evicts oldest metrics once over the maxMetrics cap', () => {
+    const maxMetrics = 3
+    const store = createInternalTraceStore(10, 10, maxMetrics, 100)
+
+    for (let i = 0; i < 5; i++) {
+      store.ingestMetrics(
+        gaugePayload('svc', `metric-${i}`, [['1700000000000000000', i]]),
+      )
+    }
+
+    expect(store.getMetricCount()).toBe(maxMetrics)
+    const names = store
+      .getMetricList()
+      .map((m) => m.name)
+      .sort()
+    // metric-0 and metric-1 (oldest) evicted.
+    expect(names).toEqual(['metric-2', 'metric-3', 'metric-4'])
+  })
+})
+
+describe('traceStore metrics — getMetricsSince cursor', () => {
+  it('returns only metrics touched after the given sequence', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+
+    store.ingestMetrics(
+      gaugePayload('svc', 'first', [['1700000000000000000', 1]]),
+    )
+    const cursor = store.getMaxMetricSeq()
+
+    store.ingestMetrics(
+      gaugePayload('svc', 'second', [['1700000001000000000', 2]]),
+    )
+
+    const since = store.getMetricsSince(cursor)
+    expect(since.map((m) => m.name)).toEqual(['second'])
+    expect(store.getMetricsSince(store.getMaxMetricSeq())).toHaveLength(0)
+  })
+})
+
+describe('traceStore metrics — removal-seq bump', () => {
+  it('bumps removal seq on clearMetrics', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+    const before = store.getMetricRemovalSeq()
+    store.ingestMetrics(gaugePayload('svc', 'm', [['1700000000000000000', 1]]))
+    expect(store.getMetricRemovalSeq()).toBe(before) // ingest does not bump
+    store.clearMetrics()
+    expect(store.getMetricRemovalSeq()).toBe(before + 1)
+  })
+
+  it('bumps removal seq on deleteMetrics when something is deleted', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+    store.ingestMetrics(gaugePayload('svc', 'm', [['1700000000000000000', 1]]))
+    const [item] = store.getMetricList()
+    const before = store.getMetricRemovalSeq()
+
+    expect(store.deleteMetrics(['does-not-exist'])).toBe(0)
+    expect(store.getMetricRemovalSeq()).toBe(before) // no-op does not bump
+
+    expect(store.deleteMetrics([item.id])).toBe(1)
+    expect(store.getMetricRemovalSeq()).toBe(before + 1)
+    expect(store.getMetricCount()).toBe(0)
+  })
+})
+
+describe('traceStore.maxMetrics / maxMetricPoints', () => {
+  it('exposes default metric limits on the shared store', () => {
+    expect(traceStore.maxMetrics).toBe(1000)
+    expect(traceStore.maxMetricPoints).toBe(600)
+  })
+})
+
+// ─── Phase 2: histogram / exp-histogram / summary ingest ───────────────────────
+
+// One-metric resourceMetrics payload whose single metric carries the supplied
+// data oneof (e.g. { histogram: {...} }).
+function metricPayload(
+  serviceName: string,
+  name: string,
+  data: Record<string, unknown>,
+): any[] {
+  return [
+    {
+      resource: {
+        attributes: [
+          { key: 'service.name', value: { stringValue: serviceName } },
+        ],
+      },
+      scopeMetrics: [
+        { scope: { name: 'unit-test' }, metrics: [{ name, unit: 'ms', ...data }] },
+      ],
+    },
+  ]
+}
+
+// Cumulative monotonic Sum on one series at the given [nanos, value] points.
+function cumulativeSumPayload(
+  serviceName: string,
+  name: string,
+  points: Array<[string, number]>,
+): any[] {
+  return metricPayload(serviceName, name, {
+    sum: {
+      aggregationTemporality: 2,
+      isMonotonic: true,
+      dataPoints: points.map(([timeUnixNano, value]) => ({
+        attributes: [],
+        timeUnixNano,
+        asDouble: value,
+      })),
+    },
+  })
+}
+
+function deltaSumPayload(
+  serviceName: string,
+  name: string,
+  points: Array<[string, number]>,
+): any[] {
+  return metricPayload(serviceName, name, {
+    sum: {
+      aggregationTemporality: 1,
+      isMonotonic: true,
+      dataPoints: points.map(([timeUnixNano, value]) => ({
+        attributes: [],
+        timeUnixNano,
+        asDouble: value,
+      })),
+    },
+  })
+}
+
+describe('traceStore metrics — histogram ingest', () => {
+  it('stores histogram bucketCounts/bounds and projects them on detail', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+    store.ingestMetrics(
+      metricPayload('svc', 'lat', {
+        histogram: {
+          aggregationTemporality: 2,
+          dataPoints: [
+            {
+              timeUnixNano: '1700000000000000000',
+              count: '3',
+              sum: 42,
+              min: 1,
+              max: 40,
+              bucketCounts: ['1', '1', '1'],
+              explicitBounds: [10, 50],
+            },
+          ],
+        },
+      }),
+    )
+
+    const [item] = store.getMetricList()
+    expect(item.type).toBe('histogram')
+    expect(item.sparkline).toEqual([3]) // count proxy, never crashes
+
+    const detail = store.getMetricDetail(item.id)!
+    const p: any = detail.series[0].points[0]
+    expect(p.count).toBe(3)
+    expect(p.sum).toBe(42)
+    expect(p.min).toBe(1)
+    expect(p.max).toBe(40)
+    expect(p.bucketCounts).toEqual([1, 1, 1])
+    expect(p.explicitBounds).toEqual([10, 50])
+    expect(store.getMetric(item.id)!.temporality).toBe('cumulative')
+  })
+})
+
+describe('traceStore metrics — exponential histogram ingest', () => {
+  it('stores scale/zeroCount/positive/negative buckets', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+    store.ingestMetrics(
+      metricPayload('svc', 'expo', {
+        exponentialHistogram: {
+          aggregationTemporality: 2,
+          dataPoints: [
+            {
+              timeUnixNano: '1700000000000000000',
+              count: '6',
+              sum: 100,
+              scale: 3,
+              zeroCount: '1',
+              positive: { offset: 2, bucketCounts: ['2', '3'] },
+              negative: { offset: 0, bucketCounts: [] },
+            },
+          ],
+        },
+      }),
+    )
+
+    const [item] = store.getMetricList()
+    expect(item.type).toBe('exp_histogram')
+
+    const detail = store.getMetricDetail(item.id)!
+    const p: any = detail.series[0].points[0]
+    expect(p.scale).toBe(3)
+    expect(p.zeroCount).toBe(1)
+    expect(p.positive).toEqual({ offset: 2, bucketCounts: [2, 3] })
+    expect(p.negative).toEqual({ offset: 0, bucketCounts: [] })
+  })
+})
+
+describe('traceStore metrics — summary ingest', () => {
+  it('stores count/sum/quantileValues', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+    store.ingestMetrics(
+      metricPayload('svc', 'sum-q', {
+        summary: {
+          dataPoints: [
+            {
+              timeUnixNano: '1700000000000000000',
+              count: '10',
+              sum: 123,
+              quantileValues: [
+                { quantile: 0.5, value: 10 },
+                { quantile: 0.99, value: 50 },
+              ],
+            },
+          ],
+        },
+      }),
+    )
+
+    const [item] = store.getMetricList()
+    expect(item.type).toBe('summary')
+
+    const detail = store.getMetricDetail(item.id)!
+    const p: any = detail.series[0].points[0]
+    expect(p.count).toBe(10)
+    expect(p.sum).toBe(123)
+    expect(p.quantileValues).toEqual([
+      { quantile: 0.5, value: 10 },
+      { quantile: 0.99, value: 50 },
+    ])
+  })
+})
+
+// ─── Phase 2: server-side rate computation ─────────────────────────────────────
+
+function firstSeriesPoints(store: any, id: string): any[] {
+  return store.getMetricDetail(id)!.series[0].points
+}
+
+describe('traceStore metrics — rate (cumulative)', () => {
+  it('computes per-second rate from monotonic increase; no rate on first point', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+    store.ingestMetrics(
+      cumulativeSumPayload('svc', 'c', [
+        ['1700000000000000000', 5],
+        ['1700000001000000000', 8], // +3 over 1s
+        ['1700000003000000000', 18], // +10 over 2s
+      ]),
+    )
+    const [item] = store.getMetricList()
+    const pts = firstSeriesPoints(store, item.id)
+
+    expect(pts[0]).toEqual({ t: pts[0].t, v: 5 })
+    expect(pts[0].rate).toBeUndefined()
+    expect(pts[1].v).toBe(8)
+    expect(pts[1].rate).toBeCloseTo(3, 10)
+    expect(pts[2].v).toBe(18)
+    expect(pts[2].rate).toBeCloseTo(5, 10) // 10 / 2s
+  })
+
+  it('detects a counter reset and emits v_i/Δt instead of a negative rate', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+    store.ingestMetrics(
+      cumulativeSumPayload('svc', 'c', [
+        ['1700000000000000000', 100],
+        ['1700000001000000000', 7], // dropped → restart from 0 → 7/1s
+      ]),
+    )
+    const [item] = store.getMetricList()
+    const pts = firstSeriesPoints(store, item.id)
+    expect(pts[1].v).toBe(7)
+    expect(pts[1].rate).toBeCloseTo(7, 10)
+    expect(pts[1].rate).toBeGreaterThanOrEqual(0)
+  })
+
+  it('handles irregular intervals (Δt varies per pair)', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+    store.ingestMetrics(
+      cumulativeSumPayload('svc', 'c', [
+        ['1700000000000000000', 0],
+        ['1700000000500000000', 5], // +5 over 0.5s = 10/s
+        ['1700000004500000000', 9], // +4 over 4s = 1/s
+      ]),
+    )
+    const [item] = store.getMetricList()
+    const pts = firstSeriesPoints(store, item.id)
+    expect(pts[1].rate).toBeCloseTo(10, 10)
+    expect(pts[2].rate).toBeCloseTo(1, 10)
+  })
+
+  it('emits no rate for a single-point series', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+    store.ingestMetrics(
+      cumulativeSumPayload('svc', 'c', [['1700000000000000000', 5]]),
+    )
+    const [item] = store.getMetricList()
+    const pts = firstSeriesPoints(store, item.id)
+    expect(pts).toHaveLength(1)
+    expect(pts[0].rate).toBeUndefined()
+  })
+
+  it('emits no rate when consecutive timestamps do not advance', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+    store.ingestMetrics(
+      cumulativeSumPayload('svc', 'c', [
+        ['1700000000000000000', 5],
+        ['1700000000000000000', 9], // same timestamp → Δt = 0
+      ]),
+    )
+    const [item] = store.getMetricList()
+    const pts = firstSeriesPoints(store, item.id)
+    expect(pts[1].v).toBe(9)
+    expect(pts[1].rate).toBeUndefined()
+  })
+})
+
+describe('traceStore metrics — rate (delta)', () => {
+  it('treats delta sums as per-interval: rate = v_i/Δt', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+    store.ingestMetrics(
+      deltaSumPayload('svc', 'd', [
+        ['1700000000000000000', 4],
+        ['1700000002000000000', 6], // 6 over 2s = 3/s (NOT (6-4)/2)
+      ]),
+    )
+    const [item] = store.getMetricList()
+    expect(store.getMetric(item.id)!.temporality).toBe('delta')
+    const pts = firstSeriesPoints(store, item.id)
+    expect(pts[1].v).toBe(6)
+    expect(pts[1].rate).toBeCloseTo(3, 10)
+  })
+})
+
+describe('expoBoundsForBucket', () => {
+  it('scale 0: base 2 → bucket i covers (2^i, 2^(i+1)]', () => {
+    expect(expoBoundsForBucket(0, 0)).toEqual({ lower: 1, upper: 2 })
+    expect(expoBoundsForBucket(0, 1)).toEqual({ lower: 2, upper: 4 })
+    expect(expoBoundsForBucket(0, 3)).toEqual({ lower: 8, upper: 16 })
+  })
+
+  it('positive scale narrows buckets (scale 1 → base sqrt(2))', () => {
+    const b = expoBoundsForBucket(1, 0)
+    expect(b.lower).toBeCloseTo(1, 10)
+    expect(b.upper).toBeCloseTo(Math.SQRT2, 10)
+    // bucket 2 at scale 1 spans (2^(2/2), 2^(3/2)] = (2, 2.828...]
+    const b2 = expoBoundsForBucket(1, 2)
+    expect(b2.lower).toBeCloseTo(2, 10)
+    expect(b2.upper).toBeCloseTo(Math.pow(2, 1.5), 10)
+  })
+
+  it('negative scale widens buckets (scale -1 → base 4)', () => {
+    expect(expoBoundsForBucket(-1, 0)).toEqual({ lower: 1, upper: 4 })
+    expect(expoBoundsForBucket(-1, 1)).toEqual({ lower: 4, upper: 16 })
   })
 })
