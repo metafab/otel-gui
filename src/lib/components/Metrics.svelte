@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { replaceState } from '$app/navigation'
+  import { goto, replaceState } from '$app/navigation'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import MetricsFilter from '$lib/components/MetricsFilter.svelte'
   import VersionInfo from '$lib/components/VersionInfo.svelte'
   import { metricStore } from '$lib/stores/metrics.svelte'
+  import { onSSEEvents } from '$lib/stores/sseClient'
   import type { MetricListItem } from '$lib/types'
 
   // Bindable props so parent can read reactive state for header action buttons.
@@ -284,7 +285,10 @@
 
   // Fallback for environments without EventSource — the live view is otherwise
   // driven entirely by the SSE snapshot/append stream (see the $effect below).
-  async function loadMetrics() {
+  // `shouldApply` lets the caller discard a slow REST response if a live SSE
+  // snapshot has already updated the list in the meantime (avoids a stale seed
+  // clobbering fresher data during a concurrent clear/delete).
+  async function loadMetrics(shouldApply: () => boolean = () => true) {
     isLoading = true
     loadError = null
     try {
@@ -292,11 +296,16 @@
       if (!response.ok) {
         throw new Error(`Failed to load metrics: ${response.statusText}`)
       }
-      metrics = await response.json()
+      const data = await response.json()
+      if (shouldApply()) metrics = data
     } catch (error) {
-      loadError =
-        error instanceof Error ? error.message : 'Unknown error loading metrics'
-      metrics = []
+      if (shouldApply()) {
+        loadError =
+          error instanceof Error
+            ? error.message
+            : 'Unknown error loading metrics'
+        metrics = []
+      }
     } finally {
       isLoading = false
     }
@@ -425,7 +434,20 @@
   }
 
   function handleRowClick(metricId: string) {
-    window.location.href = `/metrics/${encodeURIComponent(metricId)}`
+    // Client-side navigation — see Traces.svelte: a full-page load tears down and
+    // re-establishes every SSE stream on each open, stalling against the browser's
+    // 6-connection-per-origin limit.
+    void goto(`/metrics/${encodeURIComponent(metricId)}`)
+  }
+
+  // Keyboard activation for the row (Enter/Space), only when the row itself —
+  // not a child control like the select checkbox — is focused.
+  function handleRowKeydown(event: KeyboardEvent, metricId: string) {
+    if (event.target !== event.currentTarget) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleRowClick(metricId)
+    }
   }
 
   function toggleMetricSelection(metricId: string) {
@@ -443,45 +465,46 @@
   }
 
   $effect(() => {
-    // No EventSource (SSR/legacy) — fall back to a one-shot REST load.
-    if (typeof EventSource === 'undefined') {
-      void loadMetrics()
-      return
-    }
+    // Seed the current list once on mount. The shared SSE connection only
+    // replays its snapshot at connect time (page load) — this component mounts
+    // later, when the Metrics tab is opened, so it would otherwise miss the
+    // initial snapshot and stay empty until the next ingest. REST gives the
+    // initial paint; live deltas (append) and clear/delete re-syncs follow.
+    //
+    // If an SSE snapshot lands while that REST seed is still in flight (e.g. a
+    // concurrent clear), the seed must not overwrite it — track that here.
+    let sseSnapshotApplied = false
+    void loadMetrics(() => !sseSnapshotApplied)
 
-    const es = new EventSource('/api/metrics/stream')
+    // No EventSource (SSR/legacy) — the REST load above is all we get.
+    if (typeof EventSource === 'undefined') return
 
-    // Full list: sent on connect and after any clear/delete (re-sync).
-    es.addEventListener('metrics-snapshot', (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data)
-        metrics = Array.isArray(data.metrics) ? data.metrics : []
-        loadError = null
-      } catch {
-        // Ignore malformed payloads; the next snapshot will re-sync.
-      } finally {
-        isLoading = false
-      }
+    // Metric list events arrive over the shared app-wide SSE connection.
+    return onSSEEvents({
+      // Full list: re-sent after any clear/delete (re-sync).
+      'metrics-snapshot': (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data)
+          metrics = Array.isArray(data.metrics) ? data.metrics : []
+          loadError = null
+          sseSnapshotApplied = true
+        } catch {
+          // Ignore malformed payloads; the next snapshot will re-sync.
+        } finally {
+          isLoading = false
+        }
+      },
+      // Incremental: only metrics touched since the last cursor. Merged in place
+      // so the table updates without a full re-render (no flash).
+      'metrics-append': (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (Array.isArray(data.metrics)) applyAppend(data.metrics)
+        } catch {
+          // Ignore malformed payloads.
+        }
+      },
     })
-
-    // Incremental: only metrics touched since the last cursor. Merged in place
-    // so the table updates without a full re-render (no flash).
-    es.addEventListener('metrics-append', (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data)
-        if (Array.isArray(data.metrics)) applyAppend(data.metrics)
-      } catch {
-        // Ignore malformed payloads.
-      }
-    })
-
-    es.onerror = () => {
-      // EventSource auto-reconnects; the reconnect replays a fresh snapshot.
-    }
-
-    return () => {
-      es.close()
-    }
   })
 
   export function triggerClearAll() {
@@ -615,8 +638,13 @@
           </thead>
           <tbody>
             {#each sortedMetrics as metric (metric.id)}
+              <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
               <tr
                 onclick={() => handleRowClick(metric.id)}
+                onkeydown={(e) => handleRowKeydown(e, metric.id)}
+                tabindex="0"
+                data-testid="metric-row"
+                data-metric-id={metric.id}
                 class:selected={selectedMetricIdSet.has(metric.id)}
               >
                 <td
