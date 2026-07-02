@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { replaceState } from '$app/navigation'
+  import { goto, replaceState } from '$app/navigation'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import LogsFilter from '$lib/components/LogsFilter.svelte'
   import VersionInfo from '$lib/components/VersionInfo.svelte'
+  import { onSSEEvents } from '$lib/stores/sseClient'
   import { traceStore } from '$lib/stores/traces.svelte'
   import type { LogListItem } from '$lib/types'
   import { formatTimestampLocal } from '$lib/utils/time'
@@ -302,7 +303,10 @@
 
   // Fallback for environments without EventSource — the live view is otherwise
   // driven entirely by the SSE snapshot/append stream (see the $effect below).
-  async function loadLogs() {
+  // `shouldApply` lets the caller discard a slow REST response if a live SSE
+  // snapshot has already updated the list in the meantime (avoids a stale seed
+  // clobbering fresher data during a concurrent clear/delete).
+  async function loadLogs(shouldApply: () => boolean = () => true) {
     isLoading = true
     loadError = null
     try {
@@ -310,11 +314,14 @@
       if (!response.ok) {
         throw new Error(`Failed to load logs: ${response.statusText}`)
       }
-      logs = await response.json()
+      const data = await response.json()
+      if (shouldApply()) logs = data
     } catch (error) {
-      loadError =
-        error instanceof Error ? error.message : 'Unknown error loading logs'
-      logs = []
+      if (shouldApply()) {
+        loadError =
+          error instanceof Error ? error.message : 'Unknown error loading logs'
+        logs = []
+      }
     } finally {
       isLoading = false
     }
@@ -449,7 +456,20 @@
   }
 
   function handleRowClick(logId: string) {
-    window.location.href = `/logs/${logId}`
+    // Client-side navigation — see Traces.svelte: a full-page load tears down and
+    // re-establishes every SSE stream on each open, stalling against the browser's
+    // 6-connection-per-origin limit.
+    void goto(`/logs/${logId}`)
+  }
+
+  // Keyboard activation for the row (Enter/Space), only when the row itself —
+  // not a child control like the select checkbox — is focused.
+  function handleRowKeydown(event: KeyboardEvent, logId: string) {
+    if (event.target !== event.currentTarget) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleRowClick(logId)
+    }
   }
 
   function toggleLogSelection(logId: string) {
@@ -467,45 +487,46 @@
   }
 
   $effect(() => {
-    // No EventSource (SSR/legacy) — fall back to a one-shot REST load.
-    if (typeof EventSource === 'undefined') {
-      void loadLogs()
-      return
-    }
+    // Seed the current list once on mount. The shared SSE connection only
+    // replays its snapshot at connect time (page load) — this component mounts
+    // later, when the Logs tab is opened, so it would otherwise miss the initial
+    // snapshot and stay empty until the next ingest. REST gives the initial
+    // paint; live deltas (append) and clear/delete re-syncs (snapshot) follow.
+    //
+    // If an SSE snapshot lands while that REST seed is still in flight (e.g. a
+    // concurrent clear), the seed must not overwrite it — track that here.
+    let sseSnapshotApplied = false
+    void loadLogs(() => !sseSnapshotApplied)
 
-    const es = new EventSource('/api/logs/stream')
+    // No EventSource (SSR/legacy) — the REST load above is all we get.
+    if (typeof EventSource === 'undefined') return
 
-    // Full list: sent on connect and after any clear/delete (re-sync).
-    es.addEventListener('logs-snapshot', (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data)
-        logs = Array.isArray(data.logs) ? data.logs : []
-        loadError = null
-      } catch {
-        // Ignore malformed payloads; the next snapshot will re-sync.
-      } finally {
-        isLoading = false
-      }
+    // Log list events arrive over the shared app-wide SSE connection.
+    return onSSEEvents({
+      // Full list: re-sent after any clear/delete (re-sync).
+      'logs-snapshot': (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data)
+          logs = Array.isArray(data.logs) ? data.logs : []
+          loadError = null
+          sseSnapshotApplied = true
+        } catch {
+          // Ignore malformed payloads; the next snapshot will re-sync.
+        } finally {
+          isLoading = false
+        }
+      },
+      // Incremental: only logs ingested since the last cursor. Merged in place so
+      // the table updates without a full re-render (no flash).
+      'logs-append': (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (Array.isArray(data.logs)) applyAppend(data.logs)
+        } catch {
+          // Ignore malformed payloads.
+        }
+      },
     })
-
-    // Incremental: only logs ingested since the last cursor. Merged in place so
-    // the table updates without a full re-render (no flash).
-    es.addEventListener('logs-append', (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data)
-        if (Array.isArray(data.logs)) applyAppend(data.logs)
-      } catch {
-        // Ignore malformed payloads.
-      }
-    })
-
-    es.onerror = () => {
-      // EventSource auto-reconnects; the reconnect replays a fresh snapshot.
-    }
-
-    return () => {
-      es.close()
-    }
   })
 
   export function triggerClearAll() {
@@ -635,8 +656,13 @@
           </thead>
           <tbody>
             {#each sortedLogs as log (log.id)}
+              <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
               <tr
                 onclick={() => handleRowClick(log.id)}
+                onkeydown={(e) => handleRowKeydown(e, log.id)}
+                tabindex="0"
+                data-testid="log-row"
+                data-log-id={log.id}
                 class:selected={selectedLogIdSet.has(log.id)}
               >
                 <td

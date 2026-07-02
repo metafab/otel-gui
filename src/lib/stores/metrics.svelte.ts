@@ -2,6 +2,7 @@
 // Mirrors traces.svelte.ts but for metrics: it mirrors the SSE list stream
 // (metrics-snapshot / metrics-append) in memory, exactly like the Logs view,
 // so the list is flash-free (only the very first snapshot toggles isLoading).
+import { onSSEEvents } from '$lib/stores/sseClient'
 import type { MetricListItem } from '$lib/types'
 
 // State management
@@ -43,42 +44,35 @@ function connectSSE() {
       return
     }
 
-    const es = new EventSource('/api/metrics/stream')
-
-    es.addEventListener('metrics-count', (event: MessageEvent) => {
-      const parsed = Number.parseInt(event.data, 10)
-      if (!Number.isNaN(parsed)) count = parsed
+    // Metric list events arrive over the shared app-wide SSE connection.
+    return onSSEEvents({
+      'metrics-count': (event: MessageEvent) => {
+        const parsed = Number.parseInt(event.data, 10)
+        if (!Number.isNaN(parsed)) count = parsed
+      },
+      // Full list: sent on connect and after any clear/delete (re-sync).
+      'metrics-snapshot': (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data)
+          metrics = Array.isArray(data.metrics) ? data.metrics : []
+          error = null
+        } catch {
+          // Ignore malformed payloads; the next snapshot will re-sync.
+        } finally {
+          isLoading = false
+        }
+      },
+      // Incremental: only metrics touched since the last cursor. Merged in place
+      // so the table updates without a full re-render (no flash).
+      'metrics-append': (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (Array.isArray(data.metrics)) applyAppend(data.metrics)
+        } catch {
+          // Ignore malformed payloads.
+        }
+      },
     })
-
-    // Full list: sent on connect and after any clear/delete (re-sync).
-    es.addEventListener('metrics-snapshot', (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data)
-        metrics = Array.isArray(data.metrics) ? data.metrics : []
-        error = null
-      } catch {
-        // Ignore malformed payloads; the next snapshot will re-sync.
-      } finally {
-        isLoading = false
-      }
-    })
-
-    // Incremental: only metrics touched since the last cursor. Merged in place
-    // so the table updates without a full re-render (no flash).
-    es.addEventListener('metrics-append', (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data)
-        if (Array.isArray(data.metrics)) applyAppend(data.metrics)
-      } catch {
-        // Ignore malformed payloads.
-      }
-    })
-
-    es.onerror = () => {
-      // EventSource auto-reconnects; the reconnect replays a fresh snapshot.
-    }
-
-    return () => es.close()
   })
 }
 

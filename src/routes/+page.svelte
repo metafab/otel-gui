@@ -12,6 +12,7 @@
   import Traces from '$lib/components/Traces.svelte'
   import { metricStore } from '$lib/stores/metrics.svelte'
   import { serviceMapStore } from '$lib/stores/serviceMap.svelte'
+  import { onSSE } from '$lib/stores/sseClient'
   import { traceStore } from '$lib/stores/traces.svelte'
   import { isInputFocused, isMac } from '$lib/utils/keyboard'
 
@@ -25,22 +26,14 @@
 
   function connectLogsCountSSE() {
     $effect(() => {
-      if (typeof EventSource === 'undefined') return
-
-      const es = new EventSource('/api/logs/stream')
-
-      es.addEventListener('logs-count', (event: MessageEvent) => {
+      // Only the badge count is needed here; the full Logs list stream is
+      // consumed by the Logs component. Both ride the shared SSE connection.
+      return onSSE('logs-count', (event: MessageEvent) => {
         const parsed = Number.parseInt(event.data, 10)
         if (!Number.isNaN(parsed)) {
           logsBadgeTotal = parsed
         }
       })
-
-      es.onerror = () => {
-        // EventSource auto-reconnects.
-      }
-
-      return () => es.close()
     })
   }
 
@@ -211,7 +204,9 @@
     <div class="tab-bar" role="tablist">
       <button
         role="tab"
+        id="tab-traces"
         aria-selected={activeTab === 'traces'}
+        aria-controls="panel-traces"
         class="tab-btn"
         class:active={activeTab === 'traces'}
         onclick={() => switchTab('traces')}
@@ -221,7 +216,9 @@
       >
       <button
         role="tab"
+        id="tab-logs"
         aria-selected={activeTab === 'logs'}
+        aria-controls="panel-logs"
         class="tab-btn"
         class:active={activeTab === 'logs'}
         onclick={() => switchTab('logs')}
@@ -231,7 +228,9 @@
       >
       <button
         role="tab"
+        id="tab-metrics"
         aria-selected={activeTab === 'metrics'}
+        aria-controls="panel-metrics"
         class="tab-btn"
         class:active={activeTab === 'metrics'}
         onclick={() => switchTab('metrics')}
@@ -241,7 +240,9 @@
       >
       <button
         role="tab"
+        id="tab-map"
         aria-selected={activeTab === 'map'}
+        aria-controls="panel-map"
         class="tab-btn"
         class:active={activeTab === 'map'}
         onclick={() => switchTab('map')}>Service Map</button
@@ -287,14 +288,21 @@
   </header>
 
   {#if activeTab === 'traces'}
-    <Traces
-      bind:this={tracesRef}
-      bind:filteredCount
-      bind:selectedCount
-      bind:isExportingBound={isExporting}
-    />
+    <div role="tabpanel" id="panel-traces" aria-labelledby="tab-traces">
+      <Traces
+        bind:this={tracesRef}
+        bind:filteredCount
+        bind:selectedCount
+        bind:isExportingBound={isExporting}
+      />
+    </div>
   {:else if activeTab === 'logs'}
-    <div class="logs-tab" role="region" aria-label="Logs">
+    <div
+      class="logs-tab"
+      role="tabpanel"
+      id="panel-logs"
+      aria-labelledby="tab-logs"
+    >
       <Logs
         bind:this={logsRef}
         bind:totalCount={logsTotal}
@@ -303,7 +311,12 @@
       />
     </div>
   {:else if activeTab === 'metrics'}
-    <div class="metrics-tab" role="region" aria-label="Metrics">
+    <div
+      class="metrics-tab"
+      role="tabpanel"
+      id="panel-metrics"
+      aria-labelledby="tab-metrics"
+    >
       <Metrics
         bind:this={metricsRef}
         bind:totalCount={metricsTotal}
@@ -313,11 +326,16 @@
     </div>
   {:else}
     <!-- Service Map tab -->
-    <div class="map-content">
+    <div
+      class="map-content"
+      role="tabpanel"
+      id="panel-map"
+      aria-labelledby="tab-map"
+    >
       {#if serviceMapStore.isLoading && serviceMapStore.data.nodes.length === 0}
-        <div class="map-status">Loading service map…</div>
+        <div class="map-status" role="status">Loading service map…</div>
       {:else if serviceMapStore.error && serviceMapStore.data.nodes.length === 0}
-        <div class="map-error">{serviceMapStore.error}</div>
+        <div class="map-error" role="alert">{serviceMapStore.error}</div>
       {:else}
         <!-- Kept mounted across snapshots — the store streams updates in and the
              component's sticky layout expands in place (no teardown, no reflow). -->

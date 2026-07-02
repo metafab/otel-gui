@@ -6,6 +6,7 @@
 // Layout stability ("don't reflow on every change") is handled separately in
 // the render layer (createStickyLayout in $lib/utils/graph) — this store only
 // carries the raw nodes/edges + counts.
+import { onSSEEvents } from '$lib/stores/sseClient'
 import type { ServiceMapData } from '$lib/types'
 
 const EMPTY: ServiceMapData = { nodes: [], edges: [] }
@@ -25,34 +26,28 @@ function connectSSE() {
       return
     }
 
-    const es = new EventSource('/api/service-map/stream')
-
-    es.addEventListener('map-count', (event: MessageEvent) => {
-      const parsed = Number.parseInt(event.data, 10)
-      if (!Number.isNaN(parsed)) count = parsed
-    })
-
-    // Full map: sent on connect and on every change to the cumulative aggregate.
-    es.addEventListener('map-snapshot', (event: MessageEvent) => {
-      try {
-        const parsed = JSON.parse(event.data)
-        data = {
-          nodes: Array.isArray(parsed.nodes) ? parsed.nodes : [],
-          edges: Array.isArray(parsed.edges) ? parsed.edges : [],
+    // Service-map events arrive over the shared app-wide SSE connection.
+    return onSSEEvents({
+      'map-count': (event: MessageEvent) => {
+        const parsed = Number.parseInt(event.data, 10)
+        if (!Number.isNaN(parsed)) count = parsed
+      },
+      // Full map: sent on connect and on every change to the cumulative aggregate.
+      'map-snapshot': (event: MessageEvent) => {
+        try {
+          const parsed = JSON.parse(event.data)
+          data = {
+            nodes: Array.isArray(parsed.nodes) ? parsed.nodes : [],
+            edges: Array.isArray(parsed.edges) ? parsed.edges : [],
+          }
+          error = null
+        } catch {
+          // Ignore malformed payloads; the next snapshot will re-sync.
+        } finally {
+          isLoading = false
         }
-        error = null
-      } catch {
-        // Ignore malformed payloads; the next snapshot will re-sync.
-      } finally {
-        isLoading = false
-      }
+      },
     })
-
-    es.onerror = () => {
-      // EventSource auto-reconnects; the reconnect replays a fresh snapshot.
-    }
-
-    return () => es.close()
   })
 }
 
