@@ -1,25 +1,34 @@
 <script lang="ts">
   interface Props {
+    /** Available service names for the dropdown. */
+    services: string[]
     searchQuery: string
     typeFilter: 'all' | 'gauge' | 'sum'
+    /** Bound: selected service name, or "all". */
+    selectedService: string
     filteredCount: number
     totalCount: number
   }
 
   let {
+    services,
     searchQuery = $bindable(''),
     typeFilter = $bindable('all'),
+    selectedService = $bindable('all'),
     filteredCount,
     totalCount,
   }: Props = $props()
 
   const hasActiveFilters = $derived(
-    searchQuery.trim() !== '' || typeFilter !== 'all',
+    searchQuery.trim() !== '' ||
+      typeFilter !== 'all' ||
+      selectedService !== 'all',
   )
 
   function handleClear() {
     searchQuery = ''
     typeFilter = 'all'
+    selectedService = 'all'
   }
 </script>
 
@@ -35,6 +44,21 @@
         class="search-input"
         aria-label="Search metrics"
       />
+    </div>
+
+    <div class="filter-group service-group">
+      <label for="metrics-service">Service</label>
+      <select
+        id="metrics-service"
+        bind:value={selectedService}
+        class="filter-select"
+        aria-label="Service"
+      >
+        <option value="all">All Services</option>
+        {#each services as service}
+          <option value={service}>{service}</option>
+        {/each}
+      </select>
     </div>
 
     <div class="filter-group type-group">
@@ -93,7 +117,8 @@
     min-width: 300px;
   }
 
-  .type-group {
+  .type-group,
+  .service-group {
     max-width: 220px;
   }
 
@@ -157,7 +182,8 @@
     }
 
     .search-group,
-    .type-group {
+    .type-group,
+    .service-group {
       min-width: 100%;
       max-width: none;
     }

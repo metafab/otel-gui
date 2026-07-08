@@ -1,25 +1,34 @@
 <script lang="ts">
   interface Props {
+    /** Available service names for the dropdown. */
+    services: string[]
     searchQuery: string
     severityFilter: 'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error'
+    /** Bound: selected service name, or "all". */
+    selectedService: string
     filteredCount: number
     totalCount: number
   }
 
   let {
+    services,
     searchQuery = $bindable(''),
     severityFilter = $bindable('all'),
+    selectedService = $bindable('all'),
     filteredCount,
     totalCount,
   }: Props = $props()
 
   const hasActiveFilters = $derived(
-    searchQuery.trim() !== '' || severityFilter !== 'all',
+    searchQuery.trim() !== '' ||
+      severityFilter !== 'all' ||
+      selectedService !== 'all',
   )
 
   function handleClear() {
     searchQuery = ''
     severityFilter = 'all'
+    selectedService = 'all'
   }
 </script>
 
@@ -35,6 +44,21 @@
         class="search-input"
         aria-label="Search logs"
       />
+    </div>
+
+    <div class="filter-group service-group">
+      <label for="logs-service">Service</label>
+      <select
+        id="logs-service"
+        bind:value={selectedService}
+        class="filter-select"
+        aria-label="Service"
+      >
+        <option value="all">All Services</option>
+        {#each services as service}
+          <option value={service}>{service}</option>
+        {/each}
+      </select>
     </div>
 
     <div class="filter-group severity-group">
@@ -96,7 +120,8 @@
     min-width: 300px;
   }
 
-  .severity-group {
+  .severity-group,
+  .service-group {
     max-width: 220px;
   }
 
@@ -160,7 +185,8 @@
     }
 
     .search-group,
-    .severity-group {
+    .severity-group,
+    .service-group {
       min-width: 100%;
       max-width: none;
     }

@@ -75,8 +75,30 @@ describe('Metrics', () => {
 
     expect(await screen.findByText('http.server.duration')).toBeInTheDocument()
     expect(screen.getByText('jobs.processed')).toBeInTheDocument()
-    expect(screen.getByText('checkout-service')).toBeInTheDocument()
-    expect(screen.getByText('worker-service')).toBeInTheDocument()
+    // Service names also appear as options in the Service filter dropdown, so
+    // scope these assertions to the table body.
+    const table = screen.getByRole('table')
+    expect(within(table).getByText('checkout-service')).toBeInTheDocument()
+    expect(within(table).getByText('worker-service')).toBeInTheDocument()
+  })
+
+  it('filters metrics by service', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleMetrics,
+    } as Response)
+
+    render(Metrics)
+
+    await screen.findByText('http.server.duration')
+
+    const serviceSelect = screen.getByLabelText('Service') as HTMLSelectElement
+    await fireEvent.change(serviceSelect, {
+      target: { value: 'worker-service' },
+    })
+
+    expect(screen.queryByText('http.server.duration')).not.toBeInTheDocument()
+    expect(screen.getByText('jobs.processed')).toBeInTheDocument()
   })
 
   it('filters metrics by type', async () => {

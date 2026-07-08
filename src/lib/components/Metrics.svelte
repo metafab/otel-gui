@@ -66,6 +66,7 @@
       return {
         searchQuery: '',
         typeFilter: 'all',
+        selectedService: 'all',
         sortBy: DEFAULT_SORT_BY,
         sortOrder: DEFAULT_SORT_ORDER,
       } as const
@@ -75,6 +76,7 @@
     return {
       searchQuery: url.searchParams.get('search') ?? '',
       typeFilter: parseTypeFilter(url.searchParams.get('type')),
+      selectedService: url.searchParams.get('service') ?? 'all',
       sortBy: parseSortBy(url.searchParams.get('sort')),
       sortOrder: parseSortOrder(url.searchParams.get('order')),
     } as const
@@ -93,6 +95,12 @@
       url.searchParams.delete('type')
     }
 
+    if (selectedService !== 'all') {
+      url.searchParams.set('service', selectedService)
+    } else {
+      url.searchParams.delete('service')
+    }
+
     if (sortBy === DEFAULT_SORT_BY && sortOrder === DEFAULT_SORT_ORDER) {
       url.searchParams.delete('sort')
       url.searchParams.delete('order')
@@ -107,6 +115,7 @@
 
   let searchQuery = $state(initialParams.searchQuery)
   let typeFilter = $state<'all' | 'gauge' | 'sum'>(initialParams.typeFilter)
+  let selectedService = $state<string>(initialParams.selectedService)
   let sortBy = $state<MetricSortBy>(initialParams.sortBy)
   let sortOrder = $state<MetricSortOrder>(initialParams.sortOrder)
   let selectedMetricIds = $state<string[]>([])
@@ -197,12 +206,31 @@
       .join(' ')
   }
 
+  const services = $derived(
+    Array.from(
+      new Set(metrics.map((m) => m.serviceName).filter(Boolean)),
+    ).sort(),
+  )
+
+  // If the selected service disappears (e.g. after a clear/delete or eviction),
+  // fall back to "all" so the list isn't stuck showing nothing.
+  $effect(() => {
+    if (selectedService === 'all' || services.length === 0) return
+    if (!services.includes(selectedService)) {
+      selectedService = 'all'
+    }
+  })
+
   const filteredMetrics = $derived.by(() => {
     if (!Array.isArray(metrics)) return []
     const query = searchQuery.trim().toLowerCase()
 
     return metrics.filter((m) => {
       if (typeFilter !== 'all' && m.type !== typeFilter) {
+        return false
+      }
+
+      if (selectedService !== 'all' && m.serviceName !== selectedService) {
         return false
       }
 
@@ -462,6 +490,7 @@
   function handleClearFilters() {
     searchQuery = ''
     typeFilter = 'all'
+    selectedService = 'all'
   }
 
   $effect(() => {
@@ -533,8 +562,10 @@
     </div>
   {:else}
     <MetricsFilter
+      {services}
       bind:searchQuery
       bind:typeFilter
+      bind:selectedService
       filteredCount={sortedMetrics.length}
       totalCount={metrics.length}
     />

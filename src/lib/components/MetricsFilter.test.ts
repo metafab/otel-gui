@@ -7,8 +7,10 @@ describe('MetricsFilter', () => {
   it('renders filter stats', () => {
     const { container } = render(MetricsFilter, {
       props: {
+        services: [],
         searchQuery: '',
         typeFilter: 'all',
+        selectedService: 'all',
         filteredCount: 3,
         totalCount: 9,
       },
@@ -22,8 +24,10 @@ describe('MetricsFilter', () => {
   it('shows and applies clear filters action', async () => {
     render(MetricsFilter, {
       props: {
+        services: ['checkout'],
         searchQuery: 'http',
         typeFilter: 'sum',
+        selectedService: 'checkout',
         filteredCount: 1,
         totalCount: 5,
       },
@@ -31,9 +35,11 @@ describe('MetricsFilter', () => {
 
     const searchInput = screen.getByLabelText('Search metrics')
     const typeSelect = screen.getByLabelText('Metric type')
+    const serviceSelect = screen.getByLabelText('Service')
 
     expect(searchInput).toHaveValue('http')
     expect(typeSelect).toHaveValue('sum')
+    expect(serviceSelect).toHaveValue('checkout')
     expect(
       screen.getByRole('button', { name: 'Clear Filters' }),
     ).toBeInTheDocument()
@@ -42,13 +48,16 @@ describe('MetricsFilter', () => {
 
     expect(searchInput).toHaveValue('')
     expect(typeSelect).toHaveValue('all')
+    expect(serviceSelect).toHaveValue('all')
   })
 
   it('does not show clear button without active filters', () => {
     render(MetricsFilter, {
       props: {
+        services: [],
         searchQuery: '',
         typeFilter: 'all',
+        selectedService: 'all',
         filteredCount: 2,
         totalCount: 2,
       },
@@ -62,8 +71,10 @@ describe('MetricsFilter', () => {
   it('filters down to a single type via the select', async () => {
     render(MetricsFilter, {
       props: {
+        services: [],
         searchQuery: '',
         typeFilter: 'all',
+        selectedService: 'all',
         filteredCount: 4,
         totalCount: 4,
       },
@@ -72,5 +83,23 @@ describe('MetricsFilter', () => {
     const typeSelect = screen.getByLabelText('Metric type') as HTMLSelectElement
     await fireEvent.change(typeSelect, { target: { value: 'gauge' } })
     expect(typeSelect.value).toBe('gauge')
+  })
+
+  it('lists services and selects one via the select', async () => {
+    render(MetricsFilter, {
+      props: {
+        services: ['api', 'checkout'],
+        searchQuery: '',
+        typeFilter: 'all',
+        selectedService: 'all',
+        filteredCount: 4,
+        totalCount: 4,
+      },
+    })
+
+    const serviceSelect = screen.getByLabelText('Service') as HTMLSelectElement
+    expect(screen.getByRole('option', { name: 'checkout' })).toBeInTheDocument()
+    await fireEvent.change(serviceSelect, { target: { value: 'checkout' } })
+    expect(serviceSelect.value).toBe('checkout')
   })
 })

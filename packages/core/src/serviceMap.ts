@@ -380,6 +380,47 @@ export function accumulateSpan(
   }
 }
 
+/**
+ * Drop a trace's per-span bookkeeping from the aggregate.
+ *
+ * The cumulative node/edge topology (and its call/error counts) is intentionally
+ * kept forever — that is the "complete" service map. But the per-span ledgers
+ * (`spanService`, `countedNodeSpans`, `resolvedEdgeSpans`, `pendingChildren`)
+ * only exist to make ingest idempotent and to resolve out-of-order parent→child
+ * edges *while a trace is still live in the ring buffer*. Once a trace is evicted
+ * no further spans for it will arrive, so its entries are dead weight. Without
+ * this, those ledgers grow by one entry per span ever ingested and dominate
+ * memory over a long session.
+ *
+ * Node/edge counts are deliberately NOT decremented here (the map only grows;
+ * it is reset only by clearServiceMapAggregate).
+ */
+export function forgetTraceSpans(
+  agg: ServiceMapAggregate,
+  traceId: string,
+  spanIds: Iterable<string>,
+): void {
+  for (const spanId of spanIds) {
+    const spanKey = `${traceId}|${spanId}`
+    agg.spanService.delete(spanKey)
+    agg.countedNodeSpans.delete(spanKey)
+    agg.resolvedEdgeSpans.delete(spanKey)
+    // Children that were still waiting on this span as their parent will now
+    // never resolve — drop them.
+    agg.pendingChildren.delete(spanKey)
+  }
+  // Also drop any still-pending children keyed under a parent in this trace that
+  // never arrived (parentSpanId shares the evicted trace's id). pendingChildren
+  // keys are `${traceId}|${parentSpanId}`, so a prefix match is exact and
+  // unambiguous (the `|` separator cannot appear inside a trace id).
+  if (agg.pendingChildren.size > 0) {
+    const prefix = `${traceId}|`
+    for (const key of agg.pendingChildren.keys()) {
+      if (key.startsWith(prefix)) agg.pendingChildren.delete(key)
+    }
+  }
+}
+
 /** Project the cumulative aggregate into the wire shape (computes percentiles). */
 export function projectServiceMap(agg: ServiceMapAggregate): ServiceMapData {
   const nodes: ServiceMapNode[] = Array.from(agg.nodes.values()).map((n) => ({

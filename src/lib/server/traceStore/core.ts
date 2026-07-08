@@ -26,6 +26,7 @@ import {
   accumulateSpan,
   projectServiceMap,
   clearServiceMapAggregate,
+  forgetTraceSpans,
 } from '@otel-gui/core'
 import { extractAnyValue, flattenAttributes } from '@otel-gui/core'
 import { formatTimestamp, getDurationMs } from '$lib/utils/time'
@@ -151,7 +152,15 @@ export function createInternalTraceStore(
     while (traces.size > maxTraces) {
       const oldestTraceId = traces.keys().next().value
       if (!oldestTraceId) break
+      const evicted = traces.get(oldestTraceId)
       traces.delete(oldestTraceId)
+      // Release the evicted trace's per-span bookkeeping from the cumulative
+      // service-map aggregate. The topology (nodes/edges + counts) is kept; only
+      // the unbounded per-span ledgers are pruned. Without this the aggregate
+      // grows by one entry per span ever ingested and dominates memory.
+      if (evicted) {
+        forgetTraceSpans(serviceMapAgg, oldestTraceId, evicted.spans.keys())
+      }
     }
   }
 
@@ -477,8 +486,14 @@ export function createInternalTraceStore(
 
     let deletedCount = 0
     for (const traceId of traceIds) {
+      const trace = traces.get(traceId)
       if (traces.delete(traceId)) {
         deletedCount++
+        // Mirror eviction: drop the deleted trace's per-span ledgers from the
+        // aggregate (topology counts are cumulative and intentionally retained).
+        if (trace) {
+          forgetTraceSpans(serviceMapAgg, traceId, trace.spans.keys())
+        }
       }
     }
 

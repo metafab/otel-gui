@@ -65,6 +65,7 @@
       return {
         searchQuery: '',
         severityFilter: 'all',
+        selectedService: 'all',
         sortBy: DEFAULT_SORT_BY,
         sortOrder: DEFAULT_SORT_ORDER,
       } as const
@@ -74,6 +75,7 @@
     return {
       searchQuery: url.searchParams.get('search') ?? '',
       severityFilter: parseSeverityFilter(url.searchParams.get('severity')),
+      selectedService: url.searchParams.get('service') ?? 'all',
       sortBy: parseSortBy(url.searchParams.get('sort')),
       sortOrder: parseSortOrder(url.searchParams.get('order')),
     } as const
@@ -92,6 +94,12 @@
       url.searchParams.delete('severity')
     }
 
+    if (selectedService !== 'all') {
+      url.searchParams.set('service', selectedService)
+    } else {
+      url.searchParams.delete('service')
+    }
+
     if (sortBy === DEFAULT_SORT_BY && sortOrder === DEFAULT_SORT_ORDER) {
       url.searchParams.delete('sort')
       url.searchParams.delete('order')
@@ -108,6 +116,7 @@
   let severityFilter = $state<
     'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error'
   >(initialParams.severityFilter)
+  let selectedService = $state<string>(initialParams.selectedService)
   let sortBy = $state<LogSortBy>(initialParams.sortBy)
   let sortOrder = $state<LogSortOrder>(initialParams.sortOrder)
   let selectedLogIds = $state<string[]>([])
@@ -203,12 +212,31 @@
     }
   }
 
+  const services = $derived(
+    Array.from(
+      new Set(logs.map((log) => log.serviceName).filter(Boolean)),
+    ).sort(),
+  )
+
+  // If the selected service disappears (e.g. after a clear/delete or eviction),
+  // fall back to "all" so the list isn't stuck showing nothing.
+  $effect(() => {
+    if (selectedService === 'all' || services.length === 0) return
+    if (!services.includes(selectedService)) {
+      selectedService = 'all'
+    }
+  })
+
   const filteredLogs = $derived.by(() => {
     if (!Array.isArray(logs)) return []
     const query = searchQuery.trim().toLowerCase()
 
     return logs.filter((log) => {
       if (severityFilter !== 'all' && severityBucket(log) !== severityFilter) {
+        return false
+      }
+
+      if (selectedService !== 'all' && log.serviceName !== selectedService) {
         return false
       }
 
@@ -484,6 +512,7 @@
   function handleClearFilters() {
     searchQuery = ''
     severityFilter = 'all'
+    selectedService = 'all'
   }
 
   $effect(() => {
@@ -553,8 +582,10 @@
     </div>
   {:else}
     <LogsFilter
+      {services}
       bind:searchQuery
       bind:severityFilter
+      bind:selectedService
       filteredCount={sortedLogs.length}
       totalCount={logs.length}
     />
