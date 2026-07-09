@@ -63,6 +63,22 @@ function resolveMaxMetricPoints(): number {
   return parsed
 }
 
+// Interval (ms) for the periodic store-stats debug log. 0 (or unset) disables
+// it. Defaults to 30000 so every deployment gets memory-growth visibility out
+// of the box; set to 0 to silence.
+function resolveStatsLogMs(): number {
+  const raw = env.OTEL_GUI_STATS_LOG_MS
+  if (raw === undefined || raw === '') return 30_000
+  const parsed = Number.parseInt(raw, 10)
+  if (Number.isNaN(parsed) || parsed < 0 || parsed > 3_600_000) {
+    console.warn(
+      `[otel-gui] Invalid OTEL_GUI_STATS_LOG_MS="${raw}". Must be an integer between 0 and 3600000 (0 disables). Falling back to 30000.`,
+    )
+    return 30_000
+  }
+  return parsed
+}
+
 function resolvePersistenceMode(): 'memory' | 'pglite' {
   const raw = env.OTEL_GUI_PERSISTENCE_MODE
   if (raw === undefined || raw === '') return 'memory'
@@ -329,6 +345,42 @@ async function createTraceStore(): Promise<TraceStoreWithPersistenceStatus> {
 }
 
 export const traceStore = await createTraceStore()
+
+// Periodic store-stats debug log — prints every internal collection size so a
+// steadily rising number pinpoints which store is accumulating. `metricSeries`
+// / `maxSeriesInMetric` are the usual suspects (series-per-metric is uncapped).
+function startStatsLogger(): void {
+  const intervalMs = resolveStatsLogMs()
+  if (intervalMs <= 0 || typeof traceStore.getStoreStats !== 'function') return
+
+  const mb = (bytes: number) => Math.round(bytes / 1024 / 1024)
+  const timer = setInterval(() => {
+    const s = traceStore.getStoreStats!()
+    // Full memory breakdown: rss = resident set; heapUsed = live JS objects;
+    // external + arrayBuffers = off-heap Buffers (e.g. retained protobuf request
+    // bodies). Splitting them tells a JS-object leak apart from a Buffer leak.
+    const m = process.memoryUsage()
+    console.info(
+      `[otel-gui][stats] rss=${mb(m.rss)}MB heapUsed=${mb(m.heapUsed)}MB ` +
+        `heapTotal=${mb(m.heapTotal)}MB external=${mb(m.external)}MB ` +
+        `arrayBuffers=${mb(m.arrayBuffers)}MB subscribers=${s.subscribers} ` +
+        `traces=${s.traces} logs=${s.logs} ` +
+        `metrics=${s.metrics} metricSeries=${s.metricSeries} ` +
+        `maxSeriesInMetric=${s.maxSeriesInMetric}${
+          s.maxSeriesMetricKey ? ` (${s.maxSeriesMetricKey})` : ''
+        } metricPoints=${s.metricPoints} ` +
+        `map[nodes=${s.serviceMapNodes} edges=${s.serviceMapEdges} ` +
+        `spanService=${s.serviceMapSpanService} counted=${s.serviceMapCountedNodeSpans} ` +
+        `resolved=${s.serviceMapResolvedEdgeSpans} pending=${s.serviceMapPendingChildren}] ` +
+        `bookkeeping[traceLogCounts=${s.traceLogCounts} logTraceId=${s.logTraceIdByLogId} ` +
+        `logSeq=${s.logSeqById} metricSeq=${s.metricSeqById}]`,
+    )
+  }, intervalMs)
+  // Don't let the stats timer hold the event loop open on shutdown.
+  timer.unref?.()
+}
+
+startStatsLogger()
 
 export function getPersistenceStatus(): PersistenceStatus {
   if (traceStore.getPersistenceStatus) {

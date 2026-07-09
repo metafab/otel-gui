@@ -5,8 +5,10 @@
   import TraceImportModal from '$lib/components/TraceImportModal.svelte'
   import VersionInfo from '$lib/components/VersionInfo.svelte'
   import { traceStore } from '$lib/stores/traces.svelte'
+  import { createDeepSearch } from '$lib/stores/deepSearch.svelte'
   import { isInputFocused } from '$lib/utils/keyboard'
   import { formatDurationFromMs } from '$lib/utils/time'
+  import type { TraceListItem, TraceSearchHit } from '$lib/types'
 
   // Bindable props so parent can read reactive state for header action buttons
   let {
@@ -151,10 +153,33 @@
     }
   })
 
-  const filteredTraces = $derived.by(() => {
-    let result = traces
+  // Server-backed deep search. When the query is non-empty the list is driven by
+  // these hits — which match span names, status messages, events, AND every
+  // attribute across the trace's spans, not just the root name/service/id the
+  // streamed list carries — instead of the streamed list. Empty query falls back
+  // to the live stream.
+  const deep = createDeepSearch('traces')
+  $effect(() => {
+    deep.update(searchQuery, selectedService)
+  })
 
-    if (searchQuery.trim()) {
+  // A row's match breadcrumbs, present only on deep-search hits.
+  function matchHint(trace: TraceListItem): string {
+    const hit = trace as Partial<TraceSearchHit>
+    return hit.matchedIn && hit.matchedIn.length > 0
+      ? `matched: ${hit.matchedIn.join(', ')}`
+      : ''
+  }
+
+  const filteredTraces = $derived.by(() => {
+    // Use server hits once they've resolved for the current query; until then
+    // (debounce/in-flight) or if the endpoint is unavailable, fall back to a
+    // client-side substring filter over the streamed list so the view is never
+    // blank or stale. Service/error/duration filters + sort apply on top.
+    const useDeep = deep.active && deep.resolved
+    let result: TraceListItem[] = useDeep ? deep.hits : traces
+
+    if (!useDeep && searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       result = result.filter(
         (t) =>
@@ -524,9 +549,19 @@
       totalCount={traces.length}
     />
 
+    {#if deep.error}
+      <div class="error">Search error: {deep.error}</div>
+    {/if}
+
     {#if filteredTraces.length === 0}
       <div class="empty">
-        <p>No traces match the current filters.</p>
+        <p>
+          {#if deep.isSearching}
+            Searching…
+          {:else}
+            No traces match the current filters.
+          {/if}
+        </p>
         <button onclick={handleClearFilters} class="clear-filters-btn">
           Clear Filters
         </button>
@@ -672,7 +707,10 @@
                     <span class="tentative-icon" aria-label="Root span pending"
                       >⏳</span
                     >
-                  {/if}{trace.rootSpanName}</td
+                  {/if}{trace.rootSpanName}
+                  {#if matchHint(trace)}
+                    <span class="match-hint">{matchHint(trace)}</span>
+                  {/if}</td
                 >
                 <td class="duration" title={formattedDuration.detailed}
                   >{formattedDuration.simple}</td
@@ -984,6 +1022,19 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .match-hint {
+    display: block;
+    font-family:
+      system-ui,
+      -apple-system,
+      sans-serif;
+    font-weight: 400;
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+    white-space: normal;
   }
 
   .tentative-icon {

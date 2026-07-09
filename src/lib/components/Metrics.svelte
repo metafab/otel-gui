@@ -4,8 +4,9 @@
   import MetricsFilter from '$lib/components/MetricsFilter.svelte'
   import VersionInfo from '$lib/components/VersionInfo.svelte'
   import { metricStore } from '$lib/stores/metrics.svelte'
+  import { createDeepSearch } from '$lib/stores/deepSearch.svelte'
   import { onSSEEvents } from '$lib/stores/sseClient'
-  import type { MetricListItem } from '$lib/types'
+  import type { MetricListItem, MetricSearchHit } from '$lib/types'
 
   // Bindable props so parent can read reactive state for header action buttons.
   let {
@@ -121,6 +122,14 @@
   let selectedMetricIds = $state<string[]>([])
   let isDeleting = $state(false)
 
+  // Server-backed deep search. When the query is non-empty the list is driven by
+  // these hits (which match names, units, AND series attributes) instead of the
+  // streamed list; empty query falls back to the live stream.
+  const deep = createDeepSearch('metrics')
+  $effect(() => {
+    deep.update(searchQuery, selectedService)
+  })
+
   const otlpMetricsEndpoint = $derived.by(() => {
     if (typeof window !== 'undefined') {
       const { protocol, hostname, port } = window.location
@@ -221,36 +230,43 @@
     }
   })
 
+  // Source list: deep-search hits when a query is active (the server has already
+  // matched the query + service), otherwise the live streamed list. The type
+  // filter and service filter are applied client-side on top either way (service
+  // is re-applied harmlessly — the server already narrowed hits to it).
   const filteredMetrics = $derived.by(() => {
-    if (!Array.isArray(metrics)) return []
+    // Use server hits once they've resolved for the current query; until then
+    // (debounce/in-flight) or if the endpoint is unavailable, fall back to a
+    // client-side substring filter over the streamed list so the view is never
+    // blank or stale.
+    const useDeep = deep.active && deep.resolved
+    const source: MetricListItem[] = useDeep ? deep.hits : metrics
+    if (!Array.isArray(source)) return []
     const query = searchQuery.trim().toLowerCase()
 
-    return metrics.filter((m) => {
+    return source.filter((m) => {
       if (typeFilter !== 'all' && m.type !== typeFilter) {
         return false
       }
-
       if (selectedService !== 'all' && m.serviceName !== selectedService) {
         return false
       }
-
-      if (!query) {
-        return true
+      if (!useDeep && query) {
+        const haystack =
+          `${m.name} ${m.serviceName} ${m.unit} ${m.id}`.toLowerCase()
+        if (!haystack.includes(query)) return false
       }
-
-      const name = (m.name || '').toLowerCase()
-      const service = (m.serviceName || '').toLowerCase()
-      const unit = (m.unit || '').toLowerCase()
-      const id = (m.id || '').toLowerCase()
-
-      return (
-        name.includes(query) ||
-        service.includes(query) ||
-        unit.includes(query) ||
-        id.includes(query)
-      )
+      return true
     })
   })
+
+  // A row's match breadcrumbs, present only on deep-search hits.
+  function matchHint(metric: MetricListItem): string {
+    const hit = metric as Partial<MetricSearchHit>
+    return hit.matchedIn && hit.matchedIn.length > 0
+      ? `matched: ${hit.matchedIn.join(', ')}`
+      : ''
+  }
 
   const sortedMetrics = $derived.by(() => {
     const toSort = [...filteredMetrics]
@@ -570,9 +586,19 @@
       totalCount={metrics.length}
     />
 
+    {#if deep.error}
+      <div class="error">Search error: {deep.error}</div>
+    {/if}
+
     {#if sortedMetrics.length === 0}
       <div class="empty">
-        <p>No metrics match the current filters.</p>
+        <p>
+          {#if deep.isSearching}
+            Searching…
+          {:else}
+            No metrics match the current filters.
+          {/if}
+        </p>
         <button onclick={handleClearFilters} class="clear-filters-btn">
           Clear Filters
         </button>
@@ -690,7 +716,12 @@
                     aria-label={`Select metric ${metric.name}`}
                   />
                 </td>
-                <td class="metric-name" title={metric.name}>{metric.name}</td>
+                <td class="metric-name" title={metric.name}>
+                  {metric.name}
+                  {#if matchHint(metric)}
+                    <span class="match-hint">{matchHint(metric)}</span>
+                  {/if}
+                </td>
                 <td>
                   <span class={`type-badge type-${metric.type}`}>
                     {metric.type}
@@ -847,6 +878,15 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .match-hint {
+    display: block;
+    font-weight: 400;
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+    white-space: normal;
   }
 
   .unit {

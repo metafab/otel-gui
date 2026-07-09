@@ -147,6 +147,28 @@
 
   let showShortcuts = $state(false)
 
+  // Flush every buffer (traces, logs, metrics, service map) so a fresh activity
+  // can be captured and investigated in isolation. The live views clear
+  // themselves via the SSE snapshot that clearing triggers server-side.
+  let isFlushing = $state(false)
+  async function handleFlush() {
+    if (isFlushing) return
+    const confirmed = confirm(
+      'Flush all buffers (traces, logs, metrics, and the service map)? This cannot be undone.',
+    )
+    if (!confirmed) return
+
+    isFlushing = true
+    try {
+      const res = await fetch('/api/flush', { method: 'POST' })
+      if (!res.ok) throw new Error(`Flush failed: ${res.status}`)
+    } catch (err) {
+      console.error('Flush failed', err)
+    } finally {
+      isFlushing = false
+    }
+  }
+
   function handleGlobalKeydown(e: KeyboardEvent) {
     // '?': toggle shortcuts help
     if (e.key === '?' && !isInputFocused()) {
@@ -249,6 +271,14 @@
       >
     </div>
     <div class="actions">
+      <button
+        class="flush-btn"
+        onclick={handleFlush}
+        disabled={isFlushing}
+        title="Flush all buffers (traces, logs, metrics, service map) for a clean-state capture"
+        aria-label="Flush all telemetry buffers"
+        >{isFlushing ? 'Flushing…' : 'Flush'}</button
+      >
       <button
         class="shortcut-help-btn"
         onclick={() => (showShortcuts = !showShortcuts)}

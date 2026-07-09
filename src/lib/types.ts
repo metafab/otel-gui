@@ -74,6 +74,74 @@ export interface TraceListItem {
   updatedAt: number // epoch ms, copied from StoredTrace
 }
 
+// ─── Search ──────────────────────────────────────────────────────────────────
+// Deep, case-insensitive substring search over the in-memory corpus. Results
+// reuse the list-item projections and add a `matchedIn` breadcrumb naming where
+// the query hit (e.g. "body", "span.name", "attribute:http.route") so an agent —
+// or the UI — knows why a row surfaced. Shared by the MCP endpoint and (later) a
+// UI search box, so the matching lives in the store, not the callers.
+
+export interface SearchMatch {
+  /** Field breadcrumbs the query matched, e.g. ["body", "attribute:http.route"]. */
+  matchedIn: string[]
+}
+
+export interface LogSearchHit extends LogListItem, SearchMatch {}
+
+export interface TraceSearchHit extends TraceListItem, SearchMatch {
+  /** Span ids within the trace that matched, for drill-down. */
+  matchedSpanIds: string[]
+}
+
+export interface MetricSearchHit extends MetricListItem, SearchMatch {}
+
+export interface LogSearchParams {
+  query?: string
+  service?: string
+  /** Minimum OTLP severityNumber (e.g. 17 = ERROR). */
+  severityMin?: number
+  traceId?: string
+  limit?: number
+}
+
+export interface TraceSearchParams {
+  query?: string
+  service?: string
+  hasError?: boolean
+  limit?: number
+}
+
+export interface MetricSearchParams {
+  query?: string
+  service?: string
+  limit?: number
+}
+
+export type SearchKind = 'traces' | 'logs' | 'metrics'
+
+export interface SearchAllParams {
+  query: string
+  /** Which signals to search; defaults to all three. */
+  kinds?: SearchKind[]
+  service?: string
+  /** Per-kind result cap. */
+  limit?: number
+}
+
+export interface SearchResults {
+  traces: TraceSearchHit[]
+  logs: LogSearchHit[]
+  metrics: MetricSearchHit[]
+}
+
+/** Distinct service, with how many of each signal it currently owns. */
+export interface ServiceSummary {
+  name: string
+  traceCount: number
+  logCount: number
+  metricCount: number
+}
+
 export interface TraceExportItem {
   traceId: string
   resourceSpans: any[]
@@ -143,12 +211,63 @@ export interface TraceStore {
   clearMetrics(): void
   deleteMetrics(ids: string[]): number
 
+  // Search + service enumeration. Optional so external persistence backends need
+  // not implement them; the in-memory store always does. Deep substring scans
+  // over the bounded corpus (CPU-only cost). See src/lib/server/mcp.
+  searchLogs?(params: LogSearchParams): LogSearchHit[]
+  searchTraces?(params: TraceSearchParams): TraceSearchHit[]
+  searchMetrics?(params: MetricSearchParams): MetricSearchHit[]
+  searchAll?(params: SearchAllParams): SearchResults
+  listServices?(): ServiceSummary[]
+
   // Infrastructure
   subscribe(fn: () => void): () => void
+  /**
+   * Diagnostic snapshot of every internal collection size. Optional so external
+   * backends need not implement it; the in-memory store always does. Used by the
+   * periodic stats logger to spot unbounded growth (see traceStore.ts).
+   */
+  getStoreStats?(): StoreStats
   readonly maxTraces: number
   readonly maxLogs: number
   readonly maxMetrics: number
   readonly maxMetricPoints: number
+}
+
+/**
+ * A point-in-time count of every server-side collection that could grow. Every
+ * field is a map/set size (or a derived total) so a rising number pinpoints
+ * exactly which store is accumulating.
+ */
+export interface StoreStats {
+  traces: number
+  logs: number
+  metrics: number
+  /** Sum of series across all metrics — the primary metric-cardinality signal. */
+  metricSeries: number
+  /** Largest single metric's series count, with its key, to name the offender. */
+  maxSeriesInMetric: number
+  maxSeriesMetricKey: string | null
+  /** Sum of retained points across all series (bounded by maxMetricPoints each). */
+  metricPoints: number
+  serviceMapNodes: number
+  serviceMapEdges: number
+  /** Service-map per-span bookkeeping ledgers (pruned on trace eviction). */
+  serviceMapSpanService: number
+  serviceMapCountedNodeSpans: number
+  serviceMapResolvedEdgeSpans: number
+  serviceMapPendingChildren: number
+  /** Log/trace bookkeeping maps (should track logs/traces, not outgrow them). */
+  traceLogCounts: number
+  logTraceIdByLogId: number
+  logSeqById: number
+  metricSeqById: number
+  /**
+   * Active change-notification subscribers. In practice one per open SSE
+   * connection — if this climbs without bound, streams are not unsubscribing on
+   * disconnect (a listener/timer/controller leak outside the data stores).
+   */
+  subscribers: number
 }
 
 // Span tree node for waterfall rendering

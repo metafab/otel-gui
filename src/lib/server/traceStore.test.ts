@@ -633,7 +633,10 @@ function metricPayload(
         ],
       },
       scopeMetrics: [
-        { scope: { name: 'unit-test' }, metrics: [{ name, unit: 'ms', ...data }] },
+        {
+          scope: { name: 'unit-test' },
+          metrics: [{ name, unit: 'ms', ...data }],
+        },
       ],
     },
   ]
@@ -903,5 +906,43 @@ describe('expoBoundsForBucket', () => {
   it('negative scale widens buckets (scale -1 → base 4)', () => {
     expect(expoBoundsForBucket(-1, 0)).toEqual({ lower: 1, upper: 4 })
     expect(expoBoundsForBucket(-1, 1)).toEqual({ lower: 4, upper: 16 })
+  })
+})
+
+describe('traceStore.getStoreStats', () => {
+  it('reports collection sizes, totalling series/points across metrics', () => {
+    const store = createInternalTraceStore(10, 10, 100, 100)
+    store.ingestSpans(multiServiceTrace.resourceSpans)
+    store.ingestLogs(simpleLog.resourceLogs)
+    store.ingestMetrics(
+      gaugePayload('svc', 'm', [
+        ['1700000000000000000', 1, { route: '/a' }],
+        ['1700000001000000000', 2, { route: '/b' }],
+        ['1700000002000000000', 3, { route: '/a' }],
+      ]),
+    )
+
+    const stats = store.getStoreStats!()
+    expect(stats.metrics).toBe(1)
+    // Two distinct attribute sets → two series; three points total.
+    expect(stats.metricSeries).toBe(2)
+    expect(stats.metricPoints).toBe(3)
+    expect(stats.maxSeriesInMetric).toBe(2)
+    expect(stats.maxSeriesMetricKey).not.toBeNull()
+    expect(stats.traces).toBe(store.getTraceCount())
+    expect(stats.serviceMapNodes).toBeGreaterThan(0)
+  })
+
+  it('drops per-span service-map ledgers as traces are evicted', () => {
+    const store = createInternalTraceStore(1, 10, 100, 100)
+    store.ingestSpans(multiServiceTrace.resourceSpans)
+    store.ingestSpans(errorTrace.resourceSpans)
+
+    const stats = store.getStoreStats!()
+    // maxTraces=1 → only the newest trace's spans remain in the ledgers.
+    expect(stats.traces).toBe(1)
+    const liveSpans = store.getTrace(store.getTraceList()[0].traceId)!.spans
+      .size
+    expect(stats.serviceMapSpanService).toBe(liveSpans)
   })
 })

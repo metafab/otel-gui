@@ -1,5 +1,6 @@
 export * from './types.js'
 export * from './attributes.js'
+export * from './search.js'
 export * from './stats.js'
 export * from './serviceMap.js'
 export * from './traceStore.js'

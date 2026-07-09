@@ -40,7 +40,7 @@
         id="logs-search"
         type="text"
         bind:value={searchQuery}
-        placeholder="Search by service, severity, body, traceId, spanId..."
+        placeholder="Search body, severity, ids, or any attribute…"
         class="search-input"
         aria-label="Search logs"
       />

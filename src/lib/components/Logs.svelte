@@ -4,8 +4,9 @@
   import LogsFilter from '$lib/components/LogsFilter.svelte'
   import VersionInfo from '$lib/components/VersionInfo.svelte'
   import { onSSEEvents } from '$lib/stores/sseClient'
+  import { createDeepSearch } from '$lib/stores/deepSearch.svelte'
   import { traceStore } from '$lib/stores/traces.svelte'
-  import type { LogListItem } from '$lib/types'
+  import type { LogListItem, LogSearchHit } from '$lib/types'
   import { formatTimestampLocal } from '$lib/utils/time'
 
   // Bindable props so parent can read reactive state for header action buttons
@@ -122,6 +123,14 @@
   let selectedLogIds = $state<string[]>([])
   let isDeleting = $state(false)
 
+  // Server-backed deep search. When the query is non-empty the list is driven by
+  // these hits (which match the body AND all log/resource/scope attributes)
+  // instead of the streamed list; empty query falls back to the live stream.
+  const deep = createDeepSearch('logs')
+  $effect(() => {
+    deep.update(searchQuery, selectedService)
+  })
+
   const otlpLogsEndpoint = $derived.by(() => {
     if (typeof window !== 'undefined') {
       const { protocol, hostname, port } = window.location
@@ -227,40 +236,43 @@
     }
   })
 
+  // Source list: deep-search hits when a query is active (server has matched the
+  // query + service), otherwise the live streamed list. Severity and service
+  // filters apply client-side on top (both work on hits, which carry the same
+  // list-item fields; service is re-applied harmlessly).
   const filteredLogs = $derived.by(() => {
-    if (!Array.isArray(logs)) return []
+    // Use server hits once they've resolved for the current query; until then
+    // (debounce/in-flight) or if the endpoint is unavailable, fall back to a
+    // client-side substring filter over the streamed list so the view is never
+    // blank or stale.
+    const useDeep = deep.active && deep.resolved
+    const source: LogListItem[] = useDeep ? deep.hits : logs
+    if (!Array.isArray(source)) return []
     const query = searchQuery.trim().toLowerCase()
 
-    return logs.filter((log) => {
+    return source.filter((log) => {
       if (severityFilter !== 'all' && severityBucket(log) !== severityFilter) {
         return false
       }
-
       if (selectedService !== 'all' && log.serviceName !== selectedService) {
         return false
       }
-
-      if (!query) {
-        return true
+      if (!useDeep && query) {
+        const haystack =
+          `${log.serviceName} ${log.severityText} ${normalizeBody(log.body)} ${log.traceId} ${log.spanId} ${log.id}`.toLowerCase()
+        if (!haystack.includes(query)) return false
       }
-
-      const service = (log.serviceName || '').toLowerCase()
-      const severity = (log.severityText || '').toLowerCase()
-      const body = normalizeBody(log.body).toLowerCase()
-      const traceId = (log.traceId || '').toLowerCase()
-      const spanId = (log.spanId || '').toLowerCase()
-      const logId = (log.id || '').toLowerCase()
-
-      return (
-        service.includes(query) ||
-        severity.includes(query) ||
-        body.includes(query) ||
-        traceId.includes(query) ||
-        spanId.includes(query) ||
-        logId.includes(query)
-      )
+      return true
     })
   })
+
+  // A row's match breadcrumbs, present only on deep-search hits.
+  function matchHint(log: LogListItem): string {
+    const hit = log as Partial<LogSearchHit>
+    return hit.matchedIn && hit.matchedIn.length > 0
+      ? `matched: ${hit.matchedIn.join(', ')}`
+      : ''
+  }
 
   const sortedLogs = $derived.by(() => {
     const logsToSort = [...filteredLogs]
@@ -590,9 +602,19 @@
       totalCount={logs.length}
     />
 
+    {#if deep.error}
+      <div class="error">Search error: {deep.error}</div>
+    {/if}
+
     {#if sortedLogs.length === 0}
       <div class="empty">
-        <p>No logs match the current filters.</p>
+        <p>
+          {#if deep.isSearching}
+            Searching…
+          {:else}
+            No logs match the current filters.
+          {/if}
+        </p>
         <button onclick={handleClearFilters} class="clear-filters-btn">
           Clear Filters
         </button>
@@ -723,9 +745,12 @@
                     {log.severityText || severityBucket(log).toUpperCase()}
                   </span>
                 </td>
-                <td class="log-body" title={normalizeBody(log.body)}
-                  >{normalizeBody(log.body) || '(empty body)'}</td
-                >
+                <td class="log-body" title={normalizeBody(log.body)}>
+                  {normalizeBody(log.body) || '(empty body)'}
+                  {#if matchHint(log)}
+                    <span class="match-hint">{matchHint(log)}</span>
+                  {/if}
+                </td>
                 <td class="mono">
                   {#if log.traceId}
                     <a
@@ -918,6 +943,14 @@
     max-width: 520px;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .match-hint {
+    display: block;
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+    white-space: normal;
   }
 
   .muted {

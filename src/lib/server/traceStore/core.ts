@@ -1,7 +1,11 @@
 import type {
   LogListItem,
+  LogSearchHit,
+  LogSearchParams,
   MetricListItem,
   MetricDetail,
+  MetricSearchHit,
+  MetricSearchParams,
   MetricSeries,
   MetricSeriesDetail,
   MetricWirePoint,
@@ -12,12 +16,18 @@ import type {
   SummaryQuantile,
   MetricTemporality,
   MetricType,
+  SearchAllParams,
+  SearchResults,
   ServiceMapData,
+  ServiceSummary,
+  StoreStats,
   StoredLog,
   StoredMetric,
   StoredSpan,
   StoredTrace,
   TraceListItem,
+  TraceSearchHit,
+  TraceSearchParams,
   TraceStore,
 } from '$lib/types'
 import {
@@ -29,6 +39,7 @@ import {
   forgetTraceSpans,
 } from '@otel-gui/core'
 import { extractAnyValue, flattenAttributes } from '@otel-gui/core'
+import { normalizeQuery, valueContains } from '@otel-gui/core'
 import { formatTimestamp, getDurationMs } from '$lib/utils/time'
 import { SPAN_KIND_NAMES, STATUS_CODE_NAMES } from '$lib/utils/otlpEnums'
 import {
@@ -45,6 +56,14 @@ const SPARKLINE_POINTS = 30
 export interface InternalTraceStore extends TraceStore {
   listAllTraces(): StoredTrace[]
   replaceAllTraces(traces: StoredTrace[]): void
+  // Search + service enumeration are optional on the public TraceStore (external
+  // backends may omit them); the in-memory store always implements them, so
+  // narrow them to required here for callers holding a concrete store.
+  searchLogs(params: LogSearchParams): LogSearchHit[]
+  searchTraces(params: TraceSearchParams): TraceSearchHit[]
+  searchMetrics(params: MetricSearchParams): MetricSearchHit[]
+  searchAll(params: SearchAllParams): SearchResults
+  listServices(): ServiceSummary[]
 }
 
 function isBeforeNano(a: string, b: string): boolean {
@@ -411,20 +430,14 @@ export function createInternalTraceStore(
     notifyListeners()
   }
 
-  function getTraceList(limit = 100): TraceListItem[] {
-    const traceArray = Array.from(traces.values())
+  function resolveTraceServiceName(trace: StoredTrace): string {
+    const root = resolveRootServiceName(trace)
+    return root === 'unknown' ? trace.serviceName : root
+  }
 
-    traceArray.sort((a, b) => {
-      const aBigInt = BigInt(b.startTimeUnixNano)
-      const bBigInt = BigInt(a.startTimeUnixNano)
-      return aBigInt > bBigInt ? 1 : aBigInt < bBigInt ? -1 : 0
-    })
-
-    return traceArray.slice(0, limit).map((trace) => ({
-      serviceName:
-        resolveRootServiceName(trace) === 'unknown'
-          ? trace.serviceName
-          : resolveRootServiceName(trace),
+  function toTraceListItem(trace: StoredTrace): TraceListItem {
+    return {
+      serviceName: resolveTraceServiceName(trace),
       traceId: trace.traceId,
       rootSpanName: resolveRootSpanName(trace),
       rootSpanTentative: !Array.from(trace.spans.values()).some(
@@ -436,7 +449,19 @@ export function createInternalTraceStore(
       hasError: trace.hasError,
       startTime: formatTimestamp(trace.startTimeUnixNano),
       updatedAt: trace.updatedAt,
-    }))
+    }
+  }
+
+  function compareTracesByStartDesc(a: StoredTrace, b: StoredTrace): number {
+    const aBig = BigInt(a.startTimeUnixNano)
+    const bBig = BigInt(b.startTimeUnixNano)
+    return bBig > aBig ? 1 : bBig < aBig ? -1 : 0
+  }
+
+  function getTraceList(limit = 100): TraceListItem[] {
+    const traceArray = Array.from(traces.values())
+    traceArray.sort(compareTracesByStartDesc)
+    return traceArray.slice(0, limit).map(toTraceListItem)
   }
 
   function getTraceCount(): number {
@@ -759,11 +784,15 @@ export function createInternalTraceStore(
           }
 
           if (type === 'sum') {
-            const temporality = normalizeTemporality(data.aggregationTemporality)
+            const temporality = normalizeTemporality(
+              data.aggregationTemporality,
+            )
             if (temporality) stored.temporality = temporality
             stored.isMonotonic = data.isMonotonic === true
           } else if (type === 'histogram' || type === 'exp_histogram') {
-            const temporality = normalizeTemporality(data.aggregationTemporality)
+            const temporality = normalizeTemporality(
+              data.aggregationTemporality,
+            )
             if (temporality) stored.temporality = temporality
           }
 
@@ -866,7 +895,9 @@ export function createInternalTraceStore(
   function getMetricList(limit = 500): MetricListItem[] {
     const all = Array.from(metrics.entries())
     all.sort(([, a], [, b]) => compareMetricsByUpdatedDesc(a, b))
-    return all.slice(0, limit).map(([id, metric]) => toMetricListItem(id, metric))
+    return all
+      .slice(0, limit)
+      .map(([id, metric]) => toMetricListItem(id, metric))
   }
 
   function getMetric(id: string): StoredMetric | undefined {
@@ -915,15 +946,15 @@ export function createInternalTraceStore(
     return out
   }
 
-  function serializeMetricDetail(id: string, metric: StoredMetric): MetricDetail {
+  function serializeMetricDetail(
+    id: string,
+    metric: StoredMetric,
+  ): MetricDetail {
     const series: MetricSeriesDetail[] = []
     for (const s of metric.series.values()) {
       let points: MetricWirePoint[]
       if (metric.type === 'sum') {
-        points = projectSumPoints(
-          s.points as MetricPoint[],
-          metric.temporality,
-        )
+        points = projectSumPoints(s.points as MetricPoint[], metric.temporality)
       } else {
         // gauge / histogram / exp_histogram / summary pass through as stored.
         points = s.points as MetricWirePoint[]
@@ -1006,6 +1037,283 @@ export function createInternalTraceStore(
     return deleted
   }
 
+  // ─── Search ────────────────────────────────────────────────────────────────
+  //
+  // Deep, case-insensitive substring search over the bounded in-memory corpus.
+  // OTEL here is still maturing, so a query could hit anywhere — message bodies,
+  // span names, status messages, or any attribute key/value across resource,
+  // scope, and event bags. Each hit records `matchedIn` breadcrumbs so the caller
+  // knows why a row surfaced. Cost is CPU only (no indexes); the corpus is capped
+  // by maxTraces/maxLogs/maxMetrics, so worst-case work is bounded.
+
+  const DEFAULT_SEARCH_LIMIT = 200
+
+  function resolveSearchLimit(limit: number | undefined): number {
+    return limit !== undefined && limit > 0 ? limit : DEFAULT_SEARCH_LIMIT
+  }
+
+  // Scan a flattened attribute bag (attributes/resource/scope/event) for the
+  // needle, returning `<prefix>:<key>` breadcrumbs. Matches on key names as well
+  // as values, so searching an attribute name surfaces carriers of that key.
+  function bagHits(
+    bag: Record<string, any> | undefined,
+    needleLower: string,
+    prefix: string,
+  ): string[] {
+    if (!bag) return []
+    const hits: string[] = []
+    for (const [key, value] of Object.entries(bag)) {
+      if (
+        key.toLowerCase().includes(needleLower) ||
+        valueContains(value, needleLower)
+      ) {
+        hits.push(`${prefix}:${key}`)
+      }
+    }
+    return hits
+  }
+
+  function logServiceName(log: StoredLog): string {
+    return (log.resource['service.name'] as string) || 'unknown'
+  }
+
+  function logMatchedIn(log: StoredLog, needleLower: string): string[] {
+    const hits: string[] = []
+    if (valueContains(log.body, needleLower)) hits.push('body')
+    if (valueContains(log.severityText, needleLower)) hits.push('severityText')
+    hits.push(...bagHits(log.attributes, needleLower, 'attribute'))
+    hits.push(...bagHits(log.resource, needleLower, 'resource'))
+    hits.push(...bagHits(log.scopeAttributes, needleLower, 'scope'))
+    return hits
+  }
+
+  function searchLogs(params: LogSearchParams): LogSearchHit[] {
+    const limit = resolveSearchLimit(params.limit)
+    const needle = params.query ? normalizeQuery(params.query) : ''
+    const { service, traceId, severityMin } = params
+
+    const matched: Array<[string, StoredLog, string[]]> = []
+    for (const [id, log] of logs) {
+      if (service !== undefined && logServiceName(log) !== service) continue
+      if (traceId !== undefined && log.traceId !== traceId) continue
+      if (severityMin !== undefined && log.severityNumber < severityMin)
+        continue
+
+      let matchedIn: string[] = []
+      if (needle) {
+        matchedIn = logMatchedIn(log, needle)
+        if (matchedIn.length === 0) continue
+      }
+      matched.push([id, log, matchedIn])
+    }
+
+    matched.sort(([, a], [, b]) => compareLogsByTimeDesc(a, b))
+    return matched.slice(0, limit).map(([id, log, matchedIn]) => ({
+      ...toLogListItem(id, log),
+      matchedIn,
+    }))
+  }
+
+  function spanMatchedIn(span: StoredSpan, needleLower: string): string[] {
+    const hits: string[] = []
+    if (valueContains(span.name, needleLower)) hits.push('span.name')
+    if (valueContains(span.status.message, needleLower))
+      hits.push('span.status')
+    hits.push(...bagHits(span.attributes, needleLower, 'attribute'))
+    hits.push(...bagHits(span.resource, needleLower, 'resource'))
+    hits.push(...bagHits(span.scopeAttributes, needleLower, 'scope'))
+    for (const event of span.events) {
+      if (valueContains(event.name, needleLower)) {
+        hits.push(`event:${event.name}`)
+      }
+      hits.push(...bagHits(event.attributes, needleLower, 'event.attribute'))
+    }
+    return hits
+  }
+
+  function searchTraces(params: TraceSearchParams): TraceSearchHit[] {
+    const limit = resolveSearchLimit(params.limit)
+    const needle = params.query ? normalizeQuery(params.query) : ''
+    const { service, hasError } = params
+
+    const matched: Array<{
+      trace: StoredTrace
+      matchedIn: string[]
+      matchedSpanIds: string[]
+    }> = []
+
+    for (const trace of traces.values()) {
+      if (service !== undefined && resolveTraceServiceName(trace) !== service) {
+        continue
+      }
+      if (hasError !== undefined && trace.hasError !== hasError) continue
+
+      let matchedIn: string[] = []
+      const matchedSpanIds: string[] = []
+      if (needle) {
+        const seen = new Set<string>()
+        if (valueContains(resolveRootSpanName(trace), needle)) {
+          seen.add('rootSpanName')
+        }
+        if (valueContains(resolveTraceServiceName(trace), needle)) {
+          seen.add('serviceName')
+        }
+        if (valueContains(trace.traceId, needle)) seen.add('traceId')
+        for (const [spanId, span] of trace.spans) {
+          const spanHits = spanMatchedIn(span, needle)
+          if (spanHits.length > 0) {
+            matchedSpanIds.push(spanId)
+            for (const h of spanHits) seen.add(h)
+          }
+        }
+        if (seen.size === 0) continue
+        matchedIn = Array.from(seen)
+      }
+      matched.push({ trace, matchedIn, matchedSpanIds })
+    }
+
+    matched.sort((a, b) => compareTracesByStartDesc(a.trace, b.trace))
+    return matched
+      .slice(0, limit)
+      .map(({ trace, matchedIn, matchedSpanIds }) => ({
+        ...toTraceListItem(trace),
+        matchedIn,
+        matchedSpanIds,
+      }))
+  }
+
+  function metricMatchedIn(
+    metric: StoredMetric,
+    needleLower: string,
+  ): string[] {
+    const hits: string[] = []
+    if (valueContains(metric.name, needleLower)) hits.push('name')
+    if (valueContains(metric.description, needleLower)) hits.push('description')
+    if (valueContains(metric.unit, needleLower)) hits.push('unit')
+    const attrSeen = new Set<string>()
+    for (const series of metric.series.values()) {
+      for (const h of bagHits(
+        series.attributes as Record<string, any>,
+        needleLower,
+        'attribute',
+      )) {
+        attrSeen.add(h)
+      }
+    }
+    hits.push(...attrSeen)
+    return hits
+  }
+
+  function searchMetrics(params: MetricSearchParams): MetricSearchHit[] {
+    const limit = resolveSearchLimit(params.limit)
+    const needle = params.query ? normalizeQuery(params.query) : ''
+    const { service } = params
+
+    const matched: Array<[string, StoredMetric, string[]]> = []
+    for (const [id, metric] of metrics) {
+      if (service !== undefined && metric.serviceName !== service) continue
+      let matchedIn: string[] = []
+      if (needle) {
+        matchedIn = metricMatchedIn(metric, needle)
+        if (matchedIn.length === 0) continue
+      }
+      matched.push([id, metric, matchedIn])
+    }
+
+    matched.sort(([, a], [, b]) => compareMetricsByUpdatedDesc(a, b))
+    return matched.slice(0, limit).map(([id, metric, matchedIn]) => ({
+      ...toMetricListItem(id, metric),
+      matchedIn,
+    }))
+  }
+
+  function searchAll(params: SearchAllParams): SearchResults {
+    const want = new Set(
+      params.kinds && params.kinds.length > 0
+        ? params.kinds
+        : (['traces', 'logs', 'metrics'] as const),
+    )
+    const base = {
+      query: params.query,
+      service: params.service,
+      limit: params.limit,
+    }
+    return {
+      traces: want.has('traces') ? searchTraces(base) : [],
+      logs: want.has('logs') ? searchLogs(base) : [],
+      metrics: want.has('metrics') ? searchMetrics(base) : [],
+    }
+  }
+
+  function listServices(): ServiceSummary[] {
+    const summary = new Map<string, ServiceSummary>()
+    const bump = (
+      name: string,
+      field: 'traceCount' | 'logCount' | 'metricCount',
+    ) => {
+      let entry = summary.get(name)
+      if (!entry) {
+        entry = { name, traceCount: 0, logCount: 0, metricCount: 0 }
+        summary.set(name, entry)
+      }
+      entry[field]++
+    }
+
+    for (const trace of traces.values()) {
+      bump(resolveTraceServiceName(trace), 'traceCount')
+    }
+    for (const log of logs.values()) bump(logServiceName(log), 'logCount')
+    for (const metric of metrics.values()) {
+      bump(metric.serviceName, 'metricCount')
+    }
+
+    return Array.from(summary.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    )
+  }
+
+  // Point-in-time size of every internal collection. Cheap: mostly Map.size
+  // reads; the only iteration walks the metrics map once to total series/points
+  // and find the highest-cardinality metric (the usual accumulation culprit).
+  function getStoreStats(): StoreStats {
+    let metricSeries = 0
+    let metricPoints = 0
+    let maxSeriesInMetric = 0
+    let maxSeriesMetricKey: string | null = null
+    for (const [key, metric] of metrics) {
+      const seriesCount = metric.series.size
+      metricSeries += seriesCount
+      if (seriesCount > maxSeriesInMetric) {
+        maxSeriesInMetric = seriesCount
+        maxSeriesMetricKey = key
+      }
+      for (const series of metric.series.values()) {
+        metricPoints += series.points.length
+      }
+    }
+
+    return {
+      traces: traces.size,
+      logs: logs.size,
+      metrics: metrics.size,
+      metricSeries,
+      maxSeriesInMetric,
+      maxSeriesMetricKey,
+      metricPoints,
+      serviceMapNodes: serviceMapAgg.nodes.size,
+      serviceMapEdges: serviceMapAgg.edges.size,
+      serviceMapSpanService: serviceMapAgg.spanService.size,
+      serviceMapCountedNodeSpans: serviceMapAgg.countedNodeSpans.size,
+      serviceMapResolvedEdgeSpans: serviceMapAgg.resolvedEdgeSpans.size,
+      serviceMapPendingChildren: serviceMapAgg.pendingChildren.size,
+      traceLogCounts: traceLogCounts.size,
+      logTraceIdByLogId: logTraceIdByLogId.size,
+      logSeqById: logSeqById.size,
+      metricSeqById: metricSeqById.size,
+      subscribers: listeners.size,
+    }
+  }
+
   function subscribe(fn: () => void): () => void {
     listeners.add(fn)
     return () => {
@@ -1064,7 +1372,13 @@ export function createInternalTraceStore(
     getMetricsSince,
     clearMetrics,
     deleteMetrics,
+    searchLogs,
+    searchTraces,
+    searchMetrics,
+    searchAll,
+    listServices,
     subscribe,
+    getStoreStats,
     listAllTraces,
     replaceAllTraces,
     get maxTraces() {

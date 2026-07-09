@@ -44,6 +44,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Dark mode** — toggle between light and dark themes
 - **Incremental ingestion** — spans from the same trace can arrive in separate requests and out of order; the store merges them correctly
 - **In-memory with optional local persistence** — default is in-memory only; opt into PGlite-backed restart recovery with bounded retention
+- **MCP endpoint for local agents** — a localhost-only [Model Context Protocol](https://modelcontextprotocol.io) server at `POST /mcp` lets an AI agent (or you, via any MCP client) deep-search and fetch your telemetry — the same "search anywhere / fetch a trace / fetch a metric" workflow as the cloud Grafana MCP, but against your local stack with no extra process
 
 ## 📸 Screenshots
 
@@ -295,22 +296,55 @@ curl -X POST http://localhost:4318/v1/traces \
 
 See [SAMPLE_TRACES.md](./samples/SAMPLE_TRACES.md) for a full feature exploration guide.
 
+## 🤖 MCP endpoint (local agents)
+
+otel-gui exposes a [Model Context Protocol](https://modelcontextprotocol.io) server at `POST /mcp` so a local AI agent can search and fetch your telemetry — the same shape as the cloud Grafana MCP, but read-only and in-process. By default it is **loopback-only** (non-loopback clients rejected). Set `OTEL_GUI_MCP_ENABLED=0` to turn it off.
+
+Add it to Claude Code (assuming the default port `4318`):
+
+```sh
+claude mcp add --transport http otel-gui http://localhost:4318/mcp
+```
+
+**Running in Docker?** With `-p 4318:4318`, host requests reach the container through the Docker bridge, so the container sees the gateway address rather than loopback and the default guard rejects them. Set `OTEL_GUI_MCP_ALLOW_REMOTE=1` on the container — exposure is then controlled by your port mapping / network. (This is safe in the sense that `/api` and `/v1` are already unauthenticated on the same port.)
+
+Tools:
+
+| Tool              | What it does                                                                                    |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| `search`          | Deep keyword search across traces, logs, and metrics at once (messages, span names, attributes) |
+| `search_traces`   | Search traces (span names, status, events, attributes); filter by service / error state         |
+| `get_trace`       | Fetch one full trace with all spans, events, links, and status                                  |
+| `search_logs`     | Search log bodies, severity, and all attributes; filter by service / min severity / trace id    |
+| `get_log`         | Fetch one full log record                                                                       |
+| `search_metrics`  | Search metric name, description, unit, and series attributes; filter by service                 |
+| `get_metric`      | Fetch one metric's series and points (sums include a per-second rate)                           |
+| `list_services`   | List all services with per-signal counts (discover valid `service` filters)                     |
+| `get_service_map` | Fetch the service dependency graph (nodes + edges with error/latency stats)                     |
+| `flush`           | **Write.** Clear all buffers (traces, logs, metrics, service map) for a clean-state capture     |
+
+Search is a case-insensitive substring match run over the bounded in-memory corpus, so it works even when telemetry attributes aren't yet standardized. Each search hit reports a `matchedIn` breadcrumb (e.g. `body`, `span.name`, `attribute:http.route`) so you can see why a row surfaced.
+
+All tools are read-only except `flush`, which clears the in-memory buffers. Flushing then running a specific activity lets you investigate only what that activity produced — the same as the front-end **Flush** button and `POST /api/flush`.
+
 ## ⚙️ Configuration
 
-| Variable                              | Default            | Description                                                                                                                                                                                                                                                                              |
-| ------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PORT`                                | `4318`             | HTTP port the server listens on                                                                                                                                                                                                                                                          |
-| `OTEL_GUI_CORS_ORIGIN`                | `*`                | Allowed CORS origin(s) for the OTLP ingest (`/v1/*`) and read API (`/api/*`) endpoints, so browser-based OTLP exporters can post telemetry cross-origin. Use `*` to allow any origin, or a comma-separated list of exact origins (e.g. `https://app.example.com,http://localhost:5173`). |
-| `OTEL_GUI_MAX_TRACES`                 | `1000`             | Maximum number of traces kept in memory (1–10 000). Oldest traces are evicted first when the limit is reached. Requires a restart.                                                                                                                                                       |
-| `OTEL_GUI_MAX_LOGS`                   | `1000`             | Maximum number of log records kept in memory (1–10 000). Oldest records are evicted first when the limit is reached. Requires a restart.                                                                                                                                                 |
-| `OTEL_GUI_MAX_METRICS`                | `1000`             | Maximum number of metrics kept in memory (1–10 000). Oldest are evicted first when the limit is reached. Requires a restart.                                                                                                                                                             |
-| `OTEL_GUI_MAX_METRIC_POINTS`          | `600`              | Maximum number of data points retained per metric series (10–10 000). Oldest points are evicted first. Requires a restart.                                                                                                                                                               |
-| `OTEL_GUI_PERSISTENCE_MODE`           | `memory`           | Persistence backend mode. Use `memory` (default, no disk writes) or `pglite` (requires an external backend module, typically enterprise).                                                                                                                                                |
-| `OTEL_GUI_PERSISTENCE_PATH`           | `.otel-gui/pglite` | Directory path for local PGlite data when persistence mode is `pglite`.                                                                                                                                                                                                                  |
-| `OTEL_GUI_PERSISTENCE_FLUSH_MS`       | `750`              | Debounce interval for batched persistence flushes in milliseconds (50–60000).                                                                                                                                                                                                            |
-| `OTEL_GUI_PERSISTENCE_BACKEND_MODULE` | _(empty)_          | Optional module id/path dynamically loaded at startup to register persistence backends. Relative file paths resolve from the `otel-gui` project root (examples: `@otel-gui/enterprise-persistence/register`, `../otel-gui-enterprise/enterprise-persistence/dist/register.js`).          |
-| `OTEL_GUI_LICENSE_KEY`                | _(empty)_          | Optional enterprise license key consumed by private persistence backend modules.                                                                                                                                                                                                         |
-| `OTEL_GUI_LICENSE_PUBLIC_KEY_PATH`    | _(empty)_          | Optional filesystem path to the PEM-encoded public key used by enterprise modules for offline license verification.                                                                                                                                                                      |
+| Variable                              | Default            | Description                                                                                                                                                                                                                                                                                                                |
+| ------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                                | `4318`             | HTTP port the server listens on                                                                                                                                                                                                                                                                                            |
+| `OTEL_GUI_CORS_ORIGIN`                | `*`                | Allowed CORS origin(s) for the OTLP ingest (`/v1/*`) and read API (`/api/*`) endpoints, so browser-based OTLP exporters can post telemetry cross-origin. Use `*` to allow any origin, or a comma-separated list of exact origins (e.g. `https://app.example.com,http://localhost:5173`).                                   |
+| `OTEL_GUI_MAX_TRACES`                 | `1000`             | Maximum number of traces kept in memory (1–10 000). Oldest traces are evicted first when the limit is reached. Requires a restart.                                                                                                                                                                                         |
+| `OTEL_GUI_MAX_LOGS`                   | `1000`             | Maximum number of log records kept in memory (1–10 000). Oldest records are evicted first when the limit is reached. Requires a restart.                                                                                                                                                                                   |
+| `OTEL_GUI_MAX_METRICS`                | `1000`             | Maximum number of metrics kept in memory (1–10 000). Oldest are evicted first when the limit is reached. Requires a restart.                                                                                                                                                                                               |
+| `OTEL_GUI_MAX_METRIC_POINTS`          | `600`              | Maximum number of data points retained per metric series (10–10 000). Oldest points are evicted first. Requires a restart.                                                                                                                                                                                                 |
+| `OTEL_GUI_MCP_ENABLED`                | `1`                | Enable the MCP endpoint at `POST /mcp` (`1`/`true` to enable, `0`/`false` to disable).                                                                                                                                                                                                                                     |
+| `OTEL_GUI_MCP_ALLOW_REMOTE`           | `0`                | Allow non-loopback clients to reach `/mcp`. Default is loopback-only. Set to `1`/`true` in Docker / behind a proxy, where the client address is hidden behind a gateway and exposure is controlled by port mapping. The rest of the app is already unauthenticated, so this is a convenience default, not a hard boundary. |
+| `OTEL_GUI_PERSISTENCE_MODE`           | `memory`           | Persistence backend mode. Use `memory` (default, no disk writes) or `pglite` (requires an external backend module, typically enterprise).                                                                                                                                                                                  |
+| `OTEL_GUI_PERSISTENCE_PATH`           | `.otel-gui/pglite` | Directory path for local PGlite data when persistence mode is `pglite`.                                                                                                                                                                                                                                                    |
+| `OTEL_GUI_PERSISTENCE_FLUSH_MS`       | `750`              | Debounce interval for batched persistence flushes in milliseconds (50–60000).                                                                                                                                                                                                                                              |
+| `OTEL_GUI_PERSISTENCE_BACKEND_MODULE` | _(empty)_          | Optional module id/path dynamically loaded at startup to register persistence backends. Relative file paths resolve from the `otel-gui` project root (examples: `@otel-gui/enterprise-persistence/register`, `../otel-gui-enterprise/enterprise-persistence/dist/register.js`).                                            |
+| `OTEL_GUI_LICENSE_KEY`                | _(empty)_          | Optional enterprise license key consumed by private persistence backend modules.                                                                                                                                                                                                                                           |
+| `OTEL_GUI_LICENSE_PUBLIC_KEY_PATH`    | _(empty)_          | Optional filesystem path to the PEM-encoded public key used by enterprise modules for offline license verification.                                                                                                                                                                                                        |
 
 Copy [`.env.example`](./.env.example) to `.env` to customize:
 
@@ -439,6 +473,8 @@ GET  /api/metrics/:id    ← single metric detail (series + per-second rates)
 GET  /api/metrics/stream ← SSE metric-list stream (snapshot + delta)
 GET  /api/service-map    ← aggregated, cumulative service graph
 GET  /api/service-map/stream ← SSE service-map stream (cumulative snapshots)
+POST /mcp                ← MCP (JSON-RPC) endpoint for local agents (localhost-only)
+POST /api/flush          ← clear all buffers (traces, logs, metrics, service map)
 ```
 
 Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. Retention limits default to 1000 traces (`OTEL_GUI_MAX_TRACES`), 1000 log records (`OTEL_GUI_MAX_LOGS`), and 1000 metrics (`OTEL_GUI_MAX_METRICS`).
