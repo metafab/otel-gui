@@ -101,7 +101,7 @@ async function fetchTrace(traceId: string): Promise<StoredTrace | null> {
   try {
     isLoading = true
     error = null
-    const response = await fetch(`/api/traces/${traceId}`)
+    const response = await fetch(`/api/traces/${encodeURIComponent(traceId)}`)
     if (!response.ok) {
       throw new Error(`Failed to fetch trace: ${response.statusText}`)
     }
@@ -130,7 +130,7 @@ async function fetchTraceLogs(
     const query = params.toString()
 
     const response = await fetch(
-      `/api/traces/${traceId}/logs${query ? `?${query}` : ''}`,
+      `/api/traces/${encodeURIComponent(traceId)}/logs${query ? `?${query}` : ''}`,
     )
     if (!response.ok) {
       throw new Error(`Failed to fetch trace logs: ${response.statusText}`)
@@ -154,7 +154,9 @@ async function fetchTraceLog(
   try {
     isLoading = true
     error = null
-    const response = await fetch(`/api/traces/${traceId}/logs/${logId}`)
+    const response = await fetch(
+      `/api/traces/${encodeURIComponent(traceId)}/logs/${encodeURIComponent(logId)}`,
+    )
     if (!response.ok) {
       throw new Error(`Failed to fetch trace log: ${response.statusText}`)
     }

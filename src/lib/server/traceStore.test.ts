@@ -270,6 +270,71 @@ describe('traceStore.ingestLogs', () => {
     traceStore.clearLogs()
     expect(traceStore.getLogList(10)).toHaveLength(0)
   })
+
+  it('prefers log.record.uid as the stored log id when present', () => {
+    const payload = JSON.parse(JSON.stringify(simpleLog)) as any
+    payload.resourceLogs[0].scopeLogs[0].logRecords[0].attributes.push({
+      key: 'log.record.uid',
+      value: { stringValue: '01J6WX5W58Y0VZ0A8QK2SJQTR9' },
+    })
+
+    traceStore.ingestLogs(payload.resourceLogs)
+
+    const [log] = traceStore.getLogList(10)
+    expect(log).toBeDefined()
+    expect(log.id).toBe('01J6WX5W58Y0VZ0A8QK2SJQTR9')
+  })
+
+  it('deduplicates logs that share the same log.record.uid', () => {
+    traceStore.ingestSpans(simpleTrace.resourceSpans)
+
+    const traceId = traceStore.getTraceList()[0].traceId
+    const payload = JSON.parse(JSON.stringify(simpleLog)) as any
+    const base = payload.resourceLogs[0].scopeLogs[0].logRecords[0]
+
+    payload.resourceLogs[0].scopeLogs[0].logRecords = [
+      {
+        ...base,
+        traceId,
+        timeUnixNano: '1544712660500000000',
+        observedTimeUnixNano: '1544712660500000000',
+        attributes: [
+          ...(base.attributes || []),
+          {
+            key: 'log.record.uid',
+            value: { stringValue: '01J6WX5W58Y0VZ0A8QK2SJQTR9' },
+          },
+        ],
+      },
+      {
+        ...base,
+        traceId,
+        body: { stringValue: 'database timeout retry #2' },
+        timeUnixNano: '1544712660600000000',
+        observedTimeUnixNano: '1544712660600000000',
+        attributes: [
+          ...(base.attributes || []),
+          {
+            key: 'log.record.uid',
+            value: { stringValue: '01J6WX5W58Y0VZ0A8QK2SJQTR9' },
+          },
+        ],
+      },
+    ]
+
+    traceStore.ingestLogs(payload.resourceLogs)
+
+    const logs = traceStore.getLogList(10)
+    const traceItem = traceStore
+      .getTraceList()
+      .find((item) => item.traceId === traceId)
+
+    expect(logs).toHaveLength(1)
+    expect(logs[0].id).toBe('01J6WX5W58Y0VZ0A8QK2SJQTR9')
+    expect(logs[0].body).toBe('database timeout retry #2')
+    expect(traceItem?.logCount).toBe(1)
+    expect(traceStore.getLogCount()).toBe(1)
+  })
 })
 
 // ─── getTrace ────────────────────────────────────────────────────────────────
