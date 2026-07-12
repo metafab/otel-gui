@@ -290,7 +290,7 @@
   }
 
   function handleRowClick(traceId: string) {
-    window.location.href = `/traces/${traceId}`
+    window.location.href = `/traces/${encodeURIComponent(traceId)}`
   }
 
   $effect(() => {

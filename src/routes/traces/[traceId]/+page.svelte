@@ -606,7 +606,9 @@
     exportError = null
 
     try {
-      const response = await fetch(`/api/traces/${traceId}/export`)
+      const response = await fetch(
+        `/api/traces/${encodeURIComponent(traceId)}/export`,
+      )
       if (!response.ok) {
         throw new Error(`Failed to export trace: ${response.statusText}`)
       }

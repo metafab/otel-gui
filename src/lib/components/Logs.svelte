@@ -419,7 +419,7 @@
   }
 
   function handleRowClick(logId: string) {
-    window.location.href = `/logs/${logId}`
+    window.location.href = `/logs/${encodeURIComponent(logId)}`
   }
 
   function toggleLogSelection(logId: string) {
@@ -627,7 +627,7 @@
                 <td class="mono">
                   {#if log.traceId}
                     <a
-                      href={`/traces/${log.traceId}`}
+                      href={`/traces/${encodeURIComponent(log.traceId)}`}
                       onclick={(event) => event.stopPropagation()}
                     >
                       {log.traceId}
@@ -639,7 +639,7 @@
                 <td class="mono">
                   {#if log.traceId && log.spanId}
                     <a
-                      href={`/traces/${log.traceId}?spanId=${encodeURIComponent(log.spanId)}`}
+                      href={`/traces/${encodeURIComponent(log.traceId)}?spanId=${encodeURIComponent(log.spanId)}`}
                       onclick={(event) => event.stopPropagation()}
                     >
                       {log.spanId}
