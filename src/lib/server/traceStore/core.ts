@@ -219,6 +219,11 @@ export function createInternalTraceStore(
           const timestamp = getLogTimestamp(logRecord)
           if (!timestamp) continue
 
+          const logAttributes = flattenAttributes(logRecord.attributes)
+          const semanticUid = logAttributes['log.record.uid']
+          const hasSemanticUid =
+            typeof semanticUid === 'string' && semanticUid.length > 0
+
           const storedLog: StoredLog = {
             traceId,
             spanId: logRecord.spanId || '',
@@ -230,14 +235,16 @@ export function createInternalTraceStore(
                 : Number(logRecord.severityNumber) || 0,
             severityText: logRecord.severityText || '',
             body: extractAnyValue(logRecord.body),
-            attributes: flattenAttributes(logRecord.attributes),
+            attributes: logAttributes,
             resource: resourceAttrs,
             scopeName,
             scopeVersion,
             scopeAttributes,
           }
 
-          const logId = createLogId(logRecord, index)
+          const logId = hasSemanticUid
+            ? semanticUid
+            : createLogId(logRecord, index)
 
           const previousTraceId = logTraceIdByLogId.get(logId)
           if (previousTraceId) {
