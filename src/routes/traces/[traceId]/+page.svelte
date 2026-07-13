@@ -1106,9 +1106,9 @@
   </header>
 
   {#if isLoading}
-    <div class="loading">Loading trace...</div>
+    <div class="loading" role="status">Loading trace...</div>
   {:else if error}
-    <div class="error">{error}</div>
+    <div class="error" role="alert">{error}</div>
   {:else if trace}
     {#if exportError}
       <div class="error export-error">{exportError}</div>

@@ -1,10 +1,12 @@
 <script lang="ts">
-  import { replaceState } from '$app/navigation'
+  import { goto, replaceState } from '$app/navigation'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import LogsFilter from '$lib/components/LogsFilter.svelte'
   import VersionInfo from '$lib/components/VersionInfo.svelte'
+  import { onSSEEvents } from '$lib/stores/sseClient'
+  import { createDeepSearch } from '$lib/stores/deepSearch.svelte'
   import { traceStore } from '$lib/stores/traces.svelte'
-  import type { LogListItem } from '$lib/types'
+  import type { LogListItem, LogSearchHit } from '$lib/types'
   import { formatTimestampLocal } from '$lib/utils/time'
 
   // Bindable props so parent can read reactive state for header action buttons
@@ -15,7 +17,9 @@
   } = $props()
 
   let logs = $state.raw<LogListItem[]>([])
-  let isLoading = $state(false)
+  // Only true until the first snapshot (or fallback load) arrives. Background
+  // delta updates never toggle this, so the table is never torn down/remounted.
+  let isLoading = $state(true)
   let loadError = $state<string | null>(null)
   type LogSortBy = 'time' | 'service' | 'severity' | 'body' | 'trace' | 'span'
   type LogSortOrder = 'asc' | 'desc'
@@ -62,6 +66,7 @@
       return {
         searchQuery: '',
         severityFilter: 'all',
+        selectedService: 'all',
         sortBy: DEFAULT_SORT_BY,
         sortOrder: DEFAULT_SORT_ORDER,
       } as const
@@ -71,6 +76,7 @@
     return {
       searchQuery: url.searchParams.get('search') ?? '',
       severityFilter: parseSeverityFilter(url.searchParams.get('severity')),
+      selectedService: url.searchParams.get('service') ?? 'all',
       sortBy: parseSortBy(url.searchParams.get('sort')),
       sortOrder: parseSortOrder(url.searchParams.get('order')),
     } as const
@@ -89,6 +95,12 @@
       url.searchParams.delete('severity')
     }
 
+    if (selectedService !== 'all') {
+      url.searchParams.set('service', selectedService)
+    } else {
+      url.searchParams.delete('service')
+    }
+
     if (sortBy === DEFAULT_SORT_BY && sortOrder === DEFAULT_SORT_ORDER) {
       url.searchParams.delete('sort')
       url.searchParams.delete('order')
@@ -105,10 +117,19 @@
   let severityFilter = $state<
     'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error'
   >(initialParams.severityFilter)
+  let selectedService = $state<string>(initialParams.selectedService)
   let sortBy = $state<LogSortBy>(initialParams.sortBy)
   let sortOrder = $state<LogSortOrder>(initialParams.sortOrder)
   let selectedLogIds = $state<string[]>([])
   let isDeleting = $state(false)
+
+  // Server-backed deep search. When the query is non-empty the list is driven by
+  // these hits (which match the body AND all log/resource/scope attributes)
+  // instead of the streamed list; empty query falls back to the live stream.
+  const deep = createDeepSearch('logs')
+  $effect(() => {
+    deep.update(searchQuery, selectedService)
+  })
 
   const otlpLogsEndpoint = $derived.by(() => {
     if (typeof window !== 'undefined') {
@@ -200,36 +221,58 @@
     }
   }
 
+  const services = $derived(
+    Array.from(
+      new Set(logs.map((log) => log.serviceName).filter(Boolean)),
+    ).sort(),
+  )
+
+  // If the selected service disappears (e.g. after a clear/delete or eviction),
+  // fall back to "all" so the list isn't stuck showing nothing.
+  $effect(() => {
+    if (selectedService === 'all' || services.length === 0) return
+    if (!services.includes(selectedService)) {
+      selectedService = 'all'
+    }
+  })
+
+  // Source list: deep-search hits when a query is active (server has matched the
+  // query + service), otherwise the live streamed list. Severity and service
+  // filters apply client-side on top (both work on hits, which carry the same
+  // list-item fields; service is re-applied harmlessly).
   const filteredLogs = $derived.by(() => {
-    if (!Array.isArray(logs)) return []
+    // Use server hits once they've resolved for the current query; until then
+    // (debounce/in-flight) or if the endpoint is unavailable, fall back to a
+    // client-side substring filter over the streamed list so the view is never
+    // blank or stale.
+    const useDeep = deep.active && deep.resolved
+    const source: LogListItem[] = useDeep ? deep.hits : logs
+    if (!Array.isArray(source)) return []
     const query = searchQuery.trim().toLowerCase()
 
-    return logs.filter((log) => {
+    return source.filter((log) => {
       if (severityFilter !== 'all' && severityBucket(log) !== severityFilter) {
         return false
       }
-
-      if (!query) {
-        return true
+      if (selectedService !== 'all' && log.serviceName !== selectedService) {
+        return false
       }
-
-      const service = (log.serviceName || '').toLowerCase()
-      const severity = (log.severityText || '').toLowerCase()
-      const body = normalizeBody(log.body).toLowerCase()
-      const traceId = (log.traceId || '').toLowerCase()
-      const spanId = (log.spanId || '').toLowerCase()
-      const logId = (log.id || '').toLowerCase()
-
-      return (
-        service.includes(query) ||
-        severity.includes(query) ||
-        body.includes(query) ||
-        traceId.includes(query) ||
-        spanId.includes(query) ||
-        logId.includes(query)
-      )
+      if (!useDeep && query) {
+        const haystack =
+          `${log.serviceName} ${log.severityText} ${normalizeBody(log.body)} ${log.traceId} ${log.spanId} ${log.id}`.toLowerCase()
+        if (!haystack.includes(query)) return false
+      }
+      return true
     })
   })
+
+  // A row's match breadcrumbs, present only on deep-search hits.
+  function matchHint(log: LogListItem): string {
+    const hit = log as Partial<LogSearchHit>
+    return hit.matchedIn && hit.matchedIn.length > 0
+      ? `matched: ${hit.matchedIn.join(', ')}`
+      : ''
+  }
 
   const sortedLogs = $derived.by(() => {
     const logsToSort = [...filteredLogs]
@@ -298,7 +341,12 @@
     }
   })
 
-  async function loadLogs() {
+  // Fallback for environments without EventSource — the live view is otherwise
+  // driven entirely by the SSE snapshot/append stream (see the $effect below).
+  // `shouldApply` lets the caller discard a slow REST response if a live SSE
+  // snapshot has already updated the list in the meantime (avoids a stale seed
+  // clobbering fresher data during a concurrent clear/delete).
+  async function loadLogs(shouldApply: () => boolean = () => true) {
     isLoading = true
     loadError = null
     try {
@@ -306,14 +354,43 @@
       if (!response.ok) {
         throw new Error(`Failed to load logs: ${response.statusText}`)
       }
-      logs = await response.json()
+      const data = await response.json()
+      if (shouldApply()) logs = data
     } catch (error) {
-      loadError =
-        error instanceof Error ? error.message : 'Unknown error loading logs'
-      logs = []
+      if (shouldApply()) {
+        loadError =
+          error instanceof Error ? error.message : 'Unknown error loading logs'
+        logs = []
+      }
     } finally {
       isLoading = false
     }
+  }
+
+  function logTimeNano(log: LogListItem): bigint {
+    return BigInt(log.timeUnixNano || log.observedTimeUnixNano || '0')
+  }
+
+  // Merge newly-streamed logs into the existing list (upsert by id) without
+  // refetching everything, then cap to maxLogs to mirror the server's eviction.
+  function applyAppend(incoming: LogListItem[]) {
+    if (incoming.length === 0) return
+
+    const byId = new Map<string, LogListItem>()
+    for (const log of logs) byId.set(log.id, log)
+    for (const log of incoming) byId.set(log.id, log)
+
+    let merged = Array.from(byId.values())
+    if (merged.length > maxLogs) {
+      merged.sort((a, b) => {
+        const at = logTimeNano(a)
+        const bt = logTimeNano(b)
+        return bt > at ? 1 : bt < at ? -1 : 0
+      })
+      merged = merged.slice(0, maxLogs)
+    }
+
+    logs = merged
   }
 
   async function clearAllLogs() {
@@ -419,7 +496,21 @@
   }
 
   function handleRowClick(logId: string) {
-    window.location.href = `/logs/${encodeURIComponent(logId)}`
+    // Client-side navigation — see Traces.svelte: a full-page load tears down and
+    // re-establishes every SSE stream on each open, stalling against the browser's
+    // 6-connection-per-origin limit.
+    // encodeURIComponent keeps IDs containing reserved chars (/, ?, :) route-safe.
+    void goto(`/logs/${encodeURIComponent(logId)}`)
+  }
+
+  // Keyboard activation for the row (Enter/Space), only when the row itself —
+  // not a child control like the select checkbox — is focused.
+  function handleRowKeydown(event: KeyboardEvent, logId: string) {
+    if (event.target !== event.currentTarget) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleRowClick(logId)
+    }
   }
 
   function toggleLogSelection(logId: string) {
@@ -434,33 +525,50 @@
   function handleClearFilters() {
     searchQuery = ''
     severityFilter = 'all'
+    selectedService = 'all'
   }
 
   $effect(() => {
-    void loadLogs()
-  })
+    // Seed the current list once on mount. The shared SSE connection only
+    // replays its snapshot at connect time (page load) — this component mounts
+    // later, when the Logs tab is opened, so it would otherwise miss the initial
+    // snapshot and stay empty until the next ingest. REST gives the initial
+    // paint; live deltas (append) and clear/delete re-syncs (snapshot) follow.
+    //
+    // If an SSE snapshot lands while that REST seed is still in flight (e.g. a
+    // concurrent clear), the seed must not overwrite it — track that here.
+    let sseSnapshotApplied = false
+    void loadLogs(() => !sseSnapshotApplied)
 
-  $effect(() => {
+    // No EventSource (SSR/legacy) — the REST load above is all we get.
     if (typeof EventSource === 'undefined') return
 
-    const es = new EventSource('/api/logs/stream')
-    let refreshTimer: ReturnType<typeof setTimeout> | null = null
-
-    es.addEventListener('logs-count', () => {
-      if (refreshTimer !== null) clearTimeout(refreshTimer)
-      refreshTimer = setTimeout(() => {
-        void loadLogs()
-      }, 75)
+    // Log list events arrive over the shared app-wide SSE connection.
+    return onSSEEvents({
+      // Full list: re-sent after any clear/delete (re-sync).
+      'logs-snapshot': (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data)
+          logs = Array.isArray(data.logs) ? data.logs : []
+          loadError = null
+          sseSnapshotApplied = true
+        } catch {
+          // Ignore malformed payloads; the next snapshot will re-sync.
+        } finally {
+          isLoading = false
+        }
+      },
+      // Incremental: only logs ingested since the last cursor. Merged in place so
+      // the table updates without a full re-render (no flash).
+      'logs-append': (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (Array.isArray(data.logs)) applyAppend(data.logs)
+        } catch {
+          // Ignore malformed payloads.
+        }
+      },
     })
-
-    es.onerror = () => {
-      // EventSource auto-reconnects.
-    }
-
-    return () => {
-      if (refreshTimer !== null) clearTimeout(refreshTimer)
-      es.close()
-    }
   })
 
   export function triggerClearAll() {
@@ -487,15 +595,27 @@
     </div>
   {:else}
     <LogsFilter
+      {services}
       bind:searchQuery
       bind:severityFilter
+      bind:selectedService
       filteredCount={sortedLogs.length}
       totalCount={logs.length}
     />
 
+    {#if deep.error}
+      <div class="error">Search error: {deep.error}</div>
+    {/if}
+
     {#if sortedLogs.length === 0}
       <div class="empty">
-        <p>No logs match the current filters.</p>
+        <p>
+          {#if deep.isSearching}
+            Searching…
+          {:else}
+            No logs match the current filters.
+          {/if}
+        </p>
         <button onclick={handleClearFilters} class="clear-filters-btn">
           Clear Filters
         </button>
@@ -590,8 +710,13 @@
           </thead>
           <tbody>
             {#each sortedLogs as log (log.id)}
+              <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
               <tr
                 onclick={() => handleRowClick(log.id)}
+                onkeydown={(e) => handleRowKeydown(e, log.id)}
+                tabindex="0"
+                data-testid="log-row"
+                data-log-id={log.id}
                 class:selected={selectedLogIdSet.has(log.id)}
               >
                 <td
@@ -621,9 +746,12 @@
                     {log.severityText || severityBucket(log).toUpperCase()}
                   </span>
                 </td>
-                <td class="log-body" title={normalizeBody(log.body)}
-                  >{normalizeBody(log.body) || '(empty body)'}</td
-                >
+                <td class="log-body" title={normalizeBody(log.body)}>
+                  {normalizeBody(log.body) || '(empty body)'}
+                  {#if matchHint(log)}
+                    <span class="match-hint">{matchHint(log)}</span>
+                  {/if}
+                </td>
                 <td class="mono">
                   {#if log.traceId}
                     <a
@@ -816,6 +944,14 @@
     max-width: 520px;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .match-hint {
+    display: block;
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+    white-space: normal;
   }
 
   .muted {

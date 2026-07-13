@@ -484,6 +484,33 @@ a:hover {
   color: var(--accent);
 }
 
+.flush-btn {
+  padding: 0.5rem 0.85rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.flush-btn:hover:not(:disabled) {
+  background: var(--error-bg);
+  border-color: var(--error-border);
+  color: var(--error-text);
+}
+
+.flush-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 button {
   font-family: inherit;
 }

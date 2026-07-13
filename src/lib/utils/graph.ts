@@ -197,3 +197,164 @@ export function layoutGraph(
 
   return { nodes: layoutNodes, edges: layoutEdges, viewWidth, viewHeight }
 }
+
+// ─── Sticky (expand-only) layout ───────────────────────────────────────────────
+// Unlike layoutGraph (a pure recompute that recentres the whole graph on every
+// change — causing the visible reflow/"flash"), this keeps a persistent
+// placement per node. Once a node is placed it NEVER moves: new nodes are
+// appended to the bottom of their layer and the canvas simply grows. Counts and
+// edge paths update in place. Nodes/edges are never removed (never age out).
+
+interface Placement {
+  layer: number
+  slot: number
+}
+
+export interface StickyLayout {
+  /** Merge a snapshot into the persistent layout and return positioned nodes/edges. */
+  update(nodes: ServiceMapNode[], edges: ServiceMapEdge[]): GraphLayout
+  /** Forget all placements (e.g. after an explicit clear / re-tidy). */
+  reset(): void
+}
+
+function buildEdgePath(
+  src: { x: number; y: number },
+  tgt: { x: number; y: number },
+) {
+  // Connect right-centre of source to left-centre of target (matches layoutGraph).
+  const x1 = src.x + NODE_W
+  const y1 = src.y + NODE_H / 2
+  const x2 = tgt.x
+  const y2 = tgt.y + NODE_H / 2
+  const dx = Math.abs(x2 - x1) * 0.5
+  const path = `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`
+  return { path, labelX: (x1 + x2) / 2, labelY: (y1 + y2) / 2 - 8 }
+}
+
+export function createStickyLayout(): StickyLayout {
+  // Persistent across snapshots (and component remounts when held at module/
+  // page scope): the source of position stability.
+  const placements = new Map<string, Placement>()
+  const nextSlot = new Map<number, number>() // layer -> next free slot index
+
+  function coordsFor(p: Placement) {
+    return {
+      x: p.layer * LAYER_GAP_X,
+      y: p.slot * (NODE_H + NODE_GAP_Y),
+    }
+  }
+
+  function reset() {
+    placements.clear()
+    nextSlot.clear()
+  }
+
+  function update(
+    nodes: ServiceMapNode[],
+    edges: ServiceMapEdge[],
+  ): GraphLayout {
+    const names = nodes.map((n) => n.serviceName)
+    const present = new Set(names)
+
+    // Incoming sources per node (only count edges whose endpoints are present),
+    // used to assign a layer to nodes not yet placed.
+    const inEdges = new Map<string, string[]>()
+    for (const n of names) inEdges.set(n, [])
+    for (const e of edges) {
+      if (present.has(e.source) && present.has(e.target)) {
+        inEdges.get(e.target)!.push(e.source)
+      }
+    }
+
+    // Known layers = already-placed nodes (fixed) + iterative resolution for the
+    // unplaced ones (longest-path depth over currently-known neighbours).
+    const knownLayer = new Map<string, number>()
+    for (const [name, p] of placements) knownLayer.set(name, p.layer)
+    const unplaced = names.filter((n) => !placements.has(n))
+
+    let changed = true
+    let guard = 0
+    while (changed && guard++ <= unplaced.length + 2) {
+      changed = false
+      for (const n of unplaced) {
+        const sources = inEdges.get(n) ?? []
+        let layer = 0
+        for (const s of sources) {
+          const sl = knownLayer.get(s)
+          if (sl !== undefined && sl + 1 > layer) layer = sl + 1
+        }
+        const prev = knownLayer.get(n)
+        if (prev === undefined || layer > prev) {
+          knownLayer.set(n, layer)
+          changed = true
+        }
+      }
+    }
+
+    // Assign a slot to each newly-seen node, in array (first-appearance) order,
+    // appending to the bottom of its layer. Existing nodes are untouched.
+    for (const n of names) {
+      if (placements.has(n)) continue
+      const layer = knownLayer.get(n) ?? 0
+      const slot = nextSlot.get(layer) ?? 0
+      placements.set(n, { layer, slot })
+      nextSlot.set(layer, slot + 1)
+    }
+
+    // Build positioned nodes from current stats + sticky placements.
+    const nodeData = new Map<string, ServiceMapNode>()
+    for (const n of nodes) nodeData.set(n.serviceName, n)
+
+    const pos = new Map<string, { x: number; y: number }>()
+    const layoutNodes: LayoutNode[] = []
+    let maxLayer = 0
+    let maxSlotCount = 0
+    for (const [name, p] of placements) {
+      const src = nodeData.get(name)
+      if (!src) continue // node not in this snapshot (shouldn't happen — cumulative)
+      const c = coordsFor(p)
+      pos.set(name, c)
+      if (p.layer > maxLayer) maxLayer = p.layer
+      if (p.slot + 1 > maxSlotCount) maxSlotCount = p.slot + 1
+      layoutNodes.push({
+        serviceName: name,
+        nodeType: src.nodeType,
+        system: src.system,
+        spanCount: src.spanCount,
+        errorCount: src.errorCount,
+        x: c.x,
+        y: c.y,
+        width: NODE_W,
+        height: NODE_H,
+      })
+    }
+
+    const layoutEdges: LayoutEdge[] = edges
+      .filter((e) => pos.has(e.source) && pos.has(e.target))
+      .map((e) => {
+        const { path, labelX, labelY } = buildEdgePath(
+          pos.get(e.source)!,
+          pos.get(e.target)!,
+        )
+        return {
+          source: e.source,
+          target: e.target,
+          callCount: e.callCount,
+          errorCount: e.errorCount,
+          p50Ms: e.p50Ms,
+          p99Ms: e.p99Ms,
+          path,
+          labelX,
+          labelY,
+        }
+      })
+
+    const viewWidth = layoutNodes.length > 0 ? maxLayer * LAYER_GAP_X + NODE_W : 0
+    const viewHeight =
+      maxSlotCount > 0 ? maxSlotCount * (NODE_H + NODE_GAP_Y) - NODE_GAP_Y : 0
+
+    return { nodes: layoutNodes, edges: layoutEdges, viewWidth, viewHeight }
+  }
+
+  return { update, reset }
+}

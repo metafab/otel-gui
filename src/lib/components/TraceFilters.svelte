@@ -58,7 +58,7 @@
         type="text"
         bind:value={searchQuery}
         bind:this={searchInputEl}
-        placeholder="Search by trace ID, operation, or service..."
+        placeholder="Search span names, status, events, or any attribute…"
         class="search-input"
       />
     </div>

@@ -68,6 +68,10 @@ describe('Logs', () => {
       'confirm',
       vi.fn(() => true),
     )
+    // Reset URL params between tests — the component seeds its filters from the
+    // URL on init, and a prior test may have written ?service=… / ?search=…
+    // there.
+    window.history.replaceState(window.history.state, '', '/?tab=logs')
   })
 
   it('loads and renders global logs including unlinked logs', async () => {
@@ -83,8 +87,31 @@ describe('Logs', () => {
     })
 
     expect(await screen.findByText('checkout failed')).toBeInTheDocument()
-    expect(screen.getByText('worker-service')).toBeInTheDocument()
+    // Service names also appear as options in the Service filter dropdown, so
+    // scope this assertion to the table body.
+    const table = screen.getByRole('table')
+    expect(within(table).getByText('worker-service')).toBeInTheDocument()
     expect(screen.getByText('Unlinked')).toBeInTheDocument()
+  })
+
+  it('filters logs by service', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleLogs,
+    } as Response)
+
+    render(Logs)
+
+    await screen.findByText('checkout failed')
+
+    const serviceSelect = screen.getByLabelText('Service') as HTMLSelectElement
+    await fireEvent.change(serviceSelect, {
+      target: { value: 'worker-service' },
+    })
+
+    expect(screen.queryByText('checkout failed')).not.toBeInTheDocument()
+    const table = screen.getByRole('table')
+    expect(within(table).getByText('worker-service')).toBeInTheDocument()
   })
 
   it('deletes selected logs', async () => {
@@ -171,8 +198,15 @@ describe('Logs', () => {
 
     render(Logs)
 
-    expect(await screen.findByText('worker-service')).toBeInTheDocument()
-    expect(screen.queryByText('checkout-service')).not.toBeInTheDocument()
+    // Both service names appear as options in the Service filter dropdown, so
+    // scope the presence/absence checks to the table body (the severity=info
+    // filter should leave only the worker-service log visible).
+    await screen.findByText(/background job tick/)
+    const table = screen.getByRole('table')
+    expect(within(table).getByText('worker-service')).toBeInTheDocument()
+    expect(
+      within(table).queryByText('checkout-service'),
+    ).not.toBeInTheDocument()
 
     const searchInput = screen.getByLabelText('Search logs') as HTMLInputElement
     expect(searchInput.value).toBe('worker')

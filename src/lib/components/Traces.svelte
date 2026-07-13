@@ -1,12 +1,14 @@
 <script lang="ts">
-  import { replaceState } from '$app/navigation'
+  import { goto, replaceState } from '$app/navigation'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import TraceFilters from '$lib/components/TraceFilters.svelte'
   import TraceImportModal from '$lib/components/TraceImportModal.svelte'
   import VersionInfo from '$lib/components/VersionInfo.svelte'
   import { traceStore } from '$lib/stores/traces.svelte'
+  import { createDeepSearch } from '$lib/stores/deepSearch.svelte'
   import { isInputFocused } from '$lib/utils/keyboard'
   import { formatDurationFromMs } from '$lib/utils/time'
+  import type { TraceListItem, TraceSearchHit } from '$lib/types'
 
   // Bindable props so parent can read reactive state for header action buttons
   let {
@@ -151,10 +153,33 @@
     }
   })
 
-  const filteredTraces = $derived.by(() => {
-    let result = traces
+  // Server-backed deep search. When the query is non-empty the list is driven by
+  // these hits — which match span names, status messages, events, AND every
+  // attribute across the trace's spans, not just the root name/service/id the
+  // streamed list carries — instead of the streamed list. Empty query falls back
+  // to the live stream.
+  const deep = createDeepSearch('traces')
+  $effect(() => {
+    deep.update(searchQuery, selectedService)
+  })
 
-    if (searchQuery.trim()) {
+  // A row's match breadcrumbs, present only on deep-search hits.
+  function matchHint(trace: TraceListItem): string {
+    const hit = trace as Partial<TraceSearchHit>
+    return hit.matchedIn && hit.matchedIn.length > 0
+      ? `matched: ${hit.matchedIn.join(', ')}`
+      : ''
+  }
+
+  const filteredTraces = $derived.by(() => {
+    // Use server hits once they've resolved for the current query; until then
+    // (debounce/in-flight) or if the endpoint is unavailable, fall back to a
+    // client-side substring filter over the streamed list so the view is never
+    // blank or stale. Service/error/duration filters + sort apply on top.
+    const useDeep = deep.active && deep.resolved
+    let result: TraceListItem[] = useDeep ? deep.hits : traces
+
+    if (!useDeep && searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       result = result.filter(
         (t) =>
@@ -290,7 +315,21 @@
   }
 
   function handleRowClick(traceId: string) {
-    window.location.href = `/traces/${encodeURIComponent(traceId)}`
+    // Client-side navigation — a full-page load (window.location) tears down and
+    // re-establishes every SSE stream and re-hydrates the whole app on each open,
+    // which stalls against the browser's 6-connection-per-origin limit.
+    // encodeURIComponent keeps IDs containing reserved chars (/, ?, :) route-safe.
+    void goto(`/traces/${encodeURIComponent(traceId)}`)
+  }
+
+  // Keyboard activation for the row. Only fires when the row itself is focused
+  // (not a child control like the select checkbox), on Enter/Space.
+  function handleRowKeydown(event: KeyboardEvent, traceId: string) {
+    if (event.target !== event.currentTarget) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleRowClick(traceId)
+    }
   }
 
   $effect(() => {
@@ -511,9 +550,19 @@
       totalCount={traces.length}
     />
 
+    {#if deep.error}
+      <div class="error">Search error: {deep.error}</div>
+    {/if}
+
     {#if filteredTraces.length === 0}
       <div class="empty">
-        <p>No traces match the current filters.</p>
+        <p>
+          {#if deep.isSearching}
+            Searching…
+          {:else}
+            No traces match the current filters.
+          {/if}
+        </p>
         <button onclick={handleClearFilters} class="clear-filters-btn">
           Clear Filters
         </button>
@@ -626,8 +675,13 @@
               {@const formattedDuration = formatDurationFromMs(
                 trace.durationMs,
               )}
+              <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
               <tr
                 onclick={() => handleRowClick(trace.traceId)}
+                onkeydown={(e) => handleRowKeydown(e, trace.traceId)}
+                tabindex="0"
+                data-testid="trace-row"
+                data-trace-id={trace.traceId}
                 class:error={trace.hasError}
                 class:selected={selectedTraceIdSet.has(trace.traceId)}
               >
@@ -654,7 +708,10 @@
                     <span class="tentative-icon" aria-label="Root span pending"
                       >⏳</span
                     >
-                  {/if}{trace.rootSpanName}</td
+                  {/if}{trace.rootSpanName}
+                  {#if matchHint(trace)}
+                    <span class="match-hint">{matchHint(trace)}</span>
+                  {/if}</td
                 >
                 <td class="duration" title={formattedDuration.detailed}
                   >{formattedDuration.simple}</td
@@ -966,6 +1023,19 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .match-hint {
+    display: block;
+    font-family:
+      system-ui,
+      -apple-system,
+      sans-serif;
+    font-weight: 400;
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+    white-space: normal;
   }
 
   .tentative-icon {
