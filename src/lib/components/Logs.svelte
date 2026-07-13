@@ -445,8 +445,14 @@
 
     const es = new EventSource('/api/logs/stream')
     let refreshTimer: ReturnType<typeof setTimeout> | null = null
+    let hasSeenInitialCount = false
 
     es.addEventListener('logs-count', () => {
+      if (!hasSeenInitialCount) {
+        hasSeenInitialCount = true
+        return
+      }
+
       if (refreshTimer !== null) clearTimeout(refreshTimer)
       refreshTimer = setTimeout(() => {
         void loadLogs()

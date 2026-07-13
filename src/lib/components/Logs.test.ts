@@ -9,6 +9,31 @@ import {
 } from '@testing-library/svelte'
 import Logs from './Logs.svelte'
 
+class MockEventSource {
+  static instances: MockEventSource[] = []
+
+  listeners = new Map<string, Array<(event: MessageEvent) => void>>()
+
+  constructor(_url: string) {
+    MockEventSource.instances.push(this)
+  }
+
+  addEventListener(type: string, listener: (event: MessageEvent) => void) {
+    const existing = this.listeners.get(type) ?? []
+    existing.push(listener)
+    this.listeners.set(type, existing)
+  }
+
+  emit(type: string, data: string) {
+    const event = { data } as MessageEvent
+    for (const listener of this.listeners.get(type) ?? []) {
+      listener(event)
+    }
+  }
+
+  close() {}
+}
+
 // Mock the trace store
 vi.mock('$lib/stores/traces.svelte', () => ({
   traceStore: {
@@ -68,6 +93,8 @@ describe('Logs', () => {
       'confirm',
       vi.fn(() => true),
     )
+    MockEventSource.instances = []
+    vi.stubGlobal('EventSource', MockEventSource as never)
   })
 
   it('loads and renders global logs including unlinked logs', async () => {
@@ -85,6 +112,25 @@ describe('Logs', () => {
     expect(await screen.findByText('checkout failed')).toBeInTheDocument()
     expect(screen.getByText('worker-service')).toBeInTheDocument()
     expect(screen.getByText('Unlinked')).toBeInTheDocument()
+  })
+
+  it('ignores the initial logs-count stream event after mount', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleLogs,
+    } as Response)
+
+    render(Logs)
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    MockEventSource.instances[0]?.emit('logs-count', '2')
+
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('deletes selected logs', async () => {
