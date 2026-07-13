@@ -26,11 +26,11 @@ export function parseAllowedOrigins(raw: string | undefined): string[] | '*' {
   if (raw === undefined) return '*'
   const trimmed = raw.trim()
   if (trimmed === '' || trimmed === '*') return '*'
-  return trimmed
+  const list = trimmed
     .split(',')
     .map((origin) => origin.trim())
     .filter((origin) => origin !== '')
-}
+  return list.length > 0 ? list : '*'
 
 /**
  * Resolve the `Access-Control-Allow-Origin` value for a request, given the
