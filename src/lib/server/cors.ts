@@ -70,18 +70,22 @@ export function buildCorsHeaders(
   if (allowOrigin === null) return headers
 
   headers.set('Access-Control-Allow-Origin', allowOrigin)
-  // When echoing a specific origin, the response varies by Origin and must not
-  // be cached across origins.
-  if (allowOrigin !== '*') headers.set('Vary', 'Origin')
   headers.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
 
   // Reflect the headers the browser asked for in its preflight; otherwise fall
   // back to the common OTLP exporter set.
   const requested = request.headers.get('access-control-request-headers')
-  headers.set(
-    'Access-Control-Allow-Headers',
-    requested && requested.trim() !== '' ? requested : DEFAULT_ALLOWED_HEADERS,
-  )
+  const allowHeaders =
+    requested && requested.trim() !== '' ? requested : DEFAULT_ALLOWED_HEADERS
+  headers.set('Access-Control-Allow-Headers', allowHeaders)
+  // Cache safety: preflight responses vary by requested headers, and non-wildcard
+  // origin policies also vary by Origin.
+  const varyParts: string[] = []
+  if (allowOrigin !== '*') varyParts.push('Origin')
+  if (requested && requested.trim() !== '') {
+    varyParts.push('Access-Control-Request-Headers')
+  }
+  if (varyParts.length > 0) headers.set('Vary', varyParts.join(', '))
   headers.set('Access-Control-Max-Age', '86400')
   return headers
 }
