@@ -71,6 +71,7 @@ export function layoutGraph(
   const roots = names.filter((n) => (inEdges.get(n)?.length ?? 0) === 0)
   // If no roots (e.g. a cycle), fall back to all nodes
   const starts = roots.length > 0 ? roots : names
+  const maxLayerCap = Math.max(names.length - 1, 0)
   const queue: string[] = [...starts]
   for (const r of starts) layer.set(r, 0)
   while (queue.length > 0) {
@@ -78,8 +79,11 @@ export function layoutGraph(
     const curLayer = layer.get(cur) ?? 0
     for (const next of outEdges.get(cur) ?? []) {
       const existing = layer.get(next) ?? -1
-      if (existing <= curLayer) {
-        layer.set(next, curLayer + 1)
+      const nextLayer = curLayer + 1
+      // Cycles can otherwise increase layers forever (A -> B -> A -> ...).
+      // Cap by node-count depth so layering always terminates.
+      if (nextLayer <= maxLayerCap && existing < nextLayer) {
+        layer.set(next, nextLayer)
         queue.push(next)
       }
     }
