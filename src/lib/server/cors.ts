@@ -1,4 +1,4 @@
-// Cross-Origin Resource Sharing (CORS) support for the OTLP ingest and read
+// Cross-Origin Resource Sharing (CORS) helpers for the OTLP ingest and read
 // API endpoints.
 //
 // Browser-based OTLP exporters (front-end telemetry) issue cross-origin
@@ -9,19 +9,29 @@
 // discards it. These helpers centralise that policy; `hooks.server.ts` wires
 // them into the request pipeline.
 //
-// The allowed origin(s) are controlled by the `OTEL_GUI_CORS_ALLOWED_ORIGINS` env var:
-//   - unset / empty / "*"        → allow any origin (default; zero-config)
+// Allowed origins are controlled by the `OTEL_GUI_CORS_ALLOWED_ORIGINS` env
+// var:
+//   - unset / empty / "*"         → allow any origin (default; zero-config)
 //   - comma-separated origin list → allow only those exact origins
 //
-// The functions here are pure (the env value is passed in) so they can be
+// The functions here are pure (the env value is passed in), so they can be
 // unit-tested without mocking the SvelteKit env module.
 
-/** Routes that accept cross-origin requests: OTLP ingest (`/v1/*`) and the read API (`/api/*`). */
+/**
+ * Returns `true` for routes that should receive CORS handling: OTLP ingest (`/v1/*`) and read API (`/api/*`).
+ */
 export function shouldApplyCorsToPath(pathname: string): boolean {
   return pathname.startsWith('/v1/') || pathname.startsWith('/api/')
 }
 
-/** Parse `OTEL_GUI_CORS_ALLOWED_ORIGINS` into either the wildcard or an explicit allow-list. */
+/**
+ * Parses `OTEL_GUI_CORS_ALLOWED_ORIGINS` into either wildcard access or an explicit allow-list.
+ * Empty values and `'*'` are treated as wildcard.
+ *
+ * @param raw The raw env var value.
+ *
+ * @returns `'*'` for unrestricted access, or the parsed allowed origins list.
+ */
 export function parseAllowedOrigins(raw: string | undefined): string[] | '*' {
   if (raw === undefined) return '*'
   const trimmed = raw.trim()
@@ -34,11 +44,13 @@ export function parseAllowedOrigins(raw: string | undefined): string[] | '*' {
 }
 
 /**
- * Resolve the `Access-Control-Allow-Origin` value for a request, given the
- * configured policy. Returns `'*'` when all origins are allowed, the echoed
- * request origin when it is on the allow-list, or `null` when the origin is
- * not permitted (no CORS headers should be emitted — the request itself still
- * succeeds for non-browser clients).
+ * Resolves the `Access-Control-Allow-Origin` value for a request.
+ *
+ * @param requestOrigin The origin of the incoming request, or `null` if the request has no `Origin` header.
+ * @param raw The raw env var value for allowed origins.
+ *
+ * @returns `'*'` when all origins are allowed, the request origin when it is
+ * allowed, or `null` when the origin is not allowed.
  */
 export function resolveAllowOrigin(
   requestOrigin: string | null,
@@ -52,14 +64,21 @@ export function resolveAllowOrigin(
   return null
 }
 
-// Headers we permit when a browser does not pre-declare them via the preflight
-// `Access-Control-Request-Headers` (covers the common OTLP exporter set).
+/**
+ * Headers we permit when a browser does not pre-declare them via the preflight
+ * `Access-Control-Request-Headers` header (covers the common OTLP exporter set).
+ */
 const DEFAULT_ALLOWED_HEADERS =
   'Content-Type, Content-Encoding, Authorization, X-Requested-With'
 
 /**
- * Build the CORS headers to attach to a response or preflight reply. Returns an
- * empty `Headers` when the request's origin is not allowed by the policy.
+ * Builds the CORS response headers for an actual request or a preflight response.
+ *
+ * @param request The incoming request.
+ * @param raw The raw env var value for allowed origins.
+ *
+ * @returns A `Headers` object containing CORS headers, or an empty `Headers`
+ * object when the request origin is not allowed.
  */
 export function buildCorsHeaders(
   request: Request,
