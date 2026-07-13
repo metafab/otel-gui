@@ -13,7 +13,7 @@ function makeRequest(headers: Record<string, string> = {}): Request {
   })
 }
 
-describe('isCorsEnabledPath', () => {
+describe(isCorsEnabledPath, () => {
   it('matches OTLP ingest and read API routes', () => {
     expect(isCorsEnabledPath('/v1/traces')).toBe(true)
     expect(isCorsEnabledPath('/v1/metrics')).toBe(true)
@@ -27,7 +27,7 @@ describe('isCorsEnabledPath', () => {
   })
 })
 
-describe('parseAllowedOrigins', () => {
+describe(parseAllowedOrigins, () => {
   it('treats unset, empty, and "*" as wildcard', () => {
     expect(parseAllowedOrigins(undefined)).toBe('*')
     expect(parseAllowedOrigins('')).toBe('*')
@@ -42,7 +42,7 @@ describe('parseAllowedOrigins', () => {
   })
 })
 
-describe('resolveAllowOrigin', () => {
+describe(resolveAllowOrigin, () => {
   it('returns the wildcard regardless of request origin when unrestricted', () => {
     expect(resolveAllowOrigin('https://app.example', undefined)).toBe('*')
     expect(resolveAllowOrigin(null, '*')).toBe('*')
@@ -65,7 +65,7 @@ describe('resolveAllowOrigin', () => {
   })
 })
 
-describe('buildCorsHeaders', () => {
+describe(buildCorsHeaders, () => {
   it('emits wildcard CORS headers by default', () => {
     const headers = buildCorsHeaders(
       makeRequest({ origin: 'https://app.example' }),
