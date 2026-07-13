@@ -31,6 +31,7 @@ export function parseAllowedOrigins(raw: string | undefined): string[] | '*' {
     .map((origin) => origin.trim())
     .filter((origin) => origin !== '')
   return list.length > 0 ? list : '*'
+}
 
 /**
  * Resolve the `Access-Control-Allow-Origin` value for a request, given the
