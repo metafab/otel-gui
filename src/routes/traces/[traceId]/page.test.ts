@@ -175,6 +175,21 @@ describe('traces/[traceId] page search UI', () => {
     expect(screen.getByText('1 span found')).toBeInTheDocument()
   })
 
+  it('shows a no-match message when span search has zero results', async () => {
+    render(TracePage)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+    })
+
+    const searchInput = screen.getByPlaceholderText('Search spans...')
+    await fireEvent.input(searchInput, {
+      target: { value: 'this-query-does-not-match-any-span' },
+    })
+
+    expect(screen.getByText('No matching spans')).toBeInTheDocument()
+  })
+
   it('shows a refresh split-menu and toggles auto-refresh from it', async () => {
     render(TracePage)
 

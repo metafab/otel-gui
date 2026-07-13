@@ -1204,6 +1204,8 @@
                       >{matchCount} span{matchCount !== 1 ? 's' : ''} found</span
                     >
                   </div>
+                {:else if spanSearchQuery.trim()}
+                  <span class="match-count no-matches">No matching spans</span>
                 {/if}
               </div>
             </div>
@@ -1735,6 +1737,10 @@
     font-size: 0.75rem;
     color: var(--text-secondary);
     white-space: nowrap;
+  }
+
+  .match-count.no-matches {
+    color: var(--text-muted);
   }
 
   .sidebar-section h3 {
