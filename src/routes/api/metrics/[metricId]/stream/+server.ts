@@ -14,6 +14,8 @@ export const GET: RequestHandler = async ({ params }) => {
   const encoder = new TextEncoder()
   let unsubscribe: (() => void) | null = null
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+  // Assigned in start(); invoked from pull() when the consumer drains.
+  let flushIfReady: (() => void) | null = null
 
   function cleanup() {
     unsubscribe?.()
@@ -56,13 +58,26 @@ export const GET: RequestHandler = async ({ params }) => {
       // Send current state immediately on connect.
       sendSnapshot()
 
+      // Backpressure-aware flush: a web ReadableStream's enqueue() never blocks,
+      // so if the client hasn't drained the previous snapshot we defer rather than
+      // piling another full metric payload onto the unbounded off-heap queue. We
+      // stay `dirty` and let pull() re-send once the consumer catches up. The
+      // payload is a full, cursor-free snapshot, so a deferred tick loses nothing.
+      let dirty = false
+      const flush = () => {
+        if (!dirty) return
+        if (controller.desiredSize !== null && controller.desiredSize <= 0) return
+        dirty = false
+        sendSnapshot()
+      }
+      flushIfReady = flush
+
       // Debounce rapid-fire ingestion (batched exports can arrive all at once).
       let debounceTimer: ReturnType<typeof setTimeout> | null = null
       unsubscribe = traceStore.subscribe(() => {
+        dirty = true
         if (debounceTimer !== null) clearTimeout(debounceTimer)
-        debounceTimer = setTimeout(() => {
-          sendSnapshot()
-        }, 100)
+        debounceTimer = setTimeout(flush, 100)
       })
 
       // Heartbeat every 30 s — keeps proxies/load-balancers from closing the connection.
@@ -73,6 +88,10 @@ export const GET: RequestHandler = async ({ params }) => {
           cleanup()
         }
       }, 30_000)
+    },
+    pull() {
+      // Consumer drained and wants more — send a pending snapshot if deferred.
+      flushIfReady?.()
     },
     cancel() {
       cleanup()

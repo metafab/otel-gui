@@ -25,6 +25,9 @@ export const GET: RequestHandler = async () => {
   const encoder = new TextEncoder()
   let unsubscribe: (() => void) | null = null
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+  // Assigned in start(); invoked from pull() when the consumer drains so pending
+  // changes are flushed as soon as the client can accept them again.
+  let flushIfReady: (() => void) | null = null
 
   // Per-connection cursors, one set per multiplexed sub-stream.
   let lastLogSeq = 0
@@ -125,36 +128,54 @@ export const GET: RequestHandler = async () => {
       sendMetricSnapshot()
       sendMapSnapshot()
 
+      // Backpressure-aware flush. A web ReadableStream's enqueue() never blocks —
+      // it just drives desiredSize negative and keeps buffering the encoded bytes
+      // off-heap. So we only flush when the consumer has drained enough to accept
+      // more (desiredSize > 0); otherwise we stay `dirty` and let pull() re-invoke
+      // us the moment the client catches up. Pending logs/metrics sit in the
+      // bounded store (never an unbounded socket queue) until then, so nothing is
+      // dropped and off-heap memory stays bounded to ~one flush.
+      let dirty = false
+      const flush = () => {
+        if (!dirty) return
+        if (controller.desiredSize !== null && controller.desiredSize <= 0) return
+        dirty = false
+
+        // traces: always full list (matches the previous per-stream behavior).
+        if (!sendTraces()) return
+
+        // logs: re-snapshot on clear/delete (cursor can't express removals),
+        // otherwise stream only the new logs.
+        if (!sendLogCount()) return
+        if (traceStore.getLogRemovalSeq() !== lastLogRemovalSeq) {
+          if (!sendLogSnapshot()) return
+        } else if (!sendLogAppend()) {
+          return
+        }
+
+        // metrics: same delta protocol as logs.
+        if (!sendMetricCount()) return
+        if (traceStore.getMetricRemovalSeq() !== lastMetricRemovalSeq) {
+          if (!sendMetricSnapshot()) return
+        } else if (!sendMetricAppend()) {
+          return
+        }
+
+        // service map: small derived aggregate — re-send only when it changed.
+        if (traceStore.getServiceMapSeq() !== lastMapSeq) {
+          if (!sendMapSnapshot()) return
+        }
+      }
+      flushIfReady = flush
+
       // Debounce rapid-fire ingestion (batched exports can arrive all at once).
+      // `dirty` is set synchronously so a pull() during a debounce window still
+      // sees pending work.
       let debounceTimer: ReturnType<typeof setTimeout> | null = null
       unsubscribe = traceStore.subscribe(() => {
+        dirty = true
         if (debounceTimer !== null) clearTimeout(debounceTimer)
-        debounceTimer = setTimeout(() => {
-          // traces: always full list (matches the previous per-stream behavior).
-          if (!sendTraces()) return
-
-          // logs: re-snapshot on clear/delete (cursor can't express removals),
-          // otherwise stream only the new logs.
-          if (!sendLogCount()) return
-          if (traceStore.getLogRemovalSeq() !== lastLogRemovalSeq) {
-            if (!sendLogSnapshot()) return
-          } else if (!sendLogAppend()) {
-            return
-          }
-
-          // metrics: same delta protocol as logs.
-          if (!sendMetricCount()) return
-          if (traceStore.getMetricRemovalSeq() !== lastMetricRemovalSeq) {
-            if (!sendMetricSnapshot()) return
-          } else if (!sendMetricAppend()) {
-            return
-          }
-
-          // service map: small derived aggregate — re-send only when it changed.
-          if (traceStore.getServiceMapSeq() !== lastMapSeq) {
-            if (!sendMapSnapshot()) return
-          }
-        }, 100)
+        debounceTimer = setTimeout(flush, 100)
       })
 
       // Heartbeat every 30 s — keeps proxies/load-balancers from closing the connection.
@@ -165,6 +186,11 @@ export const GET: RequestHandler = async () => {
           cleanup()
         }
       }, 30_000)
+    },
+    pull() {
+      // The runtime calls pull() when the consumer has drained the queue and
+      // wants more (desiredSize > 0). Flush anything that backpressure deferred.
+      flushIfReady?.()
     },
     cancel() {
       cleanup()

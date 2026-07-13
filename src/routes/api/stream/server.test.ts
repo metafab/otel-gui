@@ -129,6 +129,33 @@ describe('GET /api/stream (multiplexed SSE)', () => {
     }
   })
 
+  it('delivers a deferred update once a backpressured consumer catches up', async () => {
+    const response = await GET({} as never)
+    const reader = response.body!.getReader()
+    const decoder = new TextDecoder()
+    try {
+      // Read only ONE chunk of the connect burst, leaving the rest queued so the
+      // stream is under backpressure (desiredSize <= 0) when the next update
+      // fires. The flush is deferred rather than piled onto the outbound queue.
+      await reader.read()
+
+      // Single ingest while the consumer is behind. The old code skipped this
+      // flush and never retried (the update would be lost until the next
+      // notification); the pull()-driven flush must still deliver it.
+      await ingestLogs({ request: makeLogsPost(simpleLog) } as never)
+
+      // Drain: as the queue empties, pull() fires and the deferred logs-append
+      // is sent. No further ingest happens, so this only passes if the update
+      // was retried on drain rather than dropped.
+      const text = await readChunksUntil(reader, decoder, (t) =>
+        t.includes('event: logs-append'),
+      )
+      expect(text).toContain('event: logs-append')
+    } finally {
+      await reader.cancel()
+    }
+  })
+
   it('re-sends a logs-snapshot when logs are cleared after connect', async () => {
     await ingestLogs({ request: makeLogsPost(simpleLog) } as never)
 
