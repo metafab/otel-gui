@@ -46,6 +46,8 @@ const mutableTraceStore = traceStore as unknown as {
   traces: Array<{ traceId: string; updatedAt: number }>
 }
 
+let scrolledElements: Element[] = []
+
 function makeSpan(overrides: Partial<StoredSpan> = {}): StoredSpan {
   return {
     traceId: 'trace-nested',
@@ -69,6 +71,7 @@ function makeSpan(overrides: Partial<StoredSpan> = {}): StoredSpan {
 
 describe('traces/[traceId] page search UI', () => {
   beforeEach(() => {
+    scrolledElements = []
     mutableTraceStore.traces = []
     mockGoto.mockClear()
     mockReplaceState.mockClear()
@@ -81,7 +84,9 @@ describe('traces/[traceId] page search UI', () => {
     })
 
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
-      value: vi.fn(),
+      value(_options?: ScrollIntoViewOptions) {
+        scrolledElements.push(this)
+      },
       writable: true,
       configurable: true,
     })
@@ -101,6 +106,7 @@ describe('traces/[traceId] page search UI', () => {
       startTimeUnixNano: '2000000000',
       endTimeUnixNano: '6000000000',
       attributes: {
+        'cart.items': '3',
         'db.statement': 'SELECT * FROM products WHERE id = ?',
       },
       events: [
@@ -188,6 +194,67 @@ describe('traces/[traceId] page search UI', () => {
     })
 
     expect(screen.getByText('No matching spans')).toBeInTheDocument()
+  })
+
+  it('auto-selects the first search match', async () => {
+    const { container } = render(TracePage)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+    })
+
+    const searchInput = screen.getByPlaceholderText('Search spans...')
+    searchInput.focus()
+
+    await waitFor(() => {
+      expect(searchInput).toHaveFocus()
+    })
+
+    await fireEvent.input(searchInput, {
+      target: { value: 'select * from products' },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('1 span found')).toBeInTheDocument()
+    })
+
+    await waitFor(() => {
+      const selectedMatchRow = container.querySelector(
+        '[data-span-id="child-hidden-span"] .waterfall-row',
+      )
+      expect(selectedMatchRow).toHaveClass('selected')
+    })
+
+    expect(searchInput).toHaveFocus()
+  })
+
+  it('scrolls span details to matching attribute when search matches an attribute key', async () => {
+    render(TracePage)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+    })
+
+    scrolledElements = []
+
+    const searchInput = screen.getByPlaceholderText('Search spans...')
+    await fireEvent.input(searchInput, {
+      target: { value: 'cart.i' },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('1 span found')).toBeInTheDocument()
+    })
+
+    await waitFor(() => {
+      expect(
+        scrolledElements.some(
+          (el) =>
+            el.classList.contains('match-segment') &&
+            el.classList.contains('is-match'),
+        ),
+      ).toBe(true)
+    })
   })
 
   it('shows a refresh split-menu and toggles auto-refresh from it', async () => {

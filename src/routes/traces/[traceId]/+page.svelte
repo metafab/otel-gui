@@ -54,6 +54,7 @@
   let showSpanDetails = $state<boolean>(true)
   let isMaximized = $derived(!showTraceDetails && !showSpanDetails)
   let waterfallContainer = $state<HTMLDivElement | null>(null)
+  let spanDetailsSectionEl = $state<HTMLElement | null>(null)
   let sidebarWidth = $state<number>(425)
   let isDraggingSplitter = $state<boolean>(false)
   let contentGridElement = $state<HTMLDivElement | null>(null)
@@ -72,6 +73,7 @@
   let showRefreshMenu = $state(false)
   let refreshSplitContainer = $state<HTMLElement | null>(null)
   let lastAutoRefreshSourceUpdatedAt = $state<number | null>(null)
+  let lastAutoSelectedSearchQuery = $state<string>('')
 
   const liveTraceSummary = $derived(
     traceStore.traces.find((item) => item.traceId === traceId) || null,
@@ -168,10 +170,25 @@
   // totalErrorCount: all error spans in the trace (regardless of collapse state)
   const totalErrorCount = $derived(countAllErrorSpans(spanTreeRoot))
 
-  // Reset current match index when search changes
+  // Auto-select and jump to the first match when the search query changes.
   $effect(() => {
-    if (spanSearchQuery) {
-      currentMatchIndex = 0
+    const normalizedQuery = spanSearchQuery.trim().toLowerCase()
+
+    if (!normalizedQuery) {
+      lastAutoSelectedSearchQuery = ''
+      return
+    }
+
+    if (normalizedQuery === lastAutoSelectedSearchQuery) {
+      return
+    }
+
+    lastAutoSelectedSearchQuery = normalizedQuery
+    currentMatchIndex = 0
+
+    const firstMatchedSpan = matchingSpans[0]
+    if (firstMatchedSpan) {
+      handleSpanSelect(firstMatchedSpan.span.spanId, { updateUrl: false })
     }
   })
 
@@ -314,8 +331,25 @@
   // Auto-focus waterfall container when trace loads
   $effect(() => {
     if (waterfallContainer && trace && selectedSpanId && !isLoading) {
+      const shouldPreserveSearchFocus =
+        !!spanSearchInputEl &&
+        spanSearchQuery.trim().length > 0 &&
+        typeof document !== 'undefined' &&
+        document.activeElement === spanSearchInputEl
+
+      if (shouldPreserveSearchFocus) {
+        return
+      }
+
       // Use setTimeout to ensure DOM is ready
       setTimeout(() => {
+        if (
+          spanSearchInputEl &&
+          typeof document !== 'undefined' &&
+          document.activeElement === spanSearchInputEl
+        ) {
+          return
+        }
         waterfallContainer?.focus()
       }, 0)
     }
@@ -324,12 +358,37 @@
   // Auto-scroll selected span row into view
   $effect(() => {
     if (!selectedSpanId || !waterfallContainer) return
+    const hasActiveSearch = spanSearchQuery.trim().length > 0
     // Run after the DOM has re-rendered with the new selection
     requestAnimationFrame(() => {
       const row = waterfallContainer?.querySelector(
         `[data-span-id="${selectedSpanId}"]`,
       )
-      row?.scrollIntoView({ block: 'nearest' })
+      if (hasActiveSearch) {
+        row?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      } else {
+        row?.scrollIntoView({ block: 'nearest' })
+      }
+    })
+  })
+
+  // Keep span details visible when search jumps to a new match.
+  $effect(() => {
+    if (!spanDetailsSectionEl || !selectedSpanId) return
+    if (!spanSearchQuery.trim()) return
+    if (!matchingSpanIds.has(selectedSpanId)) return
+
+    requestAnimationFrame(() => {
+      const firstVisibleMatch = spanDetailsSectionEl?.querySelector(
+        '.span-details .attributes .match-segment.is-match, .span-details .event-attributes .match-segment.is-match, .span-details .match-segment.is-match, .span-details .search-match',
+      ) as HTMLElement | null
+
+      if (firstVisibleMatch) {
+        firstVisibleMatch.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        return
+      }
+
+      spanDetailsSectionEl?.scrollTo({ top: 0, behavior: 'smooth' })
     })
   })
 
@@ -465,11 +524,16 @@
     }
   }
 
-  function handleSpanSelect(spanId: string) {
+  function handleSpanSelect(
+    spanId: string,
+    options?: { updateUrl?: boolean },
+  ) {
     selectedSpanId = spanId
     showSpanDetails = true
     selectedEventIndex = null // Clear event selection when selecting a different span
-    updateSelectionUrl(spanId, selectedLogId)
+    if (options?.updateUrl !== false) {
+      updateSelectionUrl(spanId, selectedLogId)
+    }
   }
 
   function updateSelectionUrl(spanId: string | null, logId: string | null) {
@@ -1293,7 +1357,7 @@
 
         <!-- Span Details Sidebar (Right) -->
         {#if showSpanDetails}
-          <section class="sidebar-section">
+          <section class="sidebar-section" bind:this={spanDetailsSectionEl}>
             {#if selectedSpanId && trace.spans.get(selectedSpanId)}
               {@const selectedSpan = trace.spans.get(selectedSpanId)!}
               <h3>Span Details</h3>
