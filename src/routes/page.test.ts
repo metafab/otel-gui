@@ -41,6 +41,7 @@ vi.mock('$lib/utils/updateCheck', () => ({
 vi.mock('$lib/stores/traces.svelte', () => ({
   traceStore: {
     connectSSE: vi.fn(),
+    tracesLoaded: true,
     traces: [
       {
         traceId: 'trace-checkout-1',

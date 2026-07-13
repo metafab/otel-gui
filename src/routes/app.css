@@ -259,6 +259,12 @@ html[data-theme='dark'] {
 
 /* ─── Global styles ─────────────────────────────────────────────────── */
 
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+}
+
 * {
   box-sizing: border-box;
 }

@@ -153,7 +153,7 @@ describe('traces/[traceId] page search UI', () => {
     const { container } = render(TracePage)
 
     await waitFor(() => {
-      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+      expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
     })
 
     expect(screen.getByText('0 logs')).toBeInTheDocument()
@@ -185,7 +185,7 @@ describe('traces/[traceId] page search UI', () => {
     render(TracePage)
 
     await waitFor(() => {
-      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+      expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
     })
 
     const searchInput = screen.getByPlaceholderText('Search spans...')
@@ -200,7 +200,7 @@ describe('traces/[traceId] page search UI', () => {
     const { container } = render(TracePage)
 
     await waitFor(() => {
-      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+      expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
     })
 
     const searchInput = screen.getByPlaceholderText('Search spans...')
@@ -232,7 +232,7 @@ describe('traces/[traceId] page search UI', () => {
     render(TracePage)
 
     await waitFor(() => {
-      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+      expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
     })
 
     scrolledElements = []
@@ -261,7 +261,7 @@ describe('traces/[traceId] page search UI', () => {
     render(TracePage)
 
     await waitFor(() => {
-      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+      expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
     })
 
     const optionsButton = screen.getByRole('button', {
@@ -341,7 +341,7 @@ describe('traces/[traceId] page search UI', () => {
     render(TracePage)
 
     await waitFor(() => {
-      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+      expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
     })
 
     const callsBeforeEnable = mockFetchTrace.mock.calls.length
@@ -369,7 +369,7 @@ describe('traces/[traceId] page search UI', () => {
     render(TracePage)
 
     await waitFor(() => {
-      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+      expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
     })
 
     await fireEvent.click(
@@ -388,7 +388,7 @@ describe('traces/[traceId] page search UI', () => {
     render(TracePage)
 
     await waitFor(() => {
-      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+      expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
     })
 
     await fireEvent.keyDown(document, { key: 'Escape' })
@@ -400,7 +400,7 @@ describe('traces/[traceId] page search UI', () => {
     render(TracePage)
 
     await waitFor(() => {
-      expect(screen.queryByText('Loading trace...')).not.toBeInTheDocument()
+      expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
     })
 
     const searchInput = screen.getByPlaceholderText('Search spans...')

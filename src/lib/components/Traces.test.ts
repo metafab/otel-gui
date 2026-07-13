@@ -6,19 +6,9 @@ const { mockReplaceState } = vi.hoisted(() => ({
   mockReplaceState: vi.fn(),
 }))
 
-vi.mock('$app/navigation', () => ({
-  replaceState: mockReplaceState,
-  pushState: vi.fn(),
-}))
-
-// Mock VersionInfo so it doesn't consume any fetch mock
-vi.mock('$lib/utils/updateCheck', () => ({
-  checkForUpdate: vi.fn().mockResolvedValue(null),
-  dismissUpdate: vi.fn(),
-}))
-
-vi.mock('$lib/stores/traces.svelte', () => ({
-  traceStore: {
+const { traceStoreMock } = vi.hoisted(() => ({
+  traceStoreMock: {
+    tracesLoaded: true,
     traces: [
       {
         traceId: 'trace-checkout-1',
@@ -61,16 +51,66 @@ vi.mock('$lib/stores/traces.svelte', () => ({
   },
 }))
 
+vi.mock('$app/navigation', () => ({
+  replaceState: mockReplaceState,
+  pushState: vi.fn(),
+}))
+
+// Mock VersionInfo so it doesn't consume any fetch mock
+vi.mock('$lib/utils/updateCheck', () => ({
+  checkForUpdate: vi.fn().mockResolvedValue(null),
+  dismissUpdate: vi.fn(),
+}))
+
+vi.mock('$lib/stores/traces.svelte', () => ({
+  traceStore: traceStoreMock,
+}))
+
 import Traces from './Traces.svelte'
 
 describe('Traces', () => {
   beforeEach(() => {
     mockReplaceState.mockClear()
+    traceStoreMock.tracesLoaded = true
+    traceStoreMock.traces = [
+      {
+        traceId: 'trace-checkout-1',
+        rootSpanName: 'HTTP GET /checkout',
+        serviceName: 'checkout-service',
+        durationMs: 12,
+        spanCount: 4,
+        hasError: true,
+        startTime: '2026-04-12T12:00:00.000Z',
+        updatedAt: 1,
+        rootSpanTentative: false,
+      },
+      {
+        traceId: 'trace-inventory-1',
+        rootSpanName: 'GET /inventory',
+        serviceName: 'inventory-service',
+        durationMs: 42,
+        spanCount: 3,
+        hasError: false,
+        startTime: '2026-04-12T12:05:00.000Z',
+        updatedAt: 2,
+        rootSpanTentative: false,
+      },
+    ]
     window.history.replaceState(
       {},
       '',
       '/?search=checkout&service=checkout-service&errors=true&minDuration=10&maxDuration=20',
     )
+  })
+
+  it('shows loading before the first traces payload arrives', () => {
+    traceStoreMock.tracesLoaded = false
+    traceStoreMock.traces = []
+
+    render(Traces)
+
+    expect(screen.getByText('Loading traces…')).toBeInTheDocument()
+    expect(screen.queryByText('No traces received yet.')).not.toBeInTheDocument()
   })
 
   it('restores filters from the list page query params', () => {

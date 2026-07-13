@@ -282,7 +282,7 @@
     <!-- Service Map tab -->
     <div class="map-content">
       {#if serviceMapLoading}
-        <div class="map-status">Loading service map…</div>
+        <div class="loading">Loading service map…</div>
       {:else if serviceMapError}
         <div class="map-error">{serviceMapError}</div>
       {:else if serviceMapData}
@@ -393,13 +393,6 @@
   /* Service map container */
   .map-content {
     padding: 0;
-  }
-
-  .map-status {
-    text-align: center;
-    padding: 3rem 2rem;
-    color: var(--text-muted);
-    font-size: 0.875rem;
   }
 
   .map-error {

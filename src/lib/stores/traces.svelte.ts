@@ -20,6 +20,7 @@ interface PersistenceConfig {
 // State management
 let traces = $state.raw<TraceListItem[]>([])
 let selectedId = $state<string | null>(null)
+let tracesLoaded = $state<boolean>(false)
 let isLoading = $state<boolean>(false)
 let error = $state<string | null>(null)
 let maxTraces = $state<number>(1000)
@@ -80,6 +81,7 @@ function connectSSE() {
 
     es.addEventListener('traces', (event: MessageEvent) => {
       traces = JSON.parse(event.data)
+      tracesLoaded = true
       error = null
     })
 
@@ -246,6 +248,9 @@ export const traceStore = {
   },
   get selectedId() {
     return selectedId
+  },
+  get tracesLoaded() {
+    return tracesLoaded
   },
   get isLoading() {
     return isLoading

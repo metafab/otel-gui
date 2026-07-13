@@ -15,7 +15,7 @@
   } = $props()
 
   let logs = $state.raw<LogListItem[]>([])
-  let isLoading = $state(false)
+  let isLoading = $state(true)
   let loadError = $state<string | null>(null)
   type LogSortBy = 'time' | 'service' | 'severity' | 'body' | 'trace' | 'span'
   type LogSortOrder = 'asc' | 'desc'
@@ -483,8 +483,8 @@
   {/if}
 
   {#if isLoading}
-    <div class="empty">
-      <p>Loading logs...</p>
+    <div class="loading">
+      <p>Loading logs…</p>
     </div>
   {:else if logs.length === 0}
     <div class="empty">

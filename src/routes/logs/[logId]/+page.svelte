@@ -462,7 +462,6 @@
     gap: 1rem;
   }
 
-  .loading,
   .error {
     text-align: center;
     padding: 2rem;

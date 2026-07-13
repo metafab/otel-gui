@@ -114,6 +114,27 @@ describe('Logs', () => {
     expect(screen.getByText('Unlinked')).toBeInTheDocument()
   })
 
+  it('shows loading before the initial logs fetch resolves', async () => {
+    let resolveFetch!: (value: Response) => void
+    const pendingFetch = new Promise<Response>((resolve) => {
+      resolveFetch = resolve
+    })
+
+    fetchMock.mockReturnValueOnce(pendingFetch)
+
+    render(Logs)
+
+    expect(screen.getByText('Loading logs…')).toBeInTheDocument()
+    expect(screen.queryByText('No logs received yet.')).not.toBeInTheDocument()
+
+    resolveFetch({
+      ok: true,
+      json: async () => [],
+    } as Response)
+
+    expect(await screen.findByText('No logs received yet.')).toBeInTheDocument()
+  })
+
   it('ignores the initial logs-count stream event after mount', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
@@ -155,7 +176,7 @@ describe('Logs', () => {
     })
 
     await fireEvent.click(checkbox)
-    await component.triggerDeleteSelected()
+    component.triggerDeleteSelected()
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenNthCalledWith(

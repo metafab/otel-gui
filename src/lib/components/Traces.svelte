@@ -16,6 +16,7 @@
   } = $props()
 
   const traces = $derived(traceStore.traces)
+  const tracesLoaded = $derived(traceStore.tracesLoaded)
   const error = $derived(traceStore.error)
   const maxTraces = $derived(traceStore.maxTraces)
   const persistence = $derived(traceStore.persistence)
@@ -491,7 +492,11 @@
     </div>
   {/if}
 
-  {#if traces.length === 0}
+  {#if !tracesLoaded}
+    <div class="loading">
+      <p>Loading traces…</p>
+    </div>
+  {:else if traces.length === 0}
     <div class="empty">
       <p>No traces received yet.</p>
       <p class="hint">

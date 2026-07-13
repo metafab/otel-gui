@@ -384,7 +384,10 @@
       ) as HTMLElement | null
 
       if (firstVisibleMatch) {
-        firstVisibleMatch.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        firstVisibleMatch.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        })
         return
       }
 
@@ -524,10 +527,7 @@
     }
   }
 
-  function handleSpanSelect(
-    spanId: string,
-    options?: { updateUrl?: boolean },
-  ) {
+  function handleSpanSelect(spanId: string, options?: { updateUrl?: boolean }) {
     selectedSpanId = spanId
     showSpanDetails = true
     selectedEventIndex = null // Clear event selection when selecting a different span
@@ -1170,7 +1170,7 @@
   </header>
 
   {#if isLoading}
-    <div class="loading">Loading trace...</div>
+    <div class="loading">Loading trace…</div>
   {:else if error}
     <div class="error">{error}</div>
   {:else if trace}
@@ -1612,14 +1612,9 @@
     color: var(--accent);
   }
 
-  .loading,
   .error {
     text-align: center;
     padding: 2rem;
-    color: var(--text-secondary);
-  }
-
-  .error {
     color: var(--error-text);
   }
 
