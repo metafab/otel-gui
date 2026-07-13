@@ -9,7 +9,7 @@
 // discards it. These helpers centralise that policy; `hooks.server.ts` wires
 // them into the request pipeline.
 //
-// The allowed origin(s) are controlled by the `OTEL_GUI_CORS_ORIGIN` env var:
+// The allowed origin(s) are controlled by the `OTEL_GUI_CORS_ALLOWED_ORIGINS` env var:
 //   - unset / empty / "*"        → allow any origin (default; zero-config)
 //   - comma-separated origin list → allow only those exact origins
 //
@@ -17,11 +17,11 @@
 // unit-tested without mocking the SvelteKit env module.
 
 /** Routes that accept cross-origin requests: OTLP ingest (`/v1/*`) and the read API (`/api/*`). */
-export function isCorsEnabledPath(pathname: string): boolean {
+export function shouldApplyCorsToPath(pathname: string): boolean {
   return pathname.startsWith('/v1/') || pathname.startsWith('/api/')
 }
 
-/** Parse `OTEL_GUI_CORS_ORIGIN` into either the wildcard or an explicit allow-list. */
+/** Parse `OTEL_GUI_CORS_ALLOWED_ORIGINS` into either the wildcard or an explicit allow-list. */
 export function parseAllowedOrigins(raw: string | undefined): string[] | '*' {
   if (raw === undefined) return '*'
   const trimmed = raw.trim()

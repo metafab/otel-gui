@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildCorsHeaders,
-  isCorsEnabledPath,
+  shouldApplyCorsToPath,
   parseAllowedOrigins,
   resolveAllowOrigin,
 } from './cors'
@@ -13,17 +13,17 @@ function makeRequest(headers: Record<string, string> = {}): Request {
   })
 }
 
-describe(isCorsEnabledPath, () => {
+describe(shouldApplyCorsToPath, () => {
   it('matches OTLP ingest and read API routes', () => {
-    expect(isCorsEnabledPath('/v1/traces')).toBe(true)
-    expect(isCorsEnabledPath('/v1/metrics')).toBe(true)
-    expect(isCorsEnabledPath('/api/traces')).toBe(true)
+    expect(shouldApplyCorsToPath('/v1/traces')).toBe(true)
+    expect(shouldApplyCorsToPath('/v1/metrics')).toBe(true)
+    expect(shouldApplyCorsToPath('/api/traces')).toBe(true)
   })
 
   it('does not match app/page routes', () => {
-    expect(isCorsEnabledPath('/')).toBe(false)
-    expect(isCorsEnabledPath('/traces/abc')).toBe(false)
-    expect(isCorsEnabledPath('/v1')).toBe(false)
+    expect(shouldApplyCorsToPath('/')).toBe(false)
+    expect(shouldApplyCorsToPath('/traces/abc')).toBe(false)
+    expect(shouldApplyCorsToPath('/v1')).toBe(false)
   })
 })
 
