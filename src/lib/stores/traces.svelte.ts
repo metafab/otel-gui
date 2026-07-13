@@ -1,4 +1,5 @@
 // Client-side reactive store for traces using Svelte 5 runes
+import { onSSE } from '$lib/stores/sseClient'
 import type {
   TraceListItem,
   StoredTrace,
@@ -77,24 +78,13 @@ function connectSSE() {
         }
       })
       .catch(() => {}) // non-critical, keep default
-    const es = new EventSource('/api/traces/stream')
 
-    es.addEventListener('traces', (event: MessageEvent) => {
+    // Trace list updates arrive over the shared app-wide SSE connection.
+    return onSSE('traces', (event: MessageEvent) => {
       traces = JSON.parse(event.data)
       tracesLoaded = true
       error = null
     })
-
-    es.addEventListener('open', () => {
-      error = null
-    })
-
-    es.onerror = () => {
-      // EventSource auto-reconnects — note it but don't surface as fatal
-      console.warn('SSE connection lost, reconnecting...')
-    }
-
-    return () => es.close()
   })
 }
 

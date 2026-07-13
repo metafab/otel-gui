@@ -8,6 +8,7 @@
   import ServiceMap from '$lib/components/ServiceMap.svelte'
   import TracesCommands from '$lib/components/TracesCommands.svelte'
   import Traces from '$lib/components/Traces.svelte'
+  import { onSSE } from '$lib/stores/sseClient'
   import { traceStore } from '$lib/stores/traces.svelte'
   import type { ServiceMapData } from '$lib/types'
   import { isInputFocused, isMac } from '$lib/utils/keyboard'
@@ -17,22 +18,14 @@
 
   function connectLogsCountSSE() {
     $effect(() => {
-      if (typeof EventSource === 'undefined') return
-
-      const es = new EventSource('/api/logs/stream')
-
-      es.addEventListener('logs-count', (event: MessageEvent) => {
+      // Only the badge count is needed here; the full Logs list stream is
+      // consumed by the Logs component. Both ride the shared SSE connection.
+      return onSSE('logs-count', (event: MessageEvent) => {
         const parsed = Number.parseInt(event.data, 10)
         if (!Number.isNaN(parsed)) {
           logsBadgeTotal = parsed
         }
       })
-
-      es.onerror = () => {
-        // EventSource auto-reconnects.
-      }
-
-      return () => es.close()
     })
   }
 

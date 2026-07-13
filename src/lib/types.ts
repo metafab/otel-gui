@@ -99,6 +99,9 @@ export interface TraceStore {
   // Log reads
   getLogCount(): number
   getLogList(limit?: number): LogListItem[]
+  getMaxLogSeq(): number
+  getLogRemovalSeq(): number
+  getLogsSince(afterSeq: number, limit?: number): LogListItem[]
   getTraceLogs(traceId: string, limit?: number): LogListItem[]
   getLog(logId: string): TraceLogDetail | undefined
 

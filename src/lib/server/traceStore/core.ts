@@ -58,6 +58,14 @@ export function createInternalTraceStore(
   const logTraceIdByLogId = new Map<string, string>()
   const listeners = new Set<() => void>()
 
+  // Monotonic insertion sequence per log, used for incremental SSE delta
+  // streaming (clients pull only logs newer than the last seq they saw).
+  const logSeqById = new Map<string, number>()
+  let logSeq = 0
+  // Bumped whenever logs are explicitly removed (clear/delete) — distinct from
+  // eviction, which clients mirror locally. Signals subscribers to re-snapshot.
+  let logRemovalSeq = 0
+
   function notifyListeners() {
     for (const listener of listeners) {
       listener()
@@ -253,6 +261,7 @@ export function createInternalTraceStore(
           }
 
           logs.set(logId, storedLog)
+          logSeqById.set(logId, ++logSeq)
 
           if (traceId) {
             logTraceIdByLogId.set(logId, traceId)
@@ -263,6 +272,7 @@ export function createInternalTraceStore(
             const oldestId = logs.keys().next().value
             if (oldestId) {
               logs.delete(oldestId)
+              logSeqById.delete(oldestId)
               const evictedTraceId = logTraceIdByLogId.get(oldestId)
               if (evictedTraceId) {
                 decrementTraceLogCount(evictedTraceId)
@@ -315,20 +325,14 @@ export function createInternalTraceStore(
     notifyListeners()
   }
 
-  function getTraceList(limit = 100): TraceListItem[] {
-    const traceArray = Array.from(traces.values())
+  function resolveTraceServiceName(trace: StoredTrace): string {
+    const root = resolveRootServiceName(trace)
+    return root === 'unknown' ? trace.serviceName : root
+  }
 
-    traceArray.sort((a, b) => {
-      const aBigInt = BigInt(b.startTimeUnixNano)
-      const bBigInt = BigInt(a.startTimeUnixNano)
-      return aBigInt > bBigInt ? 1 : aBigInt < bBigInt ? -1 : 0
-    })
-
-    return traceArray.slice(0, limit).map((trace) => ({
-      serviceName:
-        resolveRootServiceName(trace) === 'unknown'
-          ? trace.serviceName
-          : resolveRootServiceName(trace),
+  function toTraceListItem(trace: StoredTrace): TraceListItem {
+    return {
+      serviceName: resolveTraceServiceName(trace),
       traceId: trace.traceId,
       rootSpanName: resolveRootSpanName(trace),
       rootSpanTentative: !Array.from(trace.spans.values()).some(
@@ -340,7 +344,19 @@ export function createInternalTraceStore(
       hasError: trace.hasError,
       startTime: formatTimestamp(trace.startTimeUnixNano),
       updatedAt: trace.updatedAt,
-    }))
+    }
+  }
+
+  function compareTracesByStartDesc(a: StoredTrace, b: StoredTrace): number {
+    const aBig = BigInt(a.startTimeUnixNano)
+    const bBig = BigInt(b.startTimeUnixNano)
+    return bBig > aBig ? 1 : bBig < aBig ? -1 : 0
+  }
+
+  function getTraceList(limit = 100): TraceListItem[] {
+    const traceArray = Array.from(traces.values())
+    traceArray.sort(compareTracesByStartDesc)
+    return traceArray.slice(0, limit).map(toTraceListItem)
   }
 
   function getTraceCount(): number {
@@ -382,16 +398,8 @@ export function createInternalTraceStore(
     return deletedCount
   }
 
-  function getLogList(limit = 500): LogListItem[] {
-    const all = Array.from(logs.entries())
-
-    all.sort(([, a], [, b]) => {
-      const aTs = BigInt(a.timeUnixNano || a.observedTimeUnixNano || '0')
-      const bTs = BigInt(b.timeUnixNano || b.observedTimeUnixNano || '0')
-      return bTs > aTs ? 1 : bTs < aTs ? -1 : 0
-    })
-
-    return all.slice(0, limit).map(([id, log]) => ({
+  function toLogListItem(id: string, log: StoredLog): LogListItem {
+    return {
       id,
       traceId: log.traceId || null,
       spanId: log.spanId || null,
@@ -401,11 +409,53 @@ export function createInternalTraceStore(
       severityText: log.severityText,
       body: log.body,
       serviceName: (log.resource['service.name'] as string) || 'unknown',
-    }))
+    }
+  }
+
+  function compareLogsByTimeDesc(a: StoredLog, b: StoredLog): number {
+    const aTs = BigInt(a.timeUnixNano || a.observedTimeUnixNano || '0')
+    const bTs = BigInt(b.timeUnixNano || b.observedTimeUnixNano || '0')
+    return bTs > aTs ? 1 : bTs < aTs ? -1 : 0
+  }
+
+  function getLogList(limit = 500): LogListItem[] {
+    const all = Array.from(logs.entries())
+
+    all.sort(([, a], [, b]) => compareLogsByTimeDesc(a, b))
+
+    return all.slice(0, limit).map(([id, log]) => toLogListItem(id, log))
   }
 
   function getLogCount(): number {
     return logs.size
+  }
+
+  // Newest sequence number assigned so far. Clients track this as a cursor and
+  // ask getLogsSince() for everything ingested after it.
+  function getMaxLogSeq(): number {
+    return logSeq
+  }
+
+  // Incremented on explicit clear/delete (not eviction); lets SSE subscribers
+  // tell "new logs arrived" (append) apart from "logs removed" (re-snapshot).
+  function getLogRemovalSeq(): number {
+    return logRemovalSeq
+  }
+
+  // Logs ingested after `afterSeq`, newest-first, capped at `limit`. Used to
+  // stream incremental deltas instead of re-sending the whole list.
+  function getLogsSince(afterSeq: number, limit = 5000): LogListItem[] {
+    const fresh: Array<[string, StoredLog]> = []
+    for (const [id, log] of logs) {
+      const seq = logSeqById.get(id)
+      if (seq !== undefined && seq > afterSeq) {
+        fresh.push([id, log])
+      }
+    }
+
+    fresh.sort(([, a], [, b]) => compareLogsByTimeDesc(a, b))
+
+    return fresh.slice(0, limit).map(([id, log]) => toLogListItem(id, log))
   }
 
   function getTraceLogs(traceId: string, limit = 100): LogListItem[] {
@@ -413,23 +463,9 @@ export function createInternalTraceStore(
       ([, log]) => log.traceId === traceId,
     )
 
-    entries.sort(([, a], [, b]) => {
-      const aTs = BigInt(a.timeUnixNano || a.observedTimeUnixNano || '0')
-      const bTs = BigInt(b.timeUnixNano || b.observedTimeUnixNano || '0')
-      return bTs > aTs ? 1 : bTs < aTs ? -1 : 0
-    })
+    entries.sort(([, a], [, b]) => compareLogsByTimeDesc(a, b))
 
-    return entries.slice(0, limit).map(([id, log]) => ({
-      id,
-      traceId: log.traceId || null,
-      spanId: log.spanId || null,
-      timeUnixNano: log.timeUnixNano,
-      observedTimeUnixNano: log.observedTimeUnixNano,
-      severityNumber: log.severityNumber,
-      severityText: log.severityText,
-      body: log.body,
-      serviceName: (log.resource['service.name'] as string) || 'unknown',
-    }))
+    return entries.slice(0, limit).map(([id, log]) => toLogListItem(id, log))
   }
 
   function getLog(logId: string) {
@@ -440,8 +476,10 @@ export function createInternalTraceStore(
 
   function clearLogs(): void {
     logs.clear()
+    logSeqById.clear()
     logTraceIdByLogId.clear()
     traceLogCounts.clear()
+    logRemovalSeq++
     for (const trace of traces.values()) {
       trace.logCount = 0
     }
@@ -455,6 +493,7 @@ export function createInternalTraceStore(
     for (const id of logIds) {
       if (logs.delete(id)) {
         deleted++
+        logSeqById.delete(id)
         const traceId = logTraceIdByLogId.get(id)
         if (traceId) {
           decrementTraceLogCount(traceId)
@@ -463,7 +502,10 @@ export function createInternalTraceStore(
       }
     }
 
-    if (deleted > 0) notifyListeners()
+    if (deleted > 0) {
+      logRemovalSeq++
+      notifyListeners()
+    }
     return deleted
   }
 
@@ -497,6 +539,9 @@ export function createInternalTraceStore(
     deleteTraces,
     getLogList,
     getLogCount,
+    getMaxLogSeq,
+    getLogRemovalSeq,
+    getLogsSince,
     getTraceLogs,
     getLog,
     clearLogs,
