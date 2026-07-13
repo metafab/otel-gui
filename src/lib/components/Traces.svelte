@@ -318,7 +318,8 @@
     // Client-side navigation — a full-page load (window.location) tears down and
     // re-establishes every SSE stream and re-hydrates the whole app on each open,
     // which stalls against the browser's 6-connection-per-origin limit.
-    void goto(`/traces/${traceId}`)
+    // encodeURIComponent keeps IDs containing reserved chars (/, ?, :) route-safe.
+    void goto(`/traces/${encodeURIComponent(traceId)}`)
   }
 
   // Keyboard activation for the row. Only fires when the row itself is focused

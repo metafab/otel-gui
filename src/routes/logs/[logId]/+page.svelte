@@ -276,7 +276,10 @@
           <ServiceBadge {serviceName} />
           <span class="separator">•</span>
           {#if logDetail.traceId}
-            <a class="mono-link" href={`/traces/${logDetail.traceId}`}>
+            <a
+              class="mono-link"
+              href={`/traces/${encodeURIComponent(logDetail.traceId)}`}
+            >
               trace {logDetail.traceId}
             </a>
           {:else}
@@ -286,7 +289,7 @@
           {#if logDetail.traceId && logDetail.spanId}
             <a
               class="mono-link"
-              href={`/traces/${logDetail.traceId}?spanId=${encodeURIComponent(logDetail.spanId)}`}
+              href={`/traces/${encodeURIComponent(logDetail.traceId)}?spanId=${encodeURIComponent(logDetail.spanId)}`}
             >
               span {logDetail.spanId}
             </a>

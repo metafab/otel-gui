@@ -499,7 +499,8 @@
     // Client-side navigation — see Traces.svelte: a full-page load tears down and
     // re-establishes every SSE stream on each open, stalling against the browser's
     // 6-connection-per-origin limit.
-    void goto(`/logs/${logId}`)
+    // encodeURIComponent keeps IDs containing reserved chars (/, ?, :) route-safe.
+    void goto(`/logs/${encodeURIComponent(logId)}`)
   }
 
   // Keyboard activation for the row (Enter/Space), only when the row itself —
@@ -754,7 +755,7 @@
                 <td class="mono">
                   {#if log.traceId}
                     <a
-                      href={`/traces/${log.traceId}`}
+                      href={`/traces/${encodeURIComponent(log.traceId)}`}
                       onclick={(event) => event.stopPropagation()}
                     >
                       {log.traceId}
@@ -766,7 +767,7 @@
                 <td class="mono">
                   {#if log.traceId && log.spanId}
                     <a
-                      href={`/traces/${log.traceId}?spanId=${encodeURIComponent(log.spanId)}`}
+                      href={`/traces/${encodeURIComponent(log.traceId)}?spanId=${encodeURIComponent(log.spanId)}`}
                       onclick={(event) => event.stopPropagation()}
                     >
                       {log.spanId}

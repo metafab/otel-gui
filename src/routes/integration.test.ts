@@ -899,23 +899,33 @@ describe('GET /api/traces/:traceId/logs', () => {
 
     const payload = JSON.parse(JSON.stringify(simpleLog)) as any
     const base = payload.resourceLogs[0].scopeLogs[0].logRecords[0]
+    const withUid = (uid: string) => ({
+      ...base,
+      attributes: [
+        ...(base.attributes || []).filter(
+          (attr: { key: string }) => attr.key !== 'log.record.uid',
+        ),
+        { key: 'log.record.uid', value: { stringValue: uid } },
+      ],
+    })
+
     payload.resourceLogs[0].scopeLogs[0].logRecords = [
       {
-        ...base,
+        ...withUid('01J6WX5W58Y0VZ0A8QK2SJQTRD'),
         traceId,
         spanId: 'target-span',
         timeUnixNano: '1544712660000000000',
         observedTimeUnixNano: '1544712660000000000',
       },
       {
-        ...base,
+        ...withUid('01J6WX5W58Y0VZ0A8QK2SJQTRE'),
         traceId,
         spanId: 'other-span',
         timeUnixNano: '1544712662000000000',
         observedTimeUnixNano: '1544712662000000000',
       },
       {
-        ...base,
+        ...withUid('01J6WX5W58Y0VZ0A8QK2SJQTRF'),
         traceId,
         spanId: 'other-span',
         timeUnixNano: '1544712663000000000',
