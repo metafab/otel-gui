@@ -109,9 +109,12 @@ describe('Logs', () => {
       expect(fetchMock).toHaveBeenCalledWith('/api/logs?limit=5000')
     })
 
-    expect(await screen.findByText('checkout failed')).toBeInTheDocument()
-    expect(screen.getByText('worker-service')).toBeInTheDocument()
-    expect(screen.getByText('Unlinked')).toBeInTheDocument()
+    const table = await screen.findByRole('table')
+    expect(
+      await within(table).findByText('checkout failed'),
+    ).toBeInTheDocument()
+    expect(within(table).getByText('worker-service')).toBeInTheDocument()
+    expect(within(table).getByText('Unlinked')).toBeInTheDocument()
   })
 
   it('shows loading before the initial logs fetch resolves', async () => {
@@ -233,16 +236,22 @@ describe('Logs', () => {
     window.history.replaceState(
       window.history.state,
       '',
-      '/?tab=logs&search=worker&severity=info',
+      '/?tab=logs&search=worker&service=worker-service&severity=info',
     )
 
     render(Logs)
 
-    expect(await screen.findByText('worker-service')).toBeInTheDocument()
-    expect(screen.queryByText('checkout-service')).not.toBeInTheDocument()
+    const table = await screen.findByRole('table')
+    expect(await within(table).findByText('worker-service')).toBeInTheDocument()
+    expect(
+      within(table).queryByText('checkout-service'),
+    ).not.toBeInTheDocument()
 
     const searchInput = screen.getByLabelText('Search logs') as HTMLInputElement
     expect(searchInput.value).toBe('worker')
+
+    const serviceSelect = screen.getByLabelText('Service') as HTMLSelectElement
+    expect(serviceSelect.value).toBe('worker-service')
 
     const severitySelect = screen.getByLabelText(
       'Severity',
@@ -250,6 +259,28 @@ describe('Logs', () => {
     expect(severitySelect.value).toBe('info')
 
     window.history.replaceState(window.history.state, '', originalUrl)
+  })
+
+  it('filters logs by selected service', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleLogs,
+    } as Response)
+
+    render(Logs)
+
+    const serviceSelect = (await screen.findByLabelText(
+      'Service',
+    )) as HTMLSelectElement
+    await fireEvent.change(serviceSelect, {
+      target: { value: 'worker-service' },
+    })
+
+    const table = screen.getByRole('table')
+    expect(await within(table).findByText('worker-service')).toBeInTheDocument()
+    expect(
+      within(table).queryByText('checkout-service'),
+    ).not.toBeInTheDocument()
   })
 
   it('renders span links to trace details with spanId query', async () => {

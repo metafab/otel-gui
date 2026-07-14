@@ -64,6 +64,7 @@
     if (typeof window === 'undefined') {
       return {
         searchQuery: '',
+        selectedService: 'all',
         severityFilter: 'all',
         sortBy: DEFAULT_SORT_BY,
         sortOrder: DEFAULT_SORT_ORDER,
@@ -73,6 +74,7 @@
     const url = new URL(window.location.href)
     return {
       searchQuery: url.searchParams.get('search') ?? '',
+      selectedService: url.searchParams.get('service') ?? 'all',
       severityFilter: parseSeverityFilter(url.searchParams.get('severity')),
       sortBy: parseSortBy(url.searchParams.get('sort')),
       sortOrder: parseSortOrder(url.searchParams.get('order')),
@@ -84,6 +86,12 @@
       url.searchParams.set('search', searchQuery)
     } else {
       url.searchParams.delete('search')
+    }
+
+    if (selectedService !== 'all') {
+      url.searchParams.set('service', selectedService)
+    } else {
+      url.searchParams.delete('service')
     }
 
     if (severityFilter !== 'all') {
@@ -105,6 +113,7 @@
   const initialParams = readParamsFromLocation()
 
   let searchQuery = $state(initialParams.searchQuery)
+  let selectedService = $state(initialParams.selectedService)
   let severityFilter = $state<
     'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error'
   >(initialParams.severityFilter)
@@ -112,6 +121,14 @@
   let sortOrder = $state<LogSortOrder>(initialParams.sortOrder)
   let selectedLogIds = $state<string[]>([])
   let isDeleting = $state(false)
+
+  const services = $derived.by(() => {
+    const serviceSet = new Set(logs.map((log) => log.serviceName || 'unknown'))
+    if (selectedService !== 'all') {
+      serviceSet.add(selectedService)
+    }
+    return Array.from(serviceSet).sort((a, b) => a.localeCompare(b))
+  })
 
   const otlpLogsEndpoint = $derived.by(() => {
     if (typeof window !== 'undefined') {
@@ -208,6 +225,13 @@
     const query = searchQuery.trim().toLowerCase()
 
     return logs.filter((log) => {
+      if (selectedService !== 'all') {
+        const serviceName = log.serviceName || 'unknown'
+        if (serviceName !== selectedService) {
+          return false
+        }
+      }
+
       if (severityFilter !== 'all' && severityBucket(log) !== severityFilter) {
         return false
       }
@@ -515,6 +539,7 @@
 
   function handleClearFilters() {
     searchQuery = ''
+    selectedService = 'all'
     severityFilter = 'all'
   }
 
@@ -585,7 +610,9 @@
     </div>
   {:else}
     <LogsFilter
+      {services}
       bind:searchQuery
+      bind:selectedService
       bind:severityFilter
       filteredCount={sortedLogs.length}
       totalCount={logs.length}

@@ -7,7 +7,9 @@ describe('LogsFilter', () => {
   it('renders filter stats', () => {
     const { container } = render(LogsFilter, {
       props: {
+        services: ['checkout-service', 'worker-service'],
         searchQuery: '',
+        selectedService: 'all',
         severityFilter: 'all',
         filteredCount: 3,
         totalCount: 9,
@@ -22,7 +24,9 @@ describe('LogsFilter', () => {
   it('shows and applies clear filters action', async () => {
     render(LogsFilter, {
       props: {
+        services: ['checkout-service', 'worker-service'],
         searchQuery: 'checkout',
+        selectedService: 'worker-service',
         severityFilter: 'error',
         filteredCount: 1,
         totalCount: 5,
@@ -30,9 +34,11 @@ describe('LogsFilter', () => {
     })
 
     const searchInput = screen.getByLabelText('Search logs')
+    const serviceSelect = screen.getByLabelText('Service')
     const severitySelect = screen.getByLabelText('Severity')
 
     expect(searchInput).toHaveValue('checkout')
+    expect(serviceSelect).toHaveValue('worker-service')
     expect(severitySelect).toHaveValue('error')
     expect(
       screen.getByRole('button', { name: 'Clear Filters' }),
@@ -41,13 +47,16 @@ describe('LogsFilter', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Clear Filters' }))
 
     expect(searchInput).toHaveValue('')
+    expect(serviceSelect).toHaveValue('all')
     expect(severitySelect).toHaveValue('all')
   })
 
   it('does not show clear button without active filters', () => {
     render(LogsFilter, {
       props: {
+        services: ['checkout-service', 'worker-service'],
         searchQuery: '',
+        selectedService: 'all',
         severityFilter: 'all',
         filteredCount: 2,
         totalCount: 2,

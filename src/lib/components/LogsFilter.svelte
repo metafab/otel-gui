@@ -1,24 +1,31 @@
 <script lang="ts">
   interface Props {
+    services: string[]
     searchQuery: string
+    selectedService: string
     severityFilter: 'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error'
     filteredCount: number
     totalCount: number
   }
 
   let {
+    services,
     searchQuery = $bindable(''),
+    selectedService = $bindable('all'),
     severityFilter = $bindable('all'),
     filteredCount,
     totalCount,
   }: Props = $props()
 
   const hasActiveFilters = $derived(
-    searchQuery.trim() !== '' || severityFilter !== 'all',
+    searchQuery.trim() !== '' ||
+      selectedService !== 'all' ||
+      severityFilter !== 'all',
   )
 
   function handleClear() {
     searchQuery = ''
+    selectedService = 'all'
     severityFilter = 'all'
   }
 </script>
@@ -35,6 +42,21 @@
         class="search-input"
         aria-label="Search logs"
       />
+    </div>
+
+    <div class="filter-group severity-group">
+      <label for="logs-service">Service</label>
+      <select
+        id="logs-service"
+        bind:value={selectedService}
+        class="filter-select"
+        aria-label="Service"
+      >
+        <option value="all">All services</option>
+        {#each services as service}
+          <option value={service}>{service}</option>
+        {/each}
+      </select>
     </div>
 
     <div class="filter-group severity-group">
