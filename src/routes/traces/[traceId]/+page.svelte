@@ -1320,7 +1320,7 @@
                   type="text"
                   bind:value={spanSearchQuery}
                   bind:this={spanSearchInputEl}
-                  placeholder="Search spans..."
+                  placeholder="Search spans…"
                   class="span-search-input"
                   onkeydown={(e) => {
                     if (e.key === 'Enter' && matchCount > 0) {

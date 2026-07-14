@@ -384,7 +384,7 @@
               type="text"
               bind:value={attributeFilter}
               bind:this={attributeFilterEl}
-              placeholder="Filter attributes..."
+              placeholder="Filter attributes…"
               class="filter-input"
             />
           </div>
@@ -411,7 +411,7 @@
               type="text"
               bind:value={resourceFilter}
               bind:this={resourceFilterEl}
-              placeholder="Filter resource attributes..."
+              placeholder="Filter resource attributes…"
               class="filter-input"
             />
           </div>
@@ -439,7 +439,7 @@
                 type="text"
                 bind:value={scopeFilter}
                 bind:this={scopeFilterEl}
-                placeholder="Filter scope attributes..."
+                placeholder="Filter scope attributes…"
                 class="filter-input"
               />
             </div>

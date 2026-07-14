@@ -3,6 +3,7 @@
   import { page } from '$app/stores'
   import AttributeItem from '$lib/components/AttributeItem.svelte'
   import ChevronIcon from '$lib/components/ChevronIcon.svelte'
+  import SeverityPicker from '$lib/components/SeverityPicker.svelte'
   import {
     formatDuration,
     formatTimestamp,
@@ -561,18 +562,18 @@
 
     {#if !logsCollapsed}
       <div class="logs-filters">
-        <select bind:value={logSeverityFilter} class="log-severity-filter">
-          <option value="all">All severities</option>
-          <option value="error">Error+</option>
-          <option value="warn">Warn</option>
-          <option value="info">Info</option>
-          <option value="debug">Debug</option>
-          <option value="trace">Trace</option>
-        </select>
+        <div class="log-severity-filter">
+          <SeverityPicker
+            id="span-logs-severity"
+            ariaLabel="Log severity"
+            allLabel="All severities"
+            bind:selectedSeverity={logSeverityFilter}
+          />
+        </div>
         <input
           type="text"
           bind:value={logTextFilter}
-          placeholder="Filter logs by severity/text..."
+          placeholder="Filter logs by severity/text…"
           class="attribute-filter log-text-filter"
         />
       </div>
@@ -803,7 +804,7 @@
           id="attribute-filter"
           type="text"
           bind:value={attributeFilter}
-          placeholder="Filter attributes..."
+          placeholder="Filter attributes…"
           class="attribute-filter"
         />
       {/if}
@@ -852,7 +853,7 @@
         <input
           type="text"
           bind:value={resourceFilter}
-          placeholder="Filter resource..."
+          placeholder="Filter resource…"
           class="attribute-filter"
         />
       {/if}
@@ -905,7 +906,7 @@
         <input
           type="text"
           bind:value={scopeFilter}
-          placeholder="Filter scope attrs..."
+          placeholder="Filter scope attrs…"
           class="attribute-filter"
         />
       {/if}
@@ -1240,12 +1241,12 @@
 
   .log-severity-filter {
     width: 140px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--input-bg);
-    color: var(--text-primary);
-    font-size: 0.75rem;
-    padding: 0.375rem 0.5rem;
+    flex-shrink: 0;
+  }
+
+  :global(#span-logs-severity) {
+    padding: 0.2rem 0.5rem;
+    min-height: auto;
   }
 
   .log-text-filter {
