@@ -253,10 +253,8 @@ describe('Logs', () => {
     const servicePicker = screen.getByLabelText('Service')
     expect(servicePicker).toHaveTextContent('worker-service')
 
-    const severitySelect = screen.getByLabelText(
-      'Severity',
-    ) as HTMLSelectElement
-    expect(severitySelect.value).toBe('info')
+    const severityPicker = screen.getByLabelText('Severity')
+    expect(severityPicker).toHaveTextContent('Info')
 
     window.history.replaceState(window.history.state, '', originalUrl)
   })
@@ -322,10 +320,9 @@ describe('Logs', () => {
     const searchInput = await screen.findByLabelText('Search logs')
     await fireEvent.input(searchInput, { target: { value: 'checkout' } })
 
-    const severitySelect = screen.getByLabelText(
-      'Severity',
-    ) as HTMLSelectElement
-    await fireEvent.change(severitySelect, { target: { value: 'error' } })
+    const severityPicker = screen.getByLabelText('Severity')
+    await fireEvent.click(severityPicker)
+    await fireEvent.click(screen.getByRole('button', { name: 'Error+' }))
 
     const traceLink = await screen.findByRole('link', { name: 'trace-1' })
     expect(traceLink).toHaveAttribute(

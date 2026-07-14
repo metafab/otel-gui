@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SeverityPicker from '$lib/components/SeverityPicker.svelte'
   import ServicePicker from '$lib/components/ServicePicker.svelte'
 
   interface Props {
@@ -59,19 +60,12 @@
 
     <div class="filter-group severity-group">
       <label for="logs-severity">Severity</label>
-      <select
+      <SeverityPicker
         id="logs-severity"
-        bind:value={severityFilter}
-        class="filter-select"
-        aria-label="Severity"
-      >
-        <option value="all">All severities</option>
-        <option value="error">Error+</option>
-        <option value="warn">Warn</option>
-        <option value="info">Info</option>
-        <option value="debug">Debug</option>
-        <option value="trace">Trace</option>
-      </select>
+        ariaLabel="Severity"
+        allLabel="All severities"
+        bind:selectedSeverity={severityFilter}
+      />
     </div>
 
     {#if hasActiveFilters}
@@ -128,8 +122,7 @@
     letter-spacing: 0.5px;
   }
 
-  .search-input,
-  .filter-select {
+  .search-input {
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -138,8 +131,7 @@
     color: var(--text-primary);
   }
 
-  .search-input:focus,
-  .filter-select:focus {
+  .search-input:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-ring);

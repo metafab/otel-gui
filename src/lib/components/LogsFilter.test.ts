@@ -35,11 +35,11 @@ describe('LogsFilter', () => {
 
     const searchInput = screen.getByLabelText('Search logs')
     const servicePicker = screen.getByLabelText('Service')
-    const severitySelect = screen.getByLabelText('Severity')
+    const severityPicker = screen.getByLabelText('Severity')
 
     expect(searchInput).toHaveValue('checkout')
     expect(servicePicker).toHaveTextContent('worker-service')
-    expect(severitySelect).toHaveValue('error')
+    expect(severityPicker).toHaveTextContent('Error+')
     expect(
       screen.getByRole('button', { name: 'Clear Filters' }),
     ).toBeInTheDocument()
@@ -48,7 +48,7 @@ describe('LogsFilter', () => {
 
     expect(searchInput).toHaveValue('')
     expect(servicePicker).toHaveTextContent('All services')
-    expect(severitySelect).toHaveValue('all')
+    expect(severityPicker).toHaveTextContent('All severities')
   })
 
   it('selects a service from the custom picker', async () => {
@@ -70,6 +70,25 @@ describe('LogsFilter', () => {
     )
 
     expect(servicePicker).toHaveTextContent('worker-service')
+  })
+
+  it('selects a severity from the custom picker', async () => {
+    render(LogsFilter, {
+      props: {
+        services: ['checkout-service', 'worker-service'],
+        searchQuery: '',
+        selectedService: 'all',
+        severityFilter: 'all',
+        filteredCount: 2,
+        totalCount: 2,
+      },
+    })
+
+    const severityPicker = screen.getByLabelText('Severity')
+    await fireEvent.click(severityPicker)
+    await fireEvent.click(screen.getByRole('button', { name: 'Warn' }))
+
+    expect(severityPicker).toHaveTextContent('Warn')
   })
 
   it('does not show clear button without active filters', () => {
