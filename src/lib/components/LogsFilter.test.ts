@@ -34,11 +34,11 @@ describe('LogsFilter', () => {
     })
 
     const searchInput = screen.getByLabelText('Search logs')
-    const serviceSelect = screen.getByLabelText('Service')
+    const servicePicker = screen.getByLabelText('Service')
     const severitySelect = screen.getByLabelText('Severity')
 
     expect(searchInput).toHaveValue('checkout')
-    expect(serviceSelect).toHaveValue('worker-service')
+    expect(servicePicker).toHaveTextContent('worker-service')
     expect(severitySelect).toHaveValue('error')
     expect(
       screen.getByRole('button', { name: 'Clear Filters' }),
@@ -47,8 +47,52 @@ describe('LogsFilter', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Clear Filters' }))
 
     expect(searchInput).toHaveValue('')
-    expect(serviceSelect).toHaveValue('all')
+    expect(servicePicker).toHaveTextContent('All services')
     expect(severitySelect).toHaveValue('all')
+  })
+
+  it('selects a service from the custom picker', async () => {
+    render(LogsFilter, {
+      props: {
+        services: ['checkout-service', 'worker-service'],
+        searchQuery: '',
+        selectedService: 'all',
+        severityFilter: 'all',
+        filteredCount: 2,
+        totalCount: 2,
+      },
+    })
+
+    const servicePicker = screen.getByLabelText('Service')
+    await fireEvent.click(servicePicker)
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'worker-service' }),
+    )
+
+    expect(servicePicker).toHaveTextContent('worker-service')
+  })
+
+  it('supports keyboard navigation inside the service picker menu', async () => {
+    render(LogsFilter, {
+      props: {
+        services: ['checkout-service', 'worker-service'],
+        searchQuery: '',
+        selectedService: 'all',
+        severityFilter: 'all',
+        filteredCount: 2,
+        totalCount: 2,
+      },
+    })
+
+    const servicePicker = screen.getByLabelText('Service')
+    servicePicker.focus()
+
+    await fireEvent.keyDown(servicePicker, { key: 'ArrowDown' })
+    await fireEvent.keyDown(screen.getByRole('listbox', { name: 'Service' }), {
+      key: 'Enter',
+    })
+
+    expect(servicePicker).toHaveTextContent('checkout-service')
   })
 
   it('does not show clear button without active filters', () => {

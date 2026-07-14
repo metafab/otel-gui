@@ -250,8 +250,8 @@ describe('Logs', () => {
     const searchInput = screen.getByLabelText('Search logs') as HTMLInputElement
     expect(searchInput.value).toBe('worker')
 
-    const serviceSelect = screen.getByLabelText('Service') as HTMLSelectElement
-    expect(serviceSelect.value).toBe('worker-service')
+    const servicePicker = screen.getByLabelText('Service')
+    expect(servicePicker).toHaveTextContent('worker-service')
 
     const severitySelect = screen.getByLabelText(
       'Severity',
@@ -269,12 +269,11 @@ describe('Logs', () => {
 
     render(Logs)
 
-    const serviceSelect = (await screen.findByLabelText(
-      'Service',
-    )) as HTMLSelectElement
-    await fireEvent.change(serviceSelect, {
-      target: { value: 'worker-service' },
-    })
+    const servicePicker = await screen.findByLabelText('Service')
+    await fireEvent.click(servicePicker)
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'worker-service' }),
+    )
 
     const table = screen.getByRole('table')
     expect(await within(table).findByText('worker-service')).toBeInTheDocument()
