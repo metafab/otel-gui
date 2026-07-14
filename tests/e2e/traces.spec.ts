@@ -204,14 +204,18 @@ test.describe('Trace ingestion flow', () => {
     await expect(page).toHaveURL(/\/$/)
 
     // Re-query after navigation to avoid stale reference
-    const traceRowAfterNav = page.locator('tbody tr', { hasText: 'GET /' }).first()
+    const traceRowAfterNav = page
+      .locator('tbody tr', { hasText: 'GET /' })
+      .first()
     await traceRowAfterNav.waitFor({ timeout: 10_000 })
     await traceRowAfterNav.focus()
     await page.keyboard.press('Space')
 
     await expect(page).toHaveURL(/\/traces\/5B8EFFF798038103D269B633813FC60C/)
     await page.waitForSelector('.trace-detail', { timeout: 10_000 })
-    await expect(page.getByText('Trace Details')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('Trace Details')).toBeVisible({
+      timeout: 10_000,
+    })
   })
 
   test('supports trace-list keyboard shortcuts and search filtering', async ({

@@ -330,9 +330,25 @@ export function createInternalTraceStore(
     return root === 'unknown' ? trace.serviceName : root
   }
 
+  function resolveTraceAllServices(trace: StoredTrace): string[] {
+    const services = new Set<string>()
+
+    for (const span of trace.spans.values()) {
+      const serviceName = span.resource['service.name']
+      if (typeof serviceName === 'string' && serviceName.length > 0) {
+        services.add(serviceName)
+      }
+    }
+
+    services.add(resolveTraceServiceName(trace))
+
+    return Array.from(services).sort((a, b) => a.localeCompare(b))
+  }
+
   function toTraceListItem(trace: StoredTrace): TraceListItem {
     return {
       serviceName: resolveTraceServiceName(trace),
+      allServices: resolveTraceAllServices(trace),
       traceId: trace.traceId,
       rootSpanName: resolveRootSpanName(trace),
       rootSpanTentative: !Array.from(trace.spans.values()).some(

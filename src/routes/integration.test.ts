@@ -88,6 +88,7 @@ describe('POST /v1/traces', () => {
 
     expect(traces).toHaveLength(1)
     expect(traces[0].serviceName).toBe('frontend')
+    expect(traces[0].allServices).toEqual(['frontend'])
     expect(traces[0].rootSpanName).toBe('GET /')
   })
 
@@ -147,6 +148,7 @@ describe('POST /v1/traces', () => {
 
     expect(traces).toHaveLength(1)
     expect(traces[0].spanCount).toBe(3)
+    expect(traces[0].allServices).toEqual(['backend', 'frontend'])
   })
 
   it('sets hasError when a span has status.code 2', async () => {

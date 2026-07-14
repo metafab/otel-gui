@@ -47,6 +47,7 @@ export interface TraceListItem {
   rootSpanName: string
   rootSpanTentative: boolean // true while no true root span (parentSpanId == '') has arrived yet
   serviceName: string
+  allServices: string[]
   durationMs: number
   spanCount: number
   logCount?: number

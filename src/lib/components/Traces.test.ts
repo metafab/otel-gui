@@ -14,6 +14,7 @@ const { traceStoreMock } = vi.hoisted(() => ({
         traceId: 'trace-checkout-1',
         rootSpanName: 'HTTP GET /checkout',
         serviceName: 'checkout-service',
+        allServices: ['checkout-service', 'inventory-service'],
         durationMs: 12,
         spanCount: 4,
         hasError: true,
@@ -25,6 +26,7 @@ const { traceStoreMock } = vi.hoisted(() => ({
         traceId: 'trace-inventory-1',
         rootSpanName: 'GET /inventory',
         serviceName: 'inventory-service',
+        allServices: ['inventory-service'],
         durationMs: 42,
         spanCount: 3,
         hasError: false,
@@ -77,6 +79,7 @@ describe('Traces', () => {
         traceId: 'trace-checkout-1',
         rootSpanName: 'HTTP GET /checkout',
         serviceName: 'checkout-service',
+        allServices: ['checkout-service', 'inventory-service'],
         durationMs: 12,
         spanCount: 4,
         hasError: true,
@@ -88,6 +91,7 @@ describe('Traces', () => {
         traceId: 'trace-inventory-1',
         rootSpanName: 'GET /inventory',
         serviceName: 'inventory-service',
+        allServices: ['inventory-service'],
         durationMs: 42,
         spanCount: 3,
         hasError: false,
@@ -126,6 +130,37 @@ describe('Traces', () => {
 
     expect(screen.getByText('HTTP GET /checkout')).toBeInTheDocument()
     expect(screen.queryByText('GET /inventory')).not.toBeInTheDocument()
+  })
+
+  it('supports any-service filtering across non-root span services', () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/?service=inventory-service&serviceScope=any',
+    )
+
+    render(Traces)
+
+    expect(screen.getByLabelText('Service')).toHaveValue('inventory-service')
+    expect(screen.getByLabelText('Root Only')).not.toBeChecked()
+    expect(screen.getByText('HTTP GET /checkout')).toBeInTheDocument()
+    expect(screen.getByText('GET /inventory')).toBeInTheDocument()
+  })
+
+  it('keeps selected service when no trace matches current filters', () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/?service=ghost-service&serviceScope=any',
+    )
+
+    render(Traces)
+
+    expect(screen.getByLabelText('Service')).toHaveValue('ghost-service')
+    expect(screen.getByText('No traces match the current filters.'))
+    expect(
+      screen.getByText(/Service filter/, { exact: false }),
+    ).toBeInTheDocument()
   })
 
   it('syncs filter edits back into the URL', async () => {

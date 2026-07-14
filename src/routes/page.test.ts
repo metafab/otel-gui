@@ -30,6 +30,7 @@ const { mockTraceStore } = vi.hoisted(() => ({
         traceId: 'trace-checkout-1',
         rootSpanName: 'HTTP GET /checkout',
         serviceName: 'checkout-service',
+        allServices: ['checkout-service', 'inventory-service'],
         durationMs: 12,
         spanCount: 4,
         hasError: true,
@@ -41,6 +42,7 @@ const { mockTraceStore } = vi.hoisted(() => ({
         traceId: 'trace-inventory-1',
         rootSpanName: 'GET /inventory',
         serviceName: 'inventory-service',
+        allServices: ['inventory-service'],
         durationMs: 42,
         spanCount: 3,
         hasError: false,
@@ -252,6 +254,57 @@ describe('trace list page', () => {
       expect((screen.getByLabelText('Search') as HTMLInputElement).value).toBe(
         'a',
       )
+    })
+  })
+
+  it('applies service filter when selecting a service node from Service Map', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        nodes: [
+          {
+            serviceName: 'checkout-service',
+            spanCount: 4,
+            errorCount: 1,
+            nodeType: 'service',
+          },
+          {
+            serviceName: 'inventory-service',
+            spanCount: 3,
+            errorCount: 0,
+            nodeType: 'service',
+          },
+        ],
+        edges: [
+          {
+            source: 'checkout-service',
+            target: 'inventory-service',
+            callCount: 2,
+            errorCount: 0,
+            p50Ms: 10,
+            p99Ms: 20,
+          },
+        ],
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(Page)
+
+    await fireEvent.click(screen.getByRole('tab', { name: 'Service Map' }))
+
+    const checkoutNodeLabel = await screen.findByText('checkout-service')
+    await fireEvent.click(checkoutNodeLabel)
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /^Traces/ })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      )
+      expect(
+        (screen.getByLabelText('Service') as HTMLSelectElement).value,
+      ).toBe('checkout-service')
+      expect(screen.getByLabelText('Root Only')).not.toBeChecked()
     })
   })
 })

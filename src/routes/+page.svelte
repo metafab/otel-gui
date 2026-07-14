@@ -105,6 +105,7 @@
 
   let tracesRef: {
     setSelectedService: (name: string) => void
+    setServiceFilter: (name: string, scope: 'root' | 'any') => void
     openImportModal: () => void
     triggerExportFiltered: () => void
     triggerExportSelected: () => void
@@ -127,9 +128,11 @@
   let logsSelected = $state(0)
   let logsDeleting = $state(false)
 
-  function handleMapNodeSelect(serviceName: string) {
-    switchTab('traces')
-    tracesRef?.setSelectedService(serviceName)
+  async function handleMapNodeSelect(serviceName: string) {
+    await switchTab('traces')
+    // Traces is conditionally rendered by tab; wait for mount so bind:this is set.
+    await tick()
+    tracesRef?.setServiceFilter(serviceName, 'any')
   }
 
   let showShortcuts = $state(false)

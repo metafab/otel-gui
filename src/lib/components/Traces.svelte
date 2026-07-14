@@ -4,6 +4,7 @@
   import TraceFilters from '$lib/components/TraceFilters.svelte'
   import TraceImportModal from '$lib/components/TraceImportModal.svelte'
   import VersionInfo from '$lib/components/VersionInfo.svelte'
+  import type { TraceListItem } from '$lib/types'
   import { traceStore } from '$lib/stores/traces.svelte'
   import { isInputFocused } from '$lib/utils/keyboard'
   import { formatDurationFromMs } from '$lib/utils/time'
@@ -38,9 +39,11 @@
     | 'time'
     | 'status'
   type TraceSortOrder = 'asc' | 'desc'
+  type ServiceScope = 'root' | 'any'
 
   const DEFAULT_SORT_BY: TraceSortBy = 'time'
   const DEFAULT_SORT_ORDER: TraceSortOrder = 'desc'
+  const DEFAULT_SERVICE_SCOPE: ServiceScope = 'root'
 
   function parseSortBy(rawValue: string | null): TraceSortBy {
     switch (rawValue) {
@@ -63,6 +66,12 @@
       : DEFAULT_SORT_ORDER
   }
 
+  function parseServiceScope(rawValue: string | null): ServiceScope {
+    return rawValue === 'any' || rawValue === 'root'
+      ? rawValue
+      : DEFAULT_SERVICE_SCOPE
+  }
+
   function parseFilterNumber(rawValue: string | null): number | null {
     if (!rawValue) return null
     const parsedValue = Number(rawValue)
@@ -73,6 +82,7 @@
     return {
       searchQuery: url.searchParams.get('search') ?? '',
       selectedService: url.searchParams.get('service') ?? 'all',
+      serviceScope: parseServiceScope(url.searchParams.get('serviceScope')),
       showErrorsOnly: url.searchParams.get('errors') === 'true',
       minDuration: parseFilterNumber(url.searchParams.get('minDuration')),
       maxDuration: parseFilterNumber(url.searchParams.get('maxDuration')),
@@ -92,6 +102,12 @@
       url.searchParams.set('service', selectedService)
     } else {
       url.searchParams.delete('service')
+    }
+
+    if (serviceScope === DEFAULT_SERVICE_SCOPE) {
+      url.searchParams.delete('serviceScope')
+    } else {
+      url.searchParams.set('serviceScope', serviceScope)
     }
 
     if (showErrorsOnly) {
@@ -129,6 +145,7 @@
 
   let searchQuery = $state(initialFilters.searchQuery)
   let selectedService = $state<string>(initialFilters.selectedService)
+  let serviceScope = $state<ServiceScope>(initialFilters.serviceScope)
   let searchInputEl = $state<HTMLInputElement | null>(null)
   let showImportModal = $state(false)
   let importSuccessMessage = $state<string | null>(null)
@@ -141,15 +158,24 @@
   let sortBy = $state<TraceSortBy>(initialFilters.sortBy)
   let sortOrder = $state<TraceSortOrder>(initialFilters.sortOrder)
 
-  const services = $derived(
-    Array.from(new Set(traces.map((t) => t.serviceName))).sort(),
-  )
-
-  $effect(() => {
-    if (selectedService === 'all' || services.length === 0) return
-    if (!services.includes(selectedService)) {
-      selectedService = 'all'
+  function getTraceServices(trace: TraceListItem): string[] {
+    if (Array.isArray(trace.allServices) && trace.allServices.length > 0) {
+      return trace.allServices
     }
+    return [trace.serviceName]
+  }
+
+  const services = $derived.by(() => {
+    const nextServices = new Set<string>()
+    for (const trace of traces) {
+      for (const service of getTraceServices(trace)) {
+        nextServices.add(service)
+      }
+    }
+    if (selectedService !== 'all') {
+      nextServices.add(selectedService)
+    }
+    return Array.from(nextServices).sort((a, b) => a.localeCompare(b))
   })
 
   const filteredTraces = $derived.by(() => {
@@ -161,12 +187,19 @@
         (t) =>
           t.traceId.toLowerCase().includes(query) ||
           t.rootSpanName.toLowerCase().includes(query) ||
-          t.serviceName.toLowerCase().includes(query),
+          getTraceServices(t).some((service) =>
+            service.toLowerCase().includes(query),
+          ),
       )
     }
 
     if (selectedService !== 'all') {
-      result = result.filter((t) => t.serviceName === selectedService)
+      result = result.filter((t) => {
+        if (serviceScope === 'root') {
+          return t.serviceName === selectedService
+        }
+        return getTraceServices(t).includes(selectedService)
+      })
     }
 
     if (showErrorsOnly) {
@@ -265,6 +298,7 @@
   function handleClearFilters() {
     searchQuery = ''
     selectedService = 'all'
+    serviceScope = DEFAULT_SERVICE_SCOPE
     showErrorsOnly = false
     minDuration = null
     maxDuration = null
@@ -466,8 +500,15 @@
   }
 
   // Exposed for parent to call via bind:this
-  export function setSelectedService(name: string) {
+  export function setServiceFilter(
+    name: string,
+    scope: ServiceScope = DEFAULT_SERVICE_SCOPE,
+  ) {
     selectedService = name
+    serviceScope = scope
+  }
+  export function setSelectedService(name: string) {
+    setServiceFilter(name)
   }
   export function openImportModal() {
     exportError = null
@@ -526,6 +567,7 @@
     </div>
   {:else}
     <TraceFilters
+      bind:serviceScope
       {services}
       bind:searchQuery
       bind:selectedService

@@ -1,5 +1,6 @@
 <script lang="ts">
   interface Props {
+    serviceScope: 'root' | 'any'
     /** Available service names for the dropdown. */
     services: string[]
     /** Bound: text search query. */
@@ -21,6 +22,7 @@
   }
 
   let {
+    serviceScope = $bindable('root'),
     services,
     searchQuery = $bindable(''),
     selectedService = $bindable('all'),
@@ -35,6 +37,7 @@
   const hasActiveFilters = $derived(
     searchQuery.trim() !== '' ||
       selectedService !== 'all' ||
+      serviceScope !== 'root' ||
       showErrorsOnly ||
       minDuration !== null ||
       maxDuration !== null,
@@ -43,6 +46,7 @@
   function handleClear() {
     searchQuery = ''
     selectedService = 'all'
+    serviceScope = 'root'
     showErrorsOnly = false
     minDuration = null
     maxDuration = null
@@ -64,7 +68,20 @@
     </div>
 
     <div class="filter-group">
-      <label for="service">Service</label>
+      <div class="service-header">
+        <label for="service">Service</label>
+        <label class="checkbox-label scope-checkbox">
+          <input
+            id="root-service-only"
+            type="checkbox"
+            checked={serviceScope === 'root'}
+            onchange={(event) => {
+              serviceScope = event.currentTarget.checked ? 'root' : 'any'
+            }}
+          />
+          <span>Root Only</span>
+        </label>
+      </div>
       <select id="service" bind:value={selectedService} class="filter-select">
         <option value="all">All Services</option>
         {#each services as service}
@@ -159,6 +176,13 @@
     letter-spacing: 0.5px;
   }
 
+  .service-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
   .search-input {
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--border);
@@ -198,6 +222,25 @@
     cursor: pointer;
     font-size: 0.875rem;
     padding: 0.5rem 0;
+  }
+
+  .scope-checkbox {
+    padding: 0;
+    margin: 0;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .scope-checkbox span {
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  @media (min-width: 1100px) {
+    .scope-checkbox {
+      font-size: 0.7rem;
+    }
   }
 
   .checkbox-label input[type='checkbox'] {
@@ -248,5 +291,11 @@
   .filter-stats strong {
     color: var(--accent);
     font-weight: 600;
+  }
+
+  @media (max-width: 720px) {
+    .service-header {
+      align-items: flex-start;
+    }
   }
 </style>

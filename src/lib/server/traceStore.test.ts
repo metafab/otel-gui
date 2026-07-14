@@ -27,6 +27,7 @@ describe('traceStore.ingestSpans / getTraceList', () => {
     traceStore.ingestSpans(simpleTrace.resourceSpans)
     const [item] = traceStore.getTraceList()
     expect(item.serviceName).toBe('frontend')
+    expect(item.allServices).toEqual(['frontend'])
   })
 
   it('sets rootSpanName from the root span', () => {
@@ -168,6 +169,7 @@ describe('traceStore.ingestSpans / getTraceList', () => {
     // AAAABBBBCCCCDDDD… is one traceId, all spans belong to it
     expect(list).toHaveLength(1)
     expect(list[0].spanCount).toBe(3) // root + 2 backend spans
+    expect(list[0].allServices).toEqual(['backend', 'frontend'])
   })
 
   it('resolves serviceName from the root span resource even when another service arrives first', () => {
@@ -211,6 +213,7 @@ describe('traceStore.ingestLogs', () => {
     expect(traceItem).toBeDefined()
     expect(traceItem.traceId).toBe('5B8EFFF798038103D269B633813FC60C')
     expect(traceItem.serviceName).toBe('frontend')
+    expect(traceItem.allServices).toEqual(['frontend'])
     expect(traceItem.logCount).toBe(1)
   })
 

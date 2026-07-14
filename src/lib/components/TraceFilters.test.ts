@@ -10,6 +10,7 @@ describe('TraceFilters', () => {
     const { container } = render(TraceFilters, {
       props: {
         services,
+        serviceScope: 'root',
         searchQuery: '',
         selectedService: 'all',
         showErrorsOnly: false,
@@ -23,6 +24,7 @@ describe('TraceFilters', () => {
 
     expect(screen.getByLabelText('Search')).toBeInTheDocument()
     expect(screen.getByLabelText('Service')).toBeInTheDocument()
+    expect(screen.getByLabelText('Root Only')).toBeChecked()
     expect(
       screen.getByRole('option', { name: 'checkout-service' }),
     ).toBeInTheDocument()
@@ -38,6 +40,7 @@ describe('TraceFilters', () => {
     render(TraceFilters, {
       props: {
         services,
+        serviceScope: 'any',
         searchQuery: 'checkout',
         selectedService: 'checkout-service',
         showErrorsOnly: true,
@@ -51,12 +54,14 @@ describe('TraceFilters', () => {
 
     const search = screen.getByLabelText('Search')
     const service = screen.getByLabelText('Service')
+    const rootServiceOnly = screen.getByLabelText('Root Only')
     const errorsOnly = screen.getByLabelText('Errors Only')
     const minDuration = screen.getByLabelText('Min Duration (ms)')
     const maxDuration = screen.getByLabelText('Max Duration (ms)')
 
     expect(search).toHaveValue('checkout')
     expect(service).toHaveValue('checkout-service')
+    expect(rootServiceOnly).not.toBeChecked()
     expect(errorsOnly).toBeChecked()
     expect(minDuration).toHaveValue(10)
     expect(maxDuration).toHaveValue(50)
@@ -65,6 +70,7 @@ describe('TraceFilters', () => {
 
     expect(search).toHaveValue('')
     expect(service).toHaveValue('all')
+    expect(rootServiceOnly).toBeChecked()
     expect(errorsOnly).not.toBeChecked()
     expect(minDuration).toHaveValue(null)
     expect(maxDuration).toHaveValue(null)
@@ -74,6 +80,7 @@ describe('TraceFilters', () => {
     render(TraceFilters, {
       props: {
         services,
+        serviceScope: 'root',
         searchQuery: '',
         selectedService: 'all',
         showErrorsOnly: false,
