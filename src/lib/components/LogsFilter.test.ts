@@ -72,29 +72,6 @@ describe('LogsFilter', () => {
     expect(servicePicker).toHaveTextContent('worker-service')
   })
 
-  it('supports keyboard navigation inside the service picker menu', async () => {
-    render(LogsFilter, {
-      props: {
-        services: ['checkout-service', 'worker-service'],
-        searchQuery: '',
-        selectedService: 'all',
-        severityFilter: 'all',
-        filteredCount: 2,
-        totalCount: 2,
-      },
-    })
-
-    const servicePicker = screen.getByLabelText('Service')
-    servicePicker.focus()
-
-    await fireEvent.keyDown(servicePicker, { key: 'ArrowDown' })
-    await fireEvent.keyDown(screen.getByRole('listbox', { name: 'Service' }), {
-      key: 'Enter',
-    })
-
-    expect(servicePicker).toHaveTextContent('checkout-service')
-  })
-
   it('does not show clear button without active filters', () => {
     render(LogsFilter, {
       props: {

@@ -25,12 +25,6 @@ describe('TraceFilters', () => {
     expect(screen.getByLabelText('Search')).toBeInTheDocument()
     expect(screen.getByLabelText('Service')).toBeInTheDocument()
     expect(screen.getByLabelText('Root Only')).toBeChecked()
-    expect(
-      screen.getByRole('option', { name: 'checkout-service' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('option', { name: 'inventory-service' }),
-    ).toBeInTheDocument()
     expect(container.querySelector('.filter-stats')?.textContent).toContain(
       'Showing 2 of 5 traces',
     )
@@ -60,7 +54,7 @@ describe('TraceFilters', () => {
     const maxDuration = screen.getByLabelText('Max Duration (ms)')
 
     expect(search).toHaveValue('checkout')
-    expect(service).toHaveValue('checkout-service')
+    expect(service).toHaveTextContent('checkout-service')
     expect(rootServiceOnly).not.toBeChecked()
     expect(errorsOnly).toBeChecked()
     expect(minDuration).toHaveValue(10)
@@ -69,11 +63,36 @@ describe('TraceFilters', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Clear Filters' }))
 
     expect(search).toHaveValue('')
-    expect(service).toHaveValue('all')
+    expect(service).toHaveTextContent('All Services')
     expect(rootServiceOnly).toBeChecked()
     expect(errorsOnly).not.toBeChecked()
     expect(minDuration).toHaveValue(null)
     expect(maxDuration).toHaveValue(null)
+  })
+
+  it('selects a service from the shared picker', async () => {
+    render(TraceFilters, {
+      props: {
+        services,
+        serviceScope: 'root',
+        searchQuery: '',
+        selectedService: 'all',
+        showErrorsOnly: false,
+        minDuration: null,
+        maxDuration: null,
+        filteredCount: 2,
+        totalCount: 5,
+        searchInputEl: null,
+      },
+    })
+
+    const servicePicker = screen.getByLabelText('Service')
+    await fireEvent.click(servicePicker)
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'inventory-service' }),
+    )
+
+    expect(servicePicker).toHaveTextContent('inventory-service')
   })
 
   it('hides clear button when filters are not active', () => {

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import ServicePicker from '$lib/components/ServicePicker.svelte'
+
   interface Props {
     serviceScope: 'root' | 'any'
     /** Available service names for the dropdown. */
@@ -82,12 +84,13 @@
           <span>Root Only</span>
         </label>
       </div>
-      <select id="service" bind:value={selectedService} class="filter-select">
-        <option value="all">All Services</option>
-        {#each services as service}
-          <option value={service}>{service}</option>
-        {/each}
-      </select>
+      <ServicePicker
+        id="service"
+        ariaLabel="Service"
+        allLabel="All Services"
+        {services}
+        bind:selectedService
+      />
     </div>
 
     <div class="filter-group">
@@ -194,22 +197,6 @@
   }
 
   .search-input:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-ring);
-  }
-
-  .filter-select {
-    padding: 0.5rem 0.75rem;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    font-size: 0.875rem;
-    background: var(--input-bg);
-    color: var(--text-primary);
-    cursor: pointer;
-  }
-
-  .filter-select:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-ring);

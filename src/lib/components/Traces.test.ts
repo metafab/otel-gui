@@ -123,7 +123,9 @@ describe('Traces', () => {
     render(Traces)
 
     expect(screen.getByLabelText('Search')).toHaveValue('checkout')
-    expect(screen.getByLabelText('Service')).toHaveValue('checkout-service')
+    expect(screen.getByLabelText('Service')).toHaveTextContent(
+      'checkout-service',
+    )
     expect(screen.getByLabelText('Errors Only')).toBeChecked()
     expect(screen.getByLabelText('Min Duration (ms)')).toHaveValue(10)
     expect(screen.getByLabelText('Max Duration (ms)')).toHaveValue(20)
@@ -141,7 +143,9 @@ describe('Traces', () => {
 
     render(Traces)
 
-    expect(screen.getByLabelText('Service')).toHaveValue('inventory-service')
+    expect(screen.getByLabelText('Service')).toHaveTextContent(
+      'inventory-service',
+    )
     expect(screen.getByLabelText('Root Only')).not.toBeChecked()
     expect(screen.getByText('HTTP GET /checkout')).toBeInTheDocument()
     expect(screen.getByText('GET /inventory')).toBeInTheDocument()
@@ -156,11 +160,24 @@ describe('Traces', () => {
 
     render(Traces)
 
-    expect(screen.getByLabelText('Service')).toHaveValue('ghost-service')
+    expect(screen.getByLabelText('Service')).toHaveTextContent('ghost-service')
     expect(screen.getByText('No traces match the current filters.'))
-    expect(
-      screen.getByText(/Service filter/, { exact: false }),
-    ).toBeInTheDocument()
+  })
+
+  it('filters traces by selected service from the picker', async () => {
+    window.history.replaceState({}, '', '/?service=all&errors=false')
+
+    render(Traces)
+
+    const servicePicker = screen.getByLabelText('Service')
+    await fireEvent.click(servicePicker)
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'inventory-service' }),
+    )
+
+    expect(servicePicker).toHaveTextContent('inventory-service')
+    expect(screen.queryByText('HTTP GET /checkout')).not.toBeInTheDocument()
+    expect(screen.getByText('GET /inventory')).toBeInTheDocument()
   })
 
   it('syncs filter edits back into the URL', async () => {

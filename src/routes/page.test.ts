@@ -301,9 +301,9 @@ describe('trace list page', () => {
         'aria-selected',
         'true',
       )
-      expect(
-        (screen.getByLabelText('Service') as HTMLSelectElement).value,
-      ).toBe('checkout-service')
+      expect(screen.getByLabelText('Service')).toHaveTextContent(
+        'checkout-service',
+      )
       expect(screen.getByLabelText('Root Only')).not.toBeChecked()
     })
   })
