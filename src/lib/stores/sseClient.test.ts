@@ -1,9 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  __resetSSEConnectionForTests,
-  onSSE,
-  onSSEEvents,
-} from './sseClient'
+import { __resetSSEConnectionForTests, onSSE, onSSEEvents } from './sseClient'
 
 type Listener = (event: { data: string }) => void
 
@@ -42,7 +38,10 @@ class FakeEventSource {
 describe('sseClient', () => {
   beforeEach(() => {
     FakeEventSource.instances = []
-    vi.stubGlobal('EventSource', FakeEventSource as unknown as typeof EventSource)
+    vi.stubGlobal(
+      'EventSource',
+      FakeEventSource as unknown as typeof EventSource,
+    )
   })
 
   afterEach(() => {
