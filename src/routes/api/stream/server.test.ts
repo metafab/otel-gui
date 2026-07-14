@@ -6,9 +6,11 @@ import { traceStore } from '$lib/server/traceStore'
 import simpleTrace from '../../../../tests/fixtures/simple-trace.json'
 import simpleLog from '../../../../tests/fixtures/simple-log.json'
 
-// Read from a live SSE reader, accumulating text, until the predicate matches
-// (or the chunk budget is spent). Unlike readUntil() this keeps an existing
-// reader open so a test can read the initial burst and then later updates.
+/**
+ * Reads from a live SSE reader, accumulating text, until the predicate matches
+ * (or the chunk budget is spent). Unlike readUntil() this keeps an existing
+ * reader open so a test can read the initial burst and then later updates.
+ */
 async function readChunksUntil(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   decoder: TextDecoder,
@@ -25,17 +27,11 @@ async function readChunksUntil(
   return text
 }
 
-function makeLogsPost(body: unknown): Request {
-  return new Request('http://localhost:4318/v1/logs', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-}
-
-// Read from the SSE ReadableStream until every expected event marker has been
-// seen (or a chunk budget is exhausted), then cancel so the heartbeat interval
-// is torn down and the test doesn't hang.
+/**
+ * Reads the SSE ReadableStream until every expected event marker has been
+ * seen (or a chunk budget is exhausted), then cancel so the heartbeat interval
+ * is torn down and the test doesn't hang.
+ */
 async function readUntil(
   response: Response,
   markers: string[],
@@ -59,6 +55,14 @@ async function readUntil(
 
 function makeTracePost(body: unknown): Request {
   return new Request('http://localhost:4318/v1/traces', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
+function makeLogsPost(body: unknown): Request {
+  return new Request('http://localhost:4318/v1/logs', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
