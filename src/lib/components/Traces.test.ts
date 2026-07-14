@@ -110,7 +110,9 @@ describe('Traces', () => {
     render(Traces)
 
     expect(screen.getByText('Loading traces…')).toBeInTheDocument()
-    expect(screen.queryByText('No traces received yet.')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('No traces received yet.'),
+    ).not.toBeInTheDocument()
   })
 
   it('restores filters from the list page query params', () => {

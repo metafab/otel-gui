@@ -26,11 +26,7 @@ function makeEdge(source: string, target: string): ServiceMapEdge {
 describe(layoutGraph, () => {
   it('handles a 3-node cycle without unbounded layering', () => {
     const nodes = [makeNode('a'), makeNode('b'), makeNode('c')]
-    const edges = [
-      makeEdge('a', 'b'),
-      makeEdge('b', 'c'),
-      makeEdge('c', 'a'),
-    ]
+    const edges = [makeEdge('a', 'b'), makeEdge('b', 'c'), makeEdge('c', 'a')]
 
     const layout = layoutGraph(nodes, edges)
 
