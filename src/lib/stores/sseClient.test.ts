@@ -53,7 +53,7 @@ describe('sseClient', () => {
     // Act
     onSSE('traces', () => {})
     onSSE('logs-count', () => {})
-    onSSEEvents({ 'metrics-snapshot': () => {}, 'map-snapshot': () => {} })
+    onSSEEvents({ 'logs-snapshot': () => {}, 'logs-append': () => {} })
 
     // Assert
     expect(FakeEventSource.instances).toHaveLength(1)
@@ -91,21 +91,21 @@ describe('sseClient', () => {
     // Arrange
     const hits: string[] = []
     const off = onSSEEvents({
-      'metrics-count': () => hits.push('count'),
-      'metrics-append': () => hits.push('append'),
+      'logs-count': () => hits.push('count'),
+      'logs-append': () => hits.push('append'),
     })
     const es = FakeEventSource.instances[0]
 
     // Act
-    es.emit('metrics-count', '5')
-    es.emit('metrics-append', '{}')
+    es.emit('logs-count', '5')
+    es.emit('logs-append', '{}')
     // Assert
     expect(hits).toEqual(['count', 'append'])
 
     // Act
     off()
-    es.emit('metrics-count', '6')
-    es.emit('metrics-append', '{}')
+    es.emit('logs-count', '6')
+    es.emit('logs-append', '{}')
     // Assert
     expect(hits).toEqual(['count', 'append'])
   })

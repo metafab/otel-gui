@@ -6,13 +6,9 @@
 // and stalled navigation. Every one of those streams subscribed to the same
 // traceStore and its event names are already globally distinct, so they
 // collapse cleanly into one connection here.
-//
-// Event types emitted (unchanged wire format — clients listen by name):
-//   traces           : full trace list (sent on connect and on every change)
-//   logs-count       : current log count (tab badge)
-//   logs-snapshot    : full log list + cursor (connect / after clear/delete)
-//   logs-append      : only logs ingested since the client's cursor
+
 import { traceStore } from '$lib/server/traceStore'
+import type { SSEEventName } from '$lib/utils/sseEvents'
 import type { RequestHandler } from './$types'
 
 export const GET: RequestHandler = async () => {
@@ -38,7 +34,7 @@ export const GET: RequestHandler = async () => {
 
   const stream = new ReadableStream({
     start(controller) {
-      const send = (event: string, data: string): boolean => {
+      const send = (event: SSEEventName, data: string): boolean => {
         try {
           controller.enqueue(
             encoder.encode(`event: ${event}\ndata: ${data}\n\n`),

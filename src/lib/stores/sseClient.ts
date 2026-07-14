@@ -12,7 +12,11 @@
 // thrash we're avoiding). Listeners are added/removed per subscriber so a
 // remounted component never double-processes events.
 
+import type { SSEEventName } from '$lib/utils/sseEvents'
+
 type SSEHandler = (event: MessageEvent) => void
+
+type SSEHandlerMap = Partial<Record<SSEEventName, SSEHandler>>
 
 let connection: EventSource | null = null
 
@@ -34,7 +38,7 @@ function getConnection(): EventSource | null {
  * unsubscribe function that removes the listener. Returns a no-op unsubscribe
  * when EventSource is unavailable (SSR/legacy).
  */
-export function onSSE(event: string, handler: SSEHandler): () => void {
+export function onSSE(event: SSEEventName, handler: SSEHandler): () => void {
   const conn = getConnection()
   if (conn === null) return () => {}
   conn.addEventListener(event, handler as EventListener)
@@ -50,9 +54,9 @@ export function onSSE(event: string, handler: SSEHandler): () => void {
  * function that removes all of them — convenient for a store/effect that
  * listens to a snapshot + append + count triplet.
  */
-export function onSSEEvents(handlers: Record<string, SSEHandler>): () => void {
+export function onSSEEvents(handlers: SSEHandlerMap): () => void {
   const offs = Object.entries(handlers).map(([event, handler]) =>
-    onSSE(event, handler),
+    onSSE(event as SSEEventName, handler),
   )
   return () => {
     for (const off of offs) off()
