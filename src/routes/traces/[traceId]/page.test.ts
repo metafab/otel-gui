@@ -413,6 +413,56 @@ describe('traces/[traceId] page search UI', () => {
     )
   })
 
+  it('returns to logs with filters when returnTo comes from the Logs tab', async () => {
+    mockPageState.url = new URL(
+      'http://localhost/traces/trace-nested?returnTo=%2F%3Ftab%3Dlogs%26search%3Derror%26severity%3Dwarn%26sort%3Dservice%26order%3Dasc',
+    )
+
+    Object.defineProperty(document, 'referrer', {
+      configurable: true,
+      get: () => '',
+    })
+
+    render(TracePage)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
+    })
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: '← Back to Logs' }),
+    )
+
+    expect(mockGoto).toHaveBeenCalledWith(
+      '/?tab=logs&search=error&severity=warn&sort=service&order=asc',
+    )
+  })
+
+  it('returns to a log detail page when returnTo points to a log detail page', async () => {
+    mockPageState.url = new URL(
+      'http://localhost/traces/trace-nested?returnTo=%2Flogs%2Flog-123%3FreturnTo%3D%252F%253Ftab%253Dlogs%2526search%253Derror%2526severity%253Dwarn',
+    )
+
+    Object.defineProperty(document, 'referrer', {
+      configurable: true,
+      get: () => '',
+    })
+
+    render(TracePage)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
+    })
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: '← Back to Log' }),
+    )
+
+    expect(mockGoto).toHaveBeenCalledWith(
+      '/logs/log-123?returnTo=%2F%3Ftab%3Dlogs%26search%3Derror%26severity%3Dwarn',
+    )
+  })
+
   it('ignores returnTo that points to a non-traces tab', async () => {
     mockPageState.url = new URL(
       'http://localhost/traces/trace-nested?returnTo=%2F%3Ftab%3Dmap%26search%3Dcheckout',

@@ -80,6 +80,28 @@ describe('logs/[logId] page', () => {
     expect(screen.getByText('logger-scope')).toBeInTheDocument()
   })
 
+  it('uses the log detail URL as returnTo for trace links', async () => {
+    mockPageState.url = new URL(
+      'http://localhost/logs/log-123?returnTo=%2F%3Ftab%3Dlogs%26search%3Derror%26severity%3Dwarn%26sort%3Dservice%26order%3Dasc',
+    )
+
+    render(LogDetailPage)
+
+    await screen.findByText('Log log-123')
+
+    const traceLink = screen.getByRole('link', { name: 'trace trace-abc' })
+    expect(traceLink).toHaveAttribute(
+      'href',
+      '/traces/trace-abc?returnTo=%2Flogs%2Flog-123%3FreturnTo%3D%252F%253Ftab%253Dlogs%2526search%253Derror%2526severity%253Dwarn%2526sort%253Dservice%2526order%253Dasc',
+    )
+
+    const spanLink = screen.getByRole('link', { name: 'span span-xyz' })
+    expect(spanLink).toHaveAttribute(
+      'href',
+      '/traces/trace-abc?returnTo=%2Flogs%2Flog-123%3FreturnTo%3D%252F%253Ftab%253Dlogs%2526search%253Derror%2526severity%253Dwarn%2526sort%253Dservice%2526order%253Dasc&spanId=span-xyz',
+    )
+  })
+
   it('navigates back to logs on Esc when no filter is focused', async () => {
     render(LogDetailPage)
     await screen.findByText('Log log-123')

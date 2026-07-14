@@ -637,11 +637,58 @@
     scrollToLogInSidebar(logId)
   }
 
-  function resolveBackToTracesUrl(): string {
+  function resolveLogDetailReturnTarget(): string | null {
+    const rawReturnTo = returnToFromUrl?.trim()
+    if (!rawReturnTo || !rawReturnTo.startsWith('/')) {
+      return null
+    }
+
+    try {
+      const baseOrigin =
+        typeof window !== 'undefined'
+          ? window.location.origin
+          : 'http://localhost'
+      const parsed = new URL(rawReturnTo, baseOrigin)
+
+      if (parsed.origin !== baseOrigin) {
+        return null
+      }
+
+      if (!/^\/logs\/[^/]+$/.test(parsed.pathname)) {
+        return null
+      }
+
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`
+    } catch {
+      return null
+    }
+  }
+
+  function resolveBackTarget(): string {
     const baseOrigin =
       typeof window !== 'undefined'
         ? window.location.origin
         : 'http://localhost'
+
+    const logDetailTarget = resolveLogDetailReturnTarget()
+    if (logDetailTarget) {
+      return logDetailTarget
+    }
+
+    const rawReturnTo = returnToFromUrl?.trim() ?? ''
+    const isLogsReturnTarget = rawReturnTo.includes('tab=logs')
+
+    if (isLogsReturnTarget) {
+      return resolveReturnTarget(returnToFromUrl, {
+        fallback: '/?tab=logs',
+        baseOrigin,
+        expectedPathname: '/',
+        invalidTabs: ['map'],
+        normalizeTab: (_tab, searchParams) => {
+          searchParams.set('tab', 'logs')
+        },
+      })
+    }
 
     return resolveReturnTarget(returnToFromUrl, {
       fallback: '/',
@@ -656,8 +703,16 @@
     })
   }
 
+  const backButtonLabel = $derived(
+    resolveLogDetailReturnTarget()
+      ? 'Back to Log'
+      : returnToFromUrl?.includes('tab=logs')
+        ? 'Back to Logs'
+        : 'Back to Traces',
+  )
+
   function handleBack() {
-    const target = resolveBackToTracesUrl()
+    const target = resolveBackTarget()
 
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       const referrer = document.referrer
@@ -966,7 +1021,7 @@
 <div class="trace-detail">
   <header class="header">
     <button class="action-button back-button" onclick={handleBack}>
-      ← Back to Traces
+      ← {backButtonLabel}
     </button>
     {#if trace}
       <div class="view-controls">

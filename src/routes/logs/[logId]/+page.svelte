@@ -129,6 +129,22 @@
     }
   }
 
+  function buildTraceDetailHref(traceId: string, spanId?: string) {
+    const returnTo = `${$page.url.pathname}${$page.url.search}${$page.url.hash}`
+
+    const url = new URL(
+      `/traces/${encodeURIComponent(traceId)}`,
+      'http://localhost',
+    )
+    url.searchParams.set('returnTo', returnTo)
+
+    if (spanId) {
+      url.searchParams.set('spanId', spanId)
+    }
+
+    return `${url.pathname}${url.search}${url.hash}`
+  }
+
   function resolveBackToLogsUrl(): string {
     const baseOrigin =
       typeof window !== 'undefined'
@@ -300,10 +316,7 @@
           <ServiceBadge {serviceName} />
           <span class="separator">•</span>
           {#if logDetail.traceId}
-            <a
-              class="mono-link"
-              href={`/traces/${encodeURIComponent(logDetail.traceId)}`}
-            >
+            <a class="mono-link" href={buildTraceDetailHref(logDetail.traceId)}>
               trace {logDetail.traceId}
             </a>
           {:else}
@@ -313,7 +326,7 @@
           {#if logDetail.traceId && logDetail.spanId}
             <a
               class="mono-link"
-              href={`/traces/${encodeURIComponent(logDetail.traceId)}?spanId=${encodeURIComponent(logDetail.spanId)}`}
+              href={buildTraceDetailHref(logDetail.traceId, logDetail.spanId)}
             >
               span {logDetail.spanId}
             </a>

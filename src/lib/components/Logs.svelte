@@ -470,6 +470,30 @@
     )
   }
 
+  const currentLogsReturnTo = $derived.by(() => {
+    if (typeof window === 'undefined') {
+      return '/?tab=logs'
+    }
+
+    const url = new URL(window.location.href)
+    applyParams(url)
+    return `${url.pathname}${url.search}${url.hash}`
+  })
+
+  function buildTraceDetailHref(traceId: string, spanId?: string) {
+    const url = new URL(
+      `/traces/${encodeURIComponent(traceId)}`,
+      'http://localhost',
+    )
+    url.searchParams.set('returnTo', currentLogsReturnTo)
+
+    if (spanId) {
+      url.searchParams.set('spanId', spanId)
+    }
+
+    return `${url.pathname}${url.search}${url.hash}`
+  }
+
   // Keyboard activation for the row (Enter/Space), only when the row itself —
   // not a child control like the select checkbox — is focused.
   function handleRowKeydown(event: KeyboardEvent, logId: string) {
@@ -706,7 +730,7 @@
                 <td class="mono">
                   {#if log.traceId}
                     <a
-                      href={`/traces/${encodeURIComponent(log.traceId)}`}
+                      href={buildTraceDetailHref(log.traceId)}
                       onclick={(event) => event.stopPropagation()}
                     >
                       {log.traceId}
@@ -718,7 +742,7 @@
                 <td class="mono">
                   {#if log.traceId && log.spanId}
                     <a
-                      href={`/traces/${encodeURIComponent(log.traceId)}?spanId=${encodeURIComponent(log.spanId)}`}
+                      href={buildTraceDetailHref(log.traceId, log.spanId)}
                       onclick={(event) => event.stopPropagation()}
                     >
                       {log.spanId}
