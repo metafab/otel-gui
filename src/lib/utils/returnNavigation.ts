@@ -1,7 +1,7 @@
 export interface ResolveReturnTargetOptions {
   fallback: string
   baseOrigin?: string
-  expectedPathname: string
+  expectedPathname: string | ((pathname: string) => boolean)
   invalidTabs: readonly string[]
   normalizeTab?: (tab: string | null, searchParams: URLSearchParams) => void
 }
@@ -20,7 +20,11 @@ export function resolveReturnTarget(
   try {
     const parsed = new URL(raw, options.baseOrigin ?? 'http://localhost')
 
-    if (parsed.pathname !== options.expectedPathname) {
+    const pathnameOk =
+      typeof options.expectedPathname === 'function'
+        ? options.expectedPathname(parsed.pathname)
+        : parsed.pathname === options.expectedPathname
+    if (!pathnameOk) {
       return options.fallback
     }
 

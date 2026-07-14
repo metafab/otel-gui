@@ -127,6 +127,27 @@ describe('logs/[logId] page', () => {
     expect(mockGoto).toHaveBeenCalledWith('/?tab=logs')
   })
 
+  it('shows "Back to Trace" label and navigates to trace when returnTo is a trace URL', async () => {
+    mockPageState.url = new URL(
+      'http://localhost/logs/log-123?returnTo=%2Ftraces%2Ftrace-abc%3FspanId%3Dspan-001',
+    )
+
+    Object.defineProperty(document, 'referrer', {
+      configurable: true,
+      get: () => '',
+    })
+
+    render(LogDetailPage)
+    await screen.findByText('Log log-123')
+
+    const backBtn = screen.getByRole('button', { name: '← Back to Trace' })
+    expect(backBtn).toBeInTheDocument()
+
+    await fireEvent.click(backBtn)
+
+    expect(mockGoto).toHaveBeenCalledWith('/traces/trace-abc?spanId=span-001')
+  })
+
   it('ignores map-like referrer and still returns to logs tab', async () => {
     Object.defineProperty(document, 'referrer', {
       configurable: true,

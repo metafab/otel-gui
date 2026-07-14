@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { StoredSpan, TraceLogDetail, TraceLogListItem } from '$lib/types'
+  import { page } from '$app/stores'
   import AttributeItem from '$lib/components/AttributeItem.svelte'
   import ChevronIcon from '$lib/components/ChevronIcon.svelte'
   import {
@@ -633,8 +634,8 @@
                     onOpenLogDetail?.(log.id)
                   }}
                   title={openLogDetailIds.includes(log.id)
-                    ? 'Hide full log details'
-                    : 'Show full log details'}
+                    ? 'Hide log details'
+                    : 'Show log details'}
                   disabled={isLogDetailLoading}
                 >
                   <svg
@@ -658,6 +659,29 @@
                       ? 'Hide details'
                       : 'Show details'}
                 </button>
+                <a
+                  class="log-action"
+                  href={`/logs/${encodeURIComponent(log.id)}?returnTo=${encodeURIComponent($page.url.pathname + $page.url.search)}`}
+                  title="Open log details page"
+                >
+                  <svg
+                    class="log-action-icon"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M5 2H2.5A.5.5 0 0 0 2 2.5v7a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V7M7 2h3m0 0v3m0-3L5 7"
+                      stroke="currentColor"
+                      stroke-width="1.2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                  Open details
+                </a>
                 {#if selectedLogId !== log.id}
                   <button
                     class="log-action"
@@ -1317,6 +1341,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
+    text-decoration: none;
   }
 
   .log-action:hover {

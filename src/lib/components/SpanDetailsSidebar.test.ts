@@ -4,6 +4,18 @@ import { render, screen, fireEvent } from '@testing-library/svelte'
 import SpanDetailsSidebar from './SpanDetailsSidebar.svelte'
 import type { StoredSpan, TraceLogDetail, TraceLogListItem } from '$lib/types'
 
+vi.mock('$app/stores', () => ({
+  page: {
+    subscribe(run: (v: { url: URL; params: Record<string, string> }) => void) {
+      run({
+        url: new URL('http://localhost/traces/trace-abc?spanId=span-001'),
+        params: { traceId: 'trace-abc' },
+      })
+      return () => {}
+    },
+  },
+}))
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
@@ -497,8 +509,21 @@ describe('SpanDetailsSidebar', () => {
       },
     })
 
-    await fireEvent.click(screen.getByTitle('Show full log details'))
+    await fireEvent.click(screen.getByTitle('Show log details'))
     expect(onOpenLogDetail).toHaveBeenCalledWith('log-001')
+  })
+
+  it('renders a link to the log details page for each log entry', () => {
+    render(SpanDetailsSidebar, {
+      props: { span: makeSpan(), traceLogs: [makeLog()] },
+    })
+
+    const link = screen.getByTitle('Open log details page')
+    expect(link).toBeInTheDocument()
+    expect(link.tagName).toBe('A')
+    expect(link.getAttribute('href')).toBe(
+      `/logs/${encodeURIComponent('log-001')}?returnTo=${encodeURIComponent('/traces/trace-abc?spanId=span-001')}`,
+    )
   })
 
   it('renders attributes/resource/scope for the selected detailed log', () => {
@@ -526,7 +551,7 @@ describe('SpanDetailsSidebar', () => {
       },
     })
 
-    const openButton = screen.getByTitle('Show full log details')
+    const openButton = screen.getByTitle('Show log details')
     await fireEvent.click(openButton)
     expect(onOpenLogDetail).toHaveBeenCalledWith('log-001')
 
@@ -539,7 +564,7 @@ describe('SpanDetailsSidebar', () => {
     expect(screen.getByText('logger-scope')).toBeInTheDocument()
     expect(screen.getByText('2.1.0')).toBeInTheDocument()
 
-    await fireEvent.click(screen.getByTitle('Hide full log details'))
+    await fireEvent.click(screen.getByTitle('Hide log details'))
     expect(screen.queryByText('Attributes')).not.toBeInTheDocument()
     expect(screen.queryByText('Resource')).not.toBeInTheDocument()
     expect(screen.queryByText('logger-scope')).not.toBeInTheDocument()
@@ -576,7 +601,7 @@ describe('SpanDetailsSidebar', () => {
       },
     })
 
-    const showButtons = screen.getAllByTitle('Show full log details')
+    const showButtons = screen.getAllByTitle('Show log details')
     await fireEvent.click(showButtons[0])
     await fireEvent.click(showButtons[1])
 

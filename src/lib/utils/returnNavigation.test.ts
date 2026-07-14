@@ -47,6 +47,25 @@ describe(resolveReturnTarget, () => {
 
     expect(result).toBe('/')
   })
+
+  it('accepts a predicate function for expectedPathname', () => {
+    const options = {
+      fallback: '/?tab=logs',
+      baseOrigin: 'http://localhost',
+      expectedPathname: (p: string) => p === '/' || p.startsWith('/traces/'),
+      invalidTabs: [] as const,
+    }
+
+    expect(resolveReturnTarget('/?tab=logs', options)).toBe('/?tab=logs')
+    expect(resolveReturnTarget('/traces/abc123', options)).toBe(
+      '/traces/abc123',
+    )
+    expect(resolveReturnTarget('/traces/abc123?spanId=span-xyz', options)).toBe(
+      '/traces/abc123?spanId=span-xyz',
+    )
+    expect(resolveReturnTarget('/logs/log-001', options)).toBe('/?tab=logs')
+    expect(resolveReturnTarget('/admin', options)).toBe('/?tab=logs')
+  })
 })
 
 describe(shouldUseHistoryBackForTarget, () => {

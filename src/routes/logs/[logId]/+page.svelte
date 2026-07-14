@@ -151,6 +151,17 @@
         ? window.location.origin
         : 'http://localhost'
 
+    const rawReturnTo = returnToFromUrl?.trim() ?? ''
+
+    if (rawReturnTo.startsWith('/traces/')) {
+      return resolveReturnTarget(returnToFromUrl, {
+        fallback: '/?tab=logs',
+        baseOrigin,
+        expectedPathname: (p) => p.startsWith('/traces/'),
+        invalidTabs: [],
+      })
+    }
+
     return resolveReturnTarget(returnToFromUrl, {
       fallback: '/?tab=logs',
       baseOrigin,
@@ -161,6 +172,10 @@
       },
     })
   }
+
+  const isReturningToTrace = $derived(
+    (returnToFromUrl?.trim() ?? '').startsWith('/traces/'),
+  )
 
   function handleBack() {
     const target = resolveBackToLogsUrl()
@@ -279,7 +294,7 @@
 <div class="log-detail-page">
   <header class="header">
     <button class="action-button back-button" onclick={handleBack}>
-      ← Back to Logs
+      ← {isReturningToTrace ? 'Back to Trace' : 'Back to Logs'}
     </button>
     {#if logDetail}
       <button
