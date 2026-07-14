@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/svelte'
-import LogsFilter from './LogsFilter.svelte'
+import LogFilters from './LogFilters.svelte'
 
-describe('LogsFilter', () => {
+describe('LogFilters', () => {
   it('renders filter stats', () => {
-    const { container } = render(LogsFilter, {
+    const { container } = render(LogFilters, {
       props: {
         services: ['checkout-service', 'worker-service'],
         searchQuery: '',
@@ -22,7 +22,7 @@ describe('LogsFilter', () => {
   })
 
   it('shows and applies clear filters action', async () => {
-    render(LogsFilter, {
+    render(LogFilters, {
       props: {
         services: ['checkout-service', 'worker-service'],
         searchQuery: 'checkout',
@@ -52,7 +52,7 @@ describe('LogsFilter', () => {
   })
 
   it('selects a service from the custom picker', async () => {
-    render(LogsFilter, {
+    render(LogFilters, {
       props: {
         services: ['checkout-service', 'worker-service'],
         searchQuery: '',
@@ -73,7 +73,7 @@ describe('LogsFilter', () => {
   })
 
   it('selects a severity from the custom picker', async () => {
-    render(LogsFilter, {
+    render(LogFilters, {
       props: {
         services: ['checkout-service', 'worker-service'],
         searchQuery: '',
@@ -92,7 +92,7 @@ describe('LogsFilter', () => {
   })
 
   it('does not show clear button without active filters', () => {
-    render(LogsFilter, {
+    render(LogFilters, {
       props: {
         services: ['checkout-service', 'worker-service'],
         searchQuery: '',

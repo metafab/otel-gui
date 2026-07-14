@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto, replaceState } from '$app/navigation'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
-  import LogsFilter from '$lib/components/LogsFilter.svelte'
+  import LogFilters from '$lib/components/LogFilters.svelte'
   import VersionInfo from '$lib/components/VersionInfo.svelte'
   import { onSSEEvents } from '$lib/stores/sseClient'
   import { traceStore } from '$lib/stores/traces.svelte'
@@ -609,7 +609,7 @@
       <p class="hint">Send OTLP logs to <code>{otlpLogsEndpoint}</code>.</p>
     </div>
   {:else}
-    <LogsFilter
+    <LogFilters
       {services}
       bind:searchQuery
       bind:selectedService
