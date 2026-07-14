@@ -34,6 +34,9 @@ test.describe('Logs flow', () => {
     })
     expect(ingest.ok()).toBeTruthy()
 
+    // Wait longer for SSE subscription and data delivery in parallel execution
+    await page.locator('tbody tr').first().waitFor({ timeout: 10_000 })
+
     const logRow = page
       .locator('tbody tr', { hasText: 'database timeout' })
       .first()
@@ -44,12 +47,16 @@ test.describe('Logs flow', () => {
     page,
     request,
   }) => {
+    // Navigate first to let the Logs component mount, then ingest logs
+    await page.goto('/?tab=logs')
+
     await request.post('/v1/logs', {
       headers: { 'Content-Type': 'application/json' },
       data: simpleLog,
     })
 
-    await page.goto('/?tab=logs')
+    // Wait for logs table to appear after ingestion
+    await page.locator('tbody tr').first().waitFor({ timeout: 5000 })
 
     const logRow = page
       .locator('tbody tr', { hasText: 'database timeout' })
@@ -59,6 +66,8 @@ test.describe('Logs flow', () => {
     await logRow.click()
 
     await expect(page).toHaveURL(/\/logs\//)
+    // Wait for log detail page to load
+    await page.waitForSelector('.log-detail-page', { timeout: 5000 })
     await expect(page.getByRole('heading', { name: /Log / })).toBeVisible()
     await expect(page.getByText('retry_count')).toBeVisible()
 
@@ -69,16 +78,29 @@ test.describe('Logs flow', () => {
       'aria-selected',
       'true',
     )
-    await expect(logRow).toContainText('database timeout')
+    // Wait for the Logs component to render the table
+    // Add a small delay to let the page settle after navigation
+    await page.waitForTimeout(200)
+    await page.locator('table').first().waitFor({ timeout: 10_000 })
+    // Re-query the row since the DOM may have changed after navigation
+    const returnedLogRow = page
+      .locator('tbody tr', { hasText: 'database timeout' })
+      .first()
+    await returnedLogRow.waitFor({ timeout: 10_000 })
+    await expect(returnedLogRow).toContainText('database timeout')
   })
 
   test('activates log rows with Enter and Space', async ({ page, request }) => {
+    // Navigate first to let the Logs component mount, then ingest logs
+    await page.goto('/?tab=logs')
+
     await request.post('/v1/logs', {
       headers: { 'Content-Type': 'application/json' },
       data: simpleLog,
     })
 
-    await page.goto('/?tab=logs')
+    // Wait for logs table to appear after ingestion
+    await page.locator('tbody tr').first().waitFor({ timeout: 5000 })
 
     const logRow = page
       .locator('tbody tr', { hasText: 'database timeout' })
@@ -89,15 +111,24 @@ test.describe('Logs flow', () => {
     await page.keyboard.press('Enter')
 
     await expect(page).toHaveURL(/\/logs\//)
+    // Wait for log detail page to load
+    await page.waitForSelector('.log-detail-page', { timeout: 5000 })
     await expect(page.getByRole('heading', { name: /Log / })).toBeVisible()
 
     await page.getByRole('button', { name: '← Back to Logs' }).click()
     await expect(page).toHaveURL(/\/\?tab=logs$/)
 
-    await logRow.focus()
+    // Re-query after navigation to avoid stale reference
+    const logRowAfterNav = page
+      .locator('tbody tr', { hasText: 'database timeout' })
+      .first()
+    await logRowAfterNav.waitFor({ timeout: 5000 })
+    await logRowAfterNav.focus()
     await page.keyboard.press('Space')
 
     await expect(page).toHaveURL(/\/logs\//)
+    // Wait for log detail page to load
+    await page.waitForSelector('.log-detail-page', { timeout: 5000 })
     await expect(page.getByRole('heading', { name: /Log / })).toBeVisible()
   })
 
@@ -105,6 +136,9 @@ test.describe('Logs flow', () => {
     page,
     request,
   }) => {
+    // Navigate first to let the Logs component mount
+    await page.goto('/?tab=logs')
+
     await request.post('/v1/traces', {
       headers: { 'Content-Type': 'application/json' },
       data: simpleTrace,
@@ -114,11 +148,16 @@ test.describe('Logs flow', () => {
       data: simpleLog,
     })
 
-    await page.goto('/?tab=logs')
+    // Wait for logs table to appear after ingestion
+    await page.locator('tbody tr').first().waitFor({ timeout: 5000 })
+
     await page
       .locator('tbody tr', { hasText: 'database timeout' })
       .first()
       .click()
+
+    // Wait for log detail page to load
+    await page.waitForSelector('.log-detail-page', { timeout: 5000 })
 
     const spanLink = page.getByRole('link', { name: /span EEE19B7EC3C1B174/i })
     await expect(spanLink).toHaveAttribute(
@@ -131,6 +170,8 @@ test.describe('Logs flow', () => {
     await expect(page).toHaveURL(
       /\/traces\/5B8EFFF798038103D269B633813FC60C\?.*spanId=EEE19B7EC3C1B174/,
     )
+    // Wait for trace detail page to load
+    await page.waitForSelector('.trace-detail', { timeout: 5000 })
     await expect(page.getByText('Trace Details')).toBeVisible()
     await expect(
       page
@@ -140,17 +181,24 @@ test.describe('Logs flow', () => {
   })
 
   test('preserves unlinked log detail behavior', async ({ page, request }) => {
+    // Navigate first to let the Logs component mount, then ingest logs
+    await page.goto('/?tab=logs')
+
     await request.post('/v1/logs', {
       headers: { 'Content-Type': 'application/json' },
       data: unlinkedLog,
     })
 
-    await page.goto('/?tab=logs')
+    // Wait for logs table to appear after ingestion
+    await page.locator('tbody tr').first().waitFor({ timeout: 5000 })
 
     const logRow = page
       .locator('tbody tr', { hasText: 'Report generation slow: 2000ms' })
       .first()
     await logRow.click()
+
+    // Wait for log detail page to load
+    await page.waitForSelector('.log-detail-page', { timeout: 5000 })
 
     await expect(page.getByText('Unlinked trace')).toBeVisible()
     await expect(page.getByText('span -')).toBeVisible()
@@ -160,6 +208,9 @@ test.describe('Logs flow', () => {
     page,
     request,
   }) => {
+    // Navigate first to let the Logs component mount
+    await page.goto('/?tab=logs')
+
     await request.post('/v1/logs', {
       headers: { 'Content-Type': 'application/json' },
       data: simpleLog,
@@ -169,7 +220,8 @@ test.describe('Logs flow', () => {
       data: unlinkedLog,
     })
 
-    await page.goto('/?tab=logs')
+    // Wait for logs table to appear after ingestion
+    await page.locator('tbody tr').first().waitFor({ timeout: 5000 })
 
     await expect(page.getByRole('tab', { name: 'Logs' })).toHaveAttribute(
       'aria-selected',

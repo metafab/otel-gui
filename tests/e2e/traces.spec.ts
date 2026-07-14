@@ -176,6 +176,8 @@ test.describe('Trace ingestion flow', () => {
     page,
     request,
   }) => {
+    await page.goto('/')
+
     await request.post('/v1/traces', {
       headers: {
         'Content-Type': 'application/json',
@@ -183,10 +185,11 @@ test.describe('Trace ingestion flow', () => {
       data: simpleTrace,
     })
 
-    await page.goto('/')
+    await page.locator('tbody tr').first().waitFor({ timeout: 10_000 })
 
     const traceRow = page.locator('tbody tr', { hasText: 'GET /' }).first()
-    await expect(traceRow).toContainText('frontend')
+    await traceRow.waitFor({ timeout: 10_000 })
+    await expect(traceRow).toContainText('frontend', { timeout: 10_000 })
 
     await traceRow.focus()
     await page.keyboard.press('Enter')
@@ -195,21 +198,28 @@ test.describe('Trace ingestion flow', () => {
     await expect(
       page.getByRole('button', { name: /Back to Traces/i }),
     ).toBeVisible()
+    await page.waitForSelector('.trace-detail', { timeout: 10_000 })
 
     await page.getByRole('button', { name: /Back to Traces/i }).click()
     await expect(page).toHaveURL(/\/$/)
 
-    await traceRow.focus()
+    // Re-query after navigation to avoid stale reference
+    const traceRowAfterNav = page.locator('tbody tr', { hasText: 'GET /' }).first()
+    await traceRowAfterNav.waitFor({ timeout: 10_000 })
+    await traceRowAfterNav.focus()
     await page.keyboard.press('Space')
 
     await expect(page).toHaveURL(/\/traces\/5B8EFFF798038103D269B633813FC60C/)
-    await expect(page.getByText('Trace Details')).toBeVisible()
+    await page.waitForSelector('.trace-detail', { timeout: 10_000 })
+    await expect(page.getByText('Trace Details')).toBeVisible({ timeout: 10_000 })
   })
 
   test('supports trace-list keyboard shortcuts and search filtering', async ({
     page,
     request,
   }) => {
+    await page.goto('/')
+
     await request.post('/v1/traces', {
       headers: { 'Content-Type': 'application/json' },
       data: simpleTrace,
@@ -219,8 +229,7 @@ test.describe('Trace ingestion flow', () => {
       data: errorTrace,
     })
 
-    await page.goto('/')
-
+    await page.locator('tbody tr').first().waitFor({ timeout: 10_000 })
     await expect(page.locator('tbody tr')).toHaveCount(2)
 
     await page.keyboard.press('m')
