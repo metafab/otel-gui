@@ -252,9 +252,9 @@
   </header>
 
   {#if isLoading}
-    <div class="loading">Loading log...</div>
+    <div class="loading" role="status">Loading log…</div>
   {:else if loadError}
-    <div class="error">{loadError}</div>
+    <div class="error" role="alert">{loadError}</div>
   {:else if logDetail}
     <div class="log-container">
       <section class="log-panel log-identification">

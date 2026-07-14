@@ -107,7 +107,7 @@
       {#if showMiniMap}
         <div class="mini-map-wrap">
           {#if miniMapLoading}
-            <div class="mini-map-loading">Loading…</div>
+            <div class="mini-map-loading" role="status">Loading…</div>
           {:else}
             <ServiceMap data={miniMapData} mini={true} />
           {/if}

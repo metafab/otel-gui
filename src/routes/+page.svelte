@@ -275,9 +275,9 @@
     <!-- Service Map tab -->
     <div class="map-content">
       {#if serviceMapLoading}
-        <div class="loading">Loading service map…</div>
+        <div class="loading" role="status">Loading service map…</div>
       {:else if serviceMapError}
-        <div class="map-error">{serviceMapError}</div>
+        <div class="map-error" role="alert">{serviceMapError}</div>
       {:else if serviceMapData}
         <ServiceMap
           data={serviceMapData}

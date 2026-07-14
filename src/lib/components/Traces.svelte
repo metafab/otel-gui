@@ -485,11 +485,11 @@
 
 <div class="traces-tab">
   {#if error}
-    <div class="error">{error}</div>
+    <div class="error" role="alert">{error}</div>
   {/if}
 
   {#if exportError}
-    <div class="error">{exportError}</div>
+    <div class="error" role="alert">{exportError}</div>
   {/if}
 
   {#if importSuccessMessage}
@@ -507,7 +507,7 @@
   {/if}
 
   {#if !tracesLoaded}
-    <div class="loading">
+    <div class="loading" role="status">
       <p>Loading traces…</p>
     </div>
   {:else if traces.length === 0}

@@ -540,11 +540,11 @@
 
 <div class="logs-panel">
   {#if loadError}
-    <div class="error">{loadError}</div>
+    <div class="error" role="alert">{loadError}</div>
   {/if}
 
   {#if isLoading}
-    <div class="loading">
+    <div class="loading" role="status">
       <p>Loading logs…</p>
     </div>
   {:else if logs.length === 0}

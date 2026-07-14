@@ -674,9 +674,13 @@
               {#if openLogDetailIds.includes(log.id) && (isLogDetailLoading || logDetailError || logDetail)}
                 <div class="log-detail-panel">
                   {#if isLogDetailLoading}
-                    <div class="no-attributes">Loading full log detail...</div>
+                    <div class="no-attributes" role="status">
+                      Loading full log detail…
+                    </div>
                   {:else if logDetailError}
-                    <div class="log-detail-error">{logDetailError}</div>
+                    <div class="log-detail-error" role="alert">
+                      {logDetailError}
+                    </div>
                   {:else}
                     {#if logDetail && Object.keys(logDetail.attributes).length > 0}
                       <div class="log-detail-group">
