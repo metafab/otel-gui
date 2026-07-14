@@ -2,7 +2,7 @@
   "name": "otel-gui",
   "private": true,
   "version": "2.1.0",
-  "packageManager": "pnpm@10.7.0",
+  "packageManager": "pnpm@11.13.0",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
