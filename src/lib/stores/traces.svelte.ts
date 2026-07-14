@@ -1,5 +1,5 @@
 // Client-side reactive store for traces using Svelte 5 runes
-import { onSSE } from '$lib/stores/sseClient'
+import { onSSEEvents } from '$lib/stores/sseClient'
 import type {
   TraceListItem,
   StoredTrace,
@@ -26,6 +26,7 @@ let isLoading = $state<boolean>(false)
 let error = $state<string | null>(null)
 let maxTraces = $state<number>(1000)
 let maxLogs = $state<number>(1000)
+let logCount = $state<number>(0)
 let persistence = $state<PersistenceConfig>({
   mode: 'memory',
   enabled: false,
@@ -79,11 +80,20 @@ function connectSSE() {
       })
       .catch(() => {}) // non-critical, keep default
 
-    // Trace list updates arrive over the shared app-wide SSE connection.
-    return onSSE('traces', (event: MessageEvent) => {
-      traces = JSON.parse(event.data)
-      tracesLoaded = true
-      error = null
+    // Trace list and global log count updates arrive over the shared app-wide
+    // SSE connection and stay warm across route changes.
+    return onSSEEvents({
+      traces: (event: MessageEvent) => {
+        traces = JSON.parse(event.data)
+        tracesLoaded = true
+        error = null
+      },
+      'logs-count': (event: MessageEvent) => {
+        const parsed = Number.parseInt(event.data, 10)
+        if (!Number.isNaN(parsed)) {
+          logCount = parsed
+        }
+      },
     })
   })
 }
@@ -253,6 +263,9 @@ export const traceStore = {
   },
   get maxLogs() {
     return maxLogs
+  },
+  get logCount() {
+    return logCount
   },
   get persistence() {
     return persistence

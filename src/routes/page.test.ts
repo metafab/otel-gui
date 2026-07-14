@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/svelte'
 
 const { mockReplaceState } = vi.hoisted(() => ({
   mockReplaceState: vi.fn(),
@@ -15,31 +21,8 @@ const { mockCheckForUpdate, mockDismissUpdate } = vi.hoisted(() => ({
   mockDismissUpdate: vi.fn(),
 }))
 
-vi.mock('$app/navigation', () => ({
-  pushState: mockPushState,
-  replaceState: mockReplaceState,
-}))
-
-vi.mock('$app/stores', async () => {
-  const { readable } = await import('svelte/store')
-
-  return {
-    page: readable({
-      params: {},
-      url: new URL(
-        'http://localhost/?search=checkout&service=checkout-service&errors=true&minDuration=10&maxDuration=20',
-      ),
-    }),
-  }
-})
-
-vi.mock('$lib/utils/updateCheck', () => ({
-  checkForUpdate: mockCheckForUpdate,
-  dismissUpdate: mockDismissUpdate,
-}))
-
-vi.mock('$lib/stores/traces.svelte', () => ({
-  traceStore: {
+const { mockTraceStore } = vi.hoisted(() => ({
+  mockTraceStore: {
     connectSSE: vi.fn(),
     tracesLoaded: true,
     traces: [
@@ -70,6 +53,7 @@ vi.mock('$lib/stores/traces.svelte', () => ({
     isLoading: false,
     maxTraces: 1000,
     maxLogs: 1000,
+    logCount: 0,
     persistence: {
       mode: 'memory',
       enabled: false,
@@ -83,6 +67,33 @@ vi.mock('$lib/stores/traces.svelte', () => ({
     clearAllTraces: vi.fn(),
     deleteSelectedTraces: vi.fn().mockResolvedValue(0),
   },
+}))
+
+vi.mock('$app/navigation', () => ({
+  pushState: mockPushState,
+  replaceState: mockReplaceState,
+}))
+
+vi.mock('$app/stores', async () => {
+  const { readable } = await import('svelte/store')
+
+  return {
+    page: readable({
+      params: {},
+      url: new URL(
+        'http://localhost/?search=checkout&service=checkout-service&errors=true&minDuration=10&maxDuration=20',
+      ),
+    }),
+  }
+})
+
+vi.mock('$lib/utils/updateCheck', () => ({
+  checkForUpdate: mockCheckForUpdate,
+  dismissUpdate: mockDismissUpdate,
+}))
+
+vi.mock('$lib/stores/traces.svelte', () => ({
+  traceStore: mockTraceStore,
 }))
 
 import Page from './+page.svelte'
@@ -104,6 +115,22 @@ describe('trace list page', () => {
     mockPushState.mockImplementation((url: URL) => {
       window.history.pushState({}, '', url)
     })
+
+    mockTraceStore.logCount = 0
+  })
+
+  it('keeps the logs badge count after page remount', async () => {
+    mockTraceStore.logCount = 7
+
+    const firstRender = render(Page)
+    const firstLogsTab = screen.getByRole('tab', { name: /^Logs/ })
+    expect(within(firstLogsTab).getByText('7')).toBeInTheDocument()
+
+    firstRender.unmount()
+
+    render(Page)
+    const secondLogsTab = screen.getByRole('tab', { name: /^Logs/ })
+    expect(within(secondLogsTab).getByText('7')).toBeInTheDocument()
   })
 
   it('syncs logs tab selection into the URL', async () => {

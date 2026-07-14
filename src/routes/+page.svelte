@@ -8,28 +8,12 @@
   import ServiceMap from '$lib/components/ServiceMap.svelte'
   import TracesCommands from '$lib/components/TracesCommands.svelte'
   import Traces from '$lib/components/Traces.svelte'
-  import { onSSE } from '$lib/stores/sseClient'
   import { traceStore } from '$lib/stores/traces.svelte'
   import type { ServiceMapData } from '$lib/types'
   import { isInputFocused, isMac } from '$lib/utils/keyboard'
 
   // Connect to SSE stream for real-time trace updates
   traceStore.connectSSE()
-
-  function connectLogsCountSSE() {
-    $effect(() => {
-      // Only the badge count is needed here; the full Logs list stream is
-      // consumed by the Logs component. Both ride the shared SSE connection.
-      return onSSE('logs-count', (event: MessageEvent) => {
-        const parsed = Number.parseInt(event.data, 10)
-        if (!Number.isNaN(parsed)) {
-          logsBadgeTotal = parsed
-        }
-      })
-    })
-  }
-
-  connectLogsCountSSE()
 
   // Reactive state from store (for tab count badge only)
   const traces = $derived(traceStore.traces)
@@ -139,7 +123,7 @@
     triggerDeleteSelected: () => void
   } | null = $state(null)
   let logsTotal = $state(0)
-  let logsBadgeTotal = $state(0)
+  const logsBadgeTotal = $derived(traceStore.logCount)
   let logsSelected = $state(0)
   let logsDeleting = $state(false)
 

@@ -38,7 +38,11 @@ export function onSSE(event: string, handler: SSEHandler): () => void {
   const conn = getConnection()
   if (conn === null) return () => {}
   conn.addEventListener(event, handler as EventListener)
-  return () => conn.removeEventListener(event, handler as EventListener)
+  return () => {
+    if (typeof conn.removeEventListener === 'function') {
+      conn.removeEventListener(event, handler as EventListener)
+    }
+  }
 }
 
 /**
