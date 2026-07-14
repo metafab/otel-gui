@@ -69,7 +69,7 @@
       />
     </div>
 
-    <div class="filter-group">
+    <div class="filter-group service-group">
       <div class="service-header">
         <label for="service">Service</label>
         <label class="checkbox-label scope-checkbox">
@@ -93,7 +93,7 @@
       />
     </div>
 
-    <div class="filter-group">
+    <div class="filter-group status-group">
       <span class="filter-label">Status</span>
       <label class="checkbox-label">
         <input id="errors-only" type="checkbox" bind:checked={showErrorsOnly} />
@@ -101,7 +101,7 @@
       </label>
     </div>
 
-    <div class="filter-group">
+    <div class="filter-group duration-group">
       <label for="minDuration">Min Duration (ms)</label>
       <input
         id="minDuration"
@@ -114,7 +114,7 @@
       />
     </div>
 
-    <div class="filter-group">
+    <div class="filter-group duration-group">
       <label for="maxDuration">Max Duration (ms)</label>
       <input
         id="maxDuration"
@@ -162,13 +162,27 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    flex: 1;
     min-width: 150px;
   }
 
   .search-group {
-    flex: 2;
+    flex: 1 1 320px;
     min-width: 300px;
+  }
+
+  .service-group {
+    flex: 0 0 220px;
+    min-width: 220px;
+  }
+
+  .status-group {
+    flex: 0 0 110px;
+    min-width: 110px;
+  }
+
+  .duration-group {
+    flex: 0 0 120px;
+    min-width: 120px;
   }
 
   .filter-group label:not(.checkbox-label),
@@ -286,7 +300,15 @@
     font-weight: 600;
   }
 
-  @media (max-width: 720px) {
+  @media (max-width: 768px) {
+    .search-group,
+    .service-group,
+    .status-group,
+    .duration-group {
+      flex: 1 1 100%;
+      min-width: 100%;
+    }
+
     .service-header {
       align-items: flex-start;
     }
