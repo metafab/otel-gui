@@ -454,9 +454,7 @@ describe('traces/[traceId] page search UI', () => {
       expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
     })
 
-    await fireEvent.click(
-      screen.getByRole('button', { name: '← Back to Log' }),
-    )
+    await fireEvent.click(screen.getByRole('button', { name: '← Back to Log' }))
 
     expect(mockGoto).toHaveBeenCalledWith(
       '/logs/log-123?returnTo=%2F%3Ftab%3Dlogs%26search%3Derror%26severity%3Dwarn',
