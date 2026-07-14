@@ -295,7 +295,14 @@
     // re-establishes every SSE stream and re-hydrates the whole app on each open,
     // which stalls against the browser's 6-connection-per-origin limit.
     // encodeURIComponent keeps IDs containing reserved chars (/, ?, :) route-safe.
-    void goto(`/traces/${encodeURIComponent(traceId)}`)
+    const returnTo =
+      typeof window === 'undefined'
+        ? '/'
+        : `${window.location.pathname}${window.location.search}${window.location.hash}`
+
+    void goto(
+      `/traces/${encodeURIComponent(traceId)}?returnTo=${encodeURIComponent(returnTo)}`,
+    )
   }
 
   // Keyboard activation for the row. Only fires when the row itself is focused

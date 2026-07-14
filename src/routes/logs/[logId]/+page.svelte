@@ -7,11 +7,15 @@
   import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import type { TraceLogDetail } from '$lib/types'
-  import { shouldUseHistoryBack } from '$lib/utils/backNavigation'
   import { isInputFocused } from '$lib/utils/keyboard'
+  import {
+    resolveReturnTarget,
+    shouldUseHistoryBackForTarget,
+  } from '$lib/utils/returnNavigation'
   import { formatTimestamp, formatTimestampLocal } from '$lib/utils/time'
 
   const logId = $derived($page.params.logId ?? '')
+  const returnToFromUrl = $derived($page.url.searchParams.get('returnTo'))
 
   const pageTitle = $derived(
     logId ? `otel-gui - Log ${logId.slice(0, 8)}` : 'otel-gui - Log',
@@ -125,17 +129,37 @@
     }
   }
 
+  function resolveBackToLogsUrl(): string {
+    const baseOrigin =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'http://localhost'
+
+    return resolveReturnTarget(returnToFromUrl, {
+      fallback: '/?tab=logs',
+      baseOrigin,
+      expectedPathname: '/',
+      invalidTabs: ['traces', 'map'],
+      normalizeTab: (_tab, searchParams) => {
+        searchParams.set('tab', 'logs')
+      },
+    })
+  }
+
   function handleBack() {
+    const target = resolveBackToLogsUrl()
+
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const referrer = document.referrer
       if (
-        shouldUseHistoryBack(document.referrer, window.location.origin, '/')
+        shouldUseHistoryBackForTarget(referrer, window.location.origin, target)
       ) {
         window.history.back()
         return
       }
     }
 
-    void goto('/?tab=logs')
+    void goto(target)
   }
 
   async function loadLog() {

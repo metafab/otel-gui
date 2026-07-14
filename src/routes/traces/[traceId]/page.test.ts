@@ -10,6 +10,13 @@ const { mockFetchTrace, mockGoto, mockReplaceState } = vi.hoisted(() => ({
   mockReplaceState: vi.fn(),
 }))
 
+const { mockPageState } = vi.hoisted(() => ({
+  mockPageState: {
+    params: { traceId: 'trace-nested' },
+    url: new URL('http://localhost/traces/trace-nested'),
+  },
+}))
+
 const { mockFetchTraceLogs } = vi.hoisted(() => ({
   mockFetchTraceLogs: vi.fn(),
 }))
@@ -19,14 +26,14 @@ vi.mock('$app/navigation', () => ({
   replaceState: mockReplaceState,
 }))
 
-vi.mock('$app/stores', async () => {
-  const { readable } = await import('svelte/store')
-
+vi.mock('$app/stores', () => {
   return {
-    page: readable({
-      params: { traceId: 'trace-nested' },
-      url: new URL('http://localhost/traces/trace-nested'),
-    }),
+    page: {
+      subscribe(run: (value: typeof mockPageState) => void) {
+        run(mockPageState)
+        return () => {}
+      },
+    },
   }
 })
 
@@ -75,6 +82,8 @@ describe('traces/[traceId] page search UI', () => {
     mutableTraceStore.traces = []
     mockGoto.mockClear()
     mockReplaceState.mockClear()
+    mockPageState.params = { traceId: 'trace-nested' }
+    mockPageState.url = new URL('http://localhost/traces/trace-nested')
 
     window.history.replaceState({}, '', '/traces/trace-nested')
 
@@ -364,6 +373,73 @@ describe('traces/[traceId] page search UI', () => {
     Object.defineProperty(document, 'referrer', {
       configurable: true,
       get: () => '',
+    })
+
+    render(TracePage)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
+    })
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: '← Back to Traces' }),
+    )
+
+    expect(mockGoto).toHaveBeenCalledWith('/')
+  })
+
+  it('restores traces query params from returnTo when available', async () => {
+    mockPageState.url = new URL(
+      'http://localhost/traces/trace-nested?returnTo=%2F%3Fsearch%3Dcheckout%26service%3Dcheckout-service%26sort%3Dduration%26order%3Dasc',
+    )
+
+    Object.defineProperty(document, 'referrer', {
+      configurable: true,
+      get: () => '',
+    })
+
+    render(TracePage)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
+    })
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: '← Back to Traces' }),
+    )
+
+    expect(mockGoto).toHaveBeenCalledWith(
+      '/?search=checkout&service=checkout-service&sort=duration&order=asc',
+    )
+  })
+
+  it('ignores returnTo that points to a non-traces tab', async () => {
+    mockPageState.url = new URL(
+      'http://localhost/traces/trace-nested?returnTo=%2F%3Ftab%3Dmap%26search%3Dcheckout',
+    )
+
+    Object.defineProperty(document, 'referrer', {
+      configurable: true,
+      get: () => '',
+    })
+
+    render(TracePage)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
+    })
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: '← Back to Traces' }),
+    )
+
+    expect(mockGoto).toHaveBeenCalledWith('/')
+  })
+
+  it('ignores map-like referrer and still returns to traces tab', async () => {
+    Object.defineProperty(document, 'referrer', {
+      configurable: true,
+      get: () => 'http://localhost/?tab=map',
     })
 
     render(TracePage)

@@ -7,8 +7,11 @@
   import TraceHeader from '$lib/components/TraceHeader.svelte'
   import WaterfallRow from '$lib/components/WaterfallRow.svelte'
   import { traceStore } from '$lib/stores/traces.svelte'
-  import { shouldUseHistoryBack } from '$lib/utils/backNavigation'
   import { isInputFocused } from '$lib/utils/keyboard'
+  import {
+    resolveReturnTarget,
+    shouldUseHistoryBackForTarget,
+  } from '$lib/utils/returnNavigation'
   import { buildSpanTree, flattenSpanTree } from '$lib/utils/spans'
   import { findMatchingSpanIds } from '$lib/utils/spanSearch'
   import { formatDuration } from '$lib/utils/time'
@@ -26,6 +29,7 @@
 
   // Get trace ID from URL
   const traceId = $derived($page.params.traceId ?? '')
+  const returnToFromUrl = $derived($page.url.searchParams.get('returnTo'))
   const spanIdFromUrl = $derived($page.url.searchParams.get('spanId'))
   const logIdFromUrl = $derived($page.url.searchParams.get('logId'))
 
@@ -633,17 +637,39 @@
     scrollToLogInSidebar(logId)
   }
 
+  function resolveBackToTracesUrl(): string {
+    const baseOrigin =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'http://localhost'
+
+    return resolveReturnTarget(returnToFromUrl, {
+      fallback: '/',
+      baseOrigin,
+      expectedPathname: '/',
+      invalidTabs: ['logs', 'map'],
+      normalizeTab: (tab, searchParams) => {
+        if (tab === 'traces') {
+          searchParams.delete('tab')
+        }
+      },
+    })
+  }
+
   function handleBack() {
+    const target = resolveBackToTracesUrl()
+
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const referrer = document.referrer
       if (
-        shouldUseHistoryBack(document.referrer, window.location.origin, '/')
+        shouldUseHistoryBackForTarget(referrer, window.location.origin, target)
       ) {
         window.history.back()
         return
       }
     }
 
-    void goto('/')
+    void goto(target)
   }
 
   async function handleRefresh() {

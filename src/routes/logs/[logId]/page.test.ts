@@ -6,18 +6,25 @@ const { mockGoto } = vi.hoisted(() => ({
   mockGoto: vi.fn(),
 }))
 
+const { mockPageState } = vi.hoisted(() => ({
+  mockPageState: {
+    params: { logId: 'log-123' },
+    url: new URL('http://localhost/logs/log-123'),
+  },
+}))
+
 vi.mock('$app/navigation', () => ({
   goto: mockGoto,
 }))
 
-vi.mock('$app/stores', async () => {
-  const { readable } = await import('svelte/store')
-
+vi.mock('$app/stores', () => {
   return {
-    page: readable({
-      params: { logId: 'log-123' },
-      url: new URL('http://localhost/logs/log-123'),
-    }),
+    page: {
+      subscribe(run: (value: typeof mockPageState) => void) {
+        run(mockPageState)
+        return () => {}
+      },
+    },
   }
 })
 
@@ -26,6 +33,8 @@ import LogDetailPage from './+page.svelte'
 describe('logs/[logId] page', () => {
   beforeEach(() => {
     mockGoto.mockReset()
+    mockPageState.params = { logId: 'log-123' }
+    mockPageState.url = new URL('http://localhost/logs/log-123')
 
     Object.assign(navigator, {
       clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
@@ -81,6 +90,64 @@ describe('logs/[logId] page', () => {
   })
 
   it('back button navigates to /?tab=logs', async () => {
+    Object.defineProperty(document, 'referrer', {
+      configurable: true,
+      get: () => '',
+    })
+
+    render(LogDetailPage)
+    await screen.findByText('Log log-123')
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: '← Back to Logs' }),
+    )
+
+    expect(mockGoto).toHaveBeenCalledWith('/?tab=logs')
+  })
+
+  it('ignores map-like referrer and still returns to logs tab', async () => {
+    Object.defineProperty(document, 'referrer', {
+      configurable: true,
+      get: () => 'http://localhost/?tab=map',
+    })
+
+    render(LogDetailPage)
+    await screen.findByText('Log log-123')
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: '← Back to Logs' }),
+    )
+
+    expect(mockGoto).toHaveBeenCalledWith('/?tab=logs')
+  })
+
+  it('restores logs query params from returnTo when available', async () => {
+    mockPageState.url = new URL(
+      'http://localhost/logs/log-123?returnTo=%2F%3Ftab%3Dlogs%26search%3Derror%26severity%3Dwarn%26sort%3Dservice%26order%3Dasc',
+    )
+
+    Object.defineProperty(document, 'referrer', {
+      configurable: true,
+      get: () => '',
+    })
+
+    render(LogDetailPage)
+    await screen.findByText('Log log-123')
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: '← Back to Logs' }),
+    )
+
+    expect(mockGoto).toHaveBeenCalledWith(
+      '/?tab=logs&search=error&severity=warn&sort=service&order=asc',
+    )
+  })
+
+  it('ignores returnTo that points to a non-logs tab', async () => {
+    mockPageState.url = new URL(
+      'http://localhost/logs/log-123?returnTo=%2F%3Ftab%3Dmap%26search%3Derror',
+    )
+
     Object.defineProperty(document, 'referrer', {
       configurable: true,
       get: () => '',

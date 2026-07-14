@@ -460,7 +460,14 @@
     // re-establishes every SSE stream on each open, stalling against the browser's
     // 6-connection-per-origin limit.
     // encodeURIComponent keeps IDs containing reserved chars (/, ?, :) route-safe.
-    void goto(`/logs/${encodeURIComponent(logId)}`)
+    const returnTo =
+      typeof window === 'undefined'
+        ? '/?tab=logs'
+        : `${window.location.pathname}${window.location.search}${window.location.hash}`
+
+    void goto(
+      `/logs/${encodeURIComponent(logId)}?returnTo=${encodeURIComponent(returnTo)}`,
+    )
   }
 
   // Keyboard activation for the row (Enter/Space), only when the row itself —
