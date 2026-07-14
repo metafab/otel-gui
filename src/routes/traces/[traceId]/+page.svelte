@@ -7,8 +7,11 @@
   import TraceHeader from '$lib/components/TraceHeader.svelte'
   import WaterfallRow from '$lib/components/WaterfallRow.svelte'
   import { traceStore } from '$lib/stores/traces.svelte'
-  import { shouldUseHistoryBack } from '$lib/utils/backNavigation'
   import { isInputFocused } from '$lib/utils/keyboard'
+  import {
+    resolveReturnTarget,
+    shouldUseHistoryBackForTarget,
+  } from '$lib/utils/returnNavigation'
   import { buildSpanTree, flattenSpanTree } from '$lib/utils/spans'
   import { findMatchingSpanIds } from '$lib/utils/spanSearch'
   import { formatDuration } from '$lib/utils/time'
@@ -26,6 +29,7 @@
 
   // Get trace ID from URL
   const traceId = $derived($page.params.traceId ?? '')
+  const returnToFromUrl = $derived($page.url.searchParams.get('returnTo'))
   const spanIdFromUrl = $derived($page.url.searchParams.get('spanId'))
   const logIdFromUrl = $derived($page.url.searchParams.get('logId'))
 
@@ -633,17 +637,94 @@
     scrollToLogInSidebar(logId)
   }
 
+  function resolveLogDetailReturnTarget(): string | null {
+    const rawReturnTo = returnToFromUrl?.trim()
+    if (!rawReturnTo || !rawReturnTo.startsWith('/')) {
+      return null
+    }
+
+    try {
+      const baseOrigin =
+        typeof window !== 'undefined'
+          ? window.location.origin
+          : 'http://localhost'
+      const parsed = new URL(rawReturnTo, baseOrigin)
+
+      if (parsed.origin !== baseOrigin) {
+        return null
+      }
+
+      if (!/^\/logs\/[^/]+$/.test(parsed.pathname)) {
+        return null
+      }
+
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`
+    } catch {
+      return null
+    }
+  }
+
+  function resolveBackTarget(): string {
+    const baseOrigin =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'http://localhost'
+
+    const logDetailTarget = resolveLogDetailReturnTarget()
+    if (logDetailTarget) {
+      return logDetailTarget
+    }
+
+    const rawReturnTo = returnToFromUrl?.trim() ?? ''
+    const isLogsReturnTarget = rawReturnTo.includes('tab=logs')
+
+    if (isLogsReturnTarget) {
+      return resolveReturnTarget(returnToFromUrl, {
+        fallback: '/?tab=logs',
+        baseOrigin,
+        expectedPathname: '/',
+        invalidTabs: ['map'],
+        normalizeTab: (_tab, searchParams) => {
+          searchParams.set('tab', 'logs')
+        },
+      })
+    }
+
+    return resolveReturnTarget(returnToFromUrl, {
+      fallback: '/',
+      baseOrigin,
+      expectedPathname: '/',
+      invalidTabs: ['logs', 'map'],
+      normalizeTab: (tab, searchParams) => {
+        if (tab === 'traces') {
+          searchParams.delete('tab')
+        }
+      },
+    })
+  }
+
+  const backButtonLabel = $derived(
+    resolveLogDetailReturnTarget()
+      ? 'Back to Log'
+      : returnToFromUrl?.includes('tab=logs')
+        ? 'Back to Logs'
+        : 'Back to Traces',
+  )
+
   function handleBack() {
+    const target = resolveBackTarget()
+
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const referrer = document.referrer
       if (
-        shouldUseHistoryBack(document.referrer, window.location.origin, '/')
+        shouldUseHistoryBackForTarget(referrer, window.location.origin, target)
       ) {
         window.history.back()
         return
       }
     }
 
-    void goto('/')
+    void goto(target)
   }
 
   async function handleRefresh() {
@@ -940,7 +1021,7 @@
 <div class="trace-detail">
   <header class="header">
     <button class="action-button back-button" onclick={handleBack}>
-      ← Back to Traces
+      ← {backButtonLabel}
     </button>
     {#if trace}
       <div class="view-controls">
@@ -1170,9 +1251,9 @@
   </header>
 
   {#if isLoading}
-    <div class="loading">Loading trace…</div>
+    <div class="loading" role="status">Loading trace…</div>
   {:else if error}
-    <div class="error">{error}</div>
+    <div class="error" role="alert">{error}</div>
   {:else if trace}
     {#if exportError}
       <div class="error export-error">{exportError}</div>

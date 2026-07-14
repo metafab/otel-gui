@@ -7,11 +7,15 @@
   import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import type { TraceLogDetail } from '$lib/types'
-  import { shouldUseHistoryBack } from '$lib/utils/backNavigation'
   import { isInputFocused } from '$lib/utils/keyboard'
+  import {
+    resolveReturnTarget,
+    shouldUseHistoryBackForTarget,
+  } from '$lib/utils/returnNavigation'
   import { formatTimestamp, formatTimestampLocal } from '$lib/utils/time'
 
   const logId = $derived($page.params.logId ?? '')
+  const returnToFromUrl = $derived($page.url.searchParams.get('returnTo'))
 
   const pageTitle = $derived(
     logId ? `otel-gui - Log ${logId.slice(0, 8)}` : 'otel-gui - Log',
@@ -125,17 +129,53 @@
     }
   }
 
+  function buildTraceDetailHref(traceId: string, spanId?: string) {
+    const returnTo = `${$page.url.pathname}${$page.url.search}${$page.url.hash}`
+
+    const url = new URL(
+      `/traces/${encodeURIComponent(traceId)}`,
+      'http://localhost',
+    )
+    url.searchParams.set('returnTo', returnTo)
+
+    if (spanId) {
+      url.searchParams.set('spanId', spanId)
+    }
+
+    return `${url.pathname}${url.search}${url.hash}`
+  }
+
+  function resolveBackToLogsUrl(): string {
+    const baseOrigin =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'http://localhost'
+
+    return resolveReturnTarget(returnToFromUrl, {
+      fallback: '/?tab=logs',
+      baseOrigin,
+      expectedPathname: '/',
+      invalidTabs: ['traces', 'map'],
+      normalizeTab: (_tab, searchParams) => {
+        searchParams.set('tab', 'logs')
+      },
+    })
+  }
+
   function handleBack() {
+    const target = resolveBackToLogsUrl()
+
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const referrer = document.referrer
       if (
-        shouldUseHistoryBack(document.referrer, window.location.origin, '/')
+        shouldUseHistoryBackForTarget(referrer, window.location.origin, target)
       ) {
         window.history.back()
         return
       }
     }
 
-    void goto('/?tab=logs')
+    void goto(target)
   }
 
   async function loadLog() {
@@ -252,9 +292,9 @@
   </header>
 
   {#if isLoading}
-    <div class="loading">Loading log...</div>
+    <div class="loading" role="status">Loading log…</div>
   {:else if loadError}
-    <div class="error">{loadError}</div>
+    <div class="error" role="alert">{loadError}</div>
   {:else if logDetail}
     <div class="log-container">
       <section class="log-panel log-identification">
@@ -276,10 +316,7 @@
           <ServiceBadge {serviceName} />
           <span class="separator">•</span>
           {#if logDetail.traceId}
-            <a
-              class="mono-link"
-              href={`/traces/${encodeURIComponent(logDetail.traceId)}`}
-            >
+            <a class="mono-link" href={buildTraceDetailHref(logDetail.traceId)}>
               trace {logDetail.traceId}
             </a>
           {:else}
@@ -289,7 +326,7 @@
           {#if logDetail.traceId && logDetail.spanId}
             <a
               class="mono-link"
-              href={`/traces/${encodeURIComponent(logDetail.traceId)}?spanId=${encodeURIComponent(logDetail.spanId)}`}
+              href={buildTraceDetailHref(logDetail.traceId, logDetail.spanId)}
             >
               span {logDetail.spanId}
             </a>

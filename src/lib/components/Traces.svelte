@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { replaceState } from '$app/navigation'
+  import { goto, replaceState } from '$app/navigation'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import TraceFilters from '$lib/components/TraceFilters.svelte'
   import TraceImportModal from '$lib/components/TraceImportModal.svelte'
@@ -291,7 +291,28 @@
   }
 
   function handleRowClick(traceId: string) {
-    window.location.href = `/traces/${encodeURIComponent(traceId)}`
+    // Client-side navigation — a full-page load (window.location) tears down and
+    // re-establishes every SSE stream and re-hydrates the whole app on each open,
+    // which stalls against the browser's 6-connection-per-origin limit.
+    // encodeURIComponent keeps IDs containing reserved chars (/, ?, :) route-safe.
+    const returnTo =
+      typeof window === 'undefined'
+        ? '/'
+        : `${window.location.pathname}${window.location.search}${window.location.hash}`
+
+    void goto(
+      `/traces/${encodeURIComponent(traceId)}?returnTo=${encodeURIComponent(returnTo)}`,
+    )
+  }
+
+  // Keyboard activation for the row. Only fires when the row itself is focused
+  // (not a child control like the select checkbox), on Enter/Space.
+  function handleRowKeydown(event: KeyboardEvent, traceId: string) {
+    if (event.target !== event.currentTarget) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleRowClick(traceId)
+    }
   }
 
   $effect(() => {
@@ -471,11 +492,11 @@
 
 <div class="traces-tab">
   {#if error}
-    <div class="error">{error}</div>
+    <div class="error" role="alert">{error}</div>
   {/if}
 
   {#if exportError}
-    <div class="error">{exportError}</div>
+    <div class="error" role="alert">{exportError}</div>
   {/if}
 
   {#if importSuccessMessage}
@@ -493,7 +514,7 @@
   {/if}
 
   {#if !tracesLoaded}
-    <div class="loading">
+    <div class="loading" role="status">
       <p>Loading traces…</p>
     </div>
   {:else if traces.length === 0}
@@ -631,8 +652,13 @@
               {@const formattedDuration = formatDurationFromMs(
                 trace.durationMs,
               )}
+              <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
               <tr
                 onclick={() => handleRowClick(trace.traceId)}
+                onkeydown={(e) => handleRowKeydown(e, trace.traceId)}
+                tabindex="0"
+                data-testid="trace-row"
+                data-trace-id={trace.traceId}
                 class:error={trace.hasError}
                 class:selected={selectedTraceIdSet.has(trace.traceId)}
               >

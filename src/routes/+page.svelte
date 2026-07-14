@@ -15,29 +15,6 @@
   // Connect to SSE stream for real-time trace updates
   traceStore.connectSSE()
 
-  function connectLogsCountSSE() {
-    $effect(() => {
-      if (typeof EventSource === 'undefined') return
-
-      const es = new EventSource('/api/logs/stream')
-
-      es.addEventListener('logs-count', (event: MessageEvent) => {
-        const parsed = Number.parseInt(event.data, 10)
-        if (!Number.isNaN(parsed)) {
-          logsBadgeTotal = parsed
-        }
-      })
-
-      es.onerror = () => {
-        // EventSource auto-reconnects.
-      }
-
-      return () => es.close()
-    })
-  }
-
-  connectLogsCountSSE()
-
   // Reactive state from store (for tab count badge only)
   const traces = $derived(traceStore.traces)
 
@@ -146,7 +123,7 @@
     triggerDeleteSelected: () => void
   } | null = $state(null)
   let logsTotal = $state(0)
-  let logsBadgeTotal = $state(0)
+  const logsBadgeTotal = $derived(traceStore.logCount)
   let logsSelected = $state(0)
   let logsDeleting = $state(false)
 
@@ -282,9 +259,9 @@
     <!-- Service Map tab -->
     <div class="map-content">
       {#if serviceMapLoading}
-        <div class="loading">Loading service map…</div>
+        <div class="loading" role="status">Loading service map…</div>
       {:else if serviceMapError}
-        <div class="map-error">{serviceMapError}</div>
+        <div class="map-error" role="alert">{serviceMapError}</div>
       {:else if serviceMapData}
         <ServiceMap
           data={serviceMapData}
@@ -309,7 +286,15 @@
       },
       { keys: ['t'], description: 'Switch to Traces tab' },
       { keys: ['l'], description: 'Switch to Logs tab' },
-      { keys: ['m'], description: 'Toggle Traces / Service Map tab' },
+      {
+        keys: ['m'],
+        description:
+          "Switch to Service Map tab or Toggle a trace's Service Map",
+      },
+      {
+        keys: ['Enter', 'Space'],
+        description: 'Activate focused rows in the Traces and Logs grids',
+      },
       { keys: ['?'], description: 'Toggle keyboard shortcuts help' },
     ]}
     onclose={() => (showShortcuts = false)}

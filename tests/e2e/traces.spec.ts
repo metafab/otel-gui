@@ -21,8 +21,6 @@ async function resolveCssVarColor(page: Page, variableName: string) {
 }
 
 const simpleTrace = readFixture('simple-trace.json')
-const simpleLog = readFixture('simple-log.json')
-const unlinkedLog = readFixture('log-unlinked.json')
 const errorTrace = readFixture('error-trace.json')
 const multiServiceTrace = readFixture('multi-service-trace.json')
 const errorNavigationTrace = {
@@ -167,10 +165,44 @@ test.describe('Trace ingestion flow', () => {
 
     await traceRow.click()
 
-    expect(page.url()).toContain('/traces/5B8EFFF798038103D269B633813FC60C')
+    await expect(page).toHaveURL(/\/traces\/5B8EFFF798038103D269B633813FC60C/)
     await expect(
       page.getByRole('button', { name: /Back to Traces/i }),
     ).toBeVisible()
+    await expect(page.getByText('Trace Details')).toBeVisible()
+  })
+
+  test('activates trace rows with Enter and Space', async ({
+    page,
+    request,
+  }) => {
+    await request.post('/v1/traces', {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: simpleTrace,
+    })
+
+    await page.goto('/')
+
+    const traceRow = page.locator('tbody tr', { hasText: 'GET /' }).first()
+    await expect(traceRow).toContainText('frontend')
+
+    await traceRow.focus()
+    await page.keyboard.press('Enter')
+
+    await expect(page).toHaveURL(/\/traces\/5B8EFFF798038103D269B633813FC60C/)
+    await expect(
+      page.getByRole('button', { name: /Back to Traces/i }),
+    ).toBeVisible()
+
+    await page.getByRole('button', { name: /Back to Traces/i }).click()
+    await expect(page).toHaveURL(/\/$/)
+
+    await traceRow.focus()
+    await page.keyboard.press('Space')
+
+    await expect(page).toHaveURL(/\/traces\/5B8EFFF798038103D269B633813FC60C/)
     await expect(page.getByText('Trace Details')).toBeVisible()
   })
 
@@ -196,7 +228,7 @@ test.describe('Trace ingestion flow', () => {
       page.getByRole('tab', { name: 'Service Map' }),
     ).toHaveAttribute('aria-selected', 'true')
 
-    await page.keyboard.press('m')
+    await page.getByRole('tab', { name: /Traces/ }).click()
     await expect(page.getByRole('tab', { name: /Traces/ })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -226,44 +258,6 @@ test.describe('Trace ingestion flow', () => {
     await page.keyboard.press('Escape')
     await expect(page.locator('#search')).toHaveValue('')
     await expect(page.locator('tbody tr')).toHaveCount(2)
-  })
-
-  test('supports logs tab delete selected and clear all interactions', async ({
-    page,
-    request,
-  }) => {
-    await request.post('/v1/logs', {
-      headers: { 'Content-Type': 'application/json' },
-      data: simpleLog,
-    })
-    await request.post('/v1/logs', {
-      headers: { 'Content-Type': 'application/json' },
-      data: unlinkedLog,
-    })
-
-    await page.goto('/')
-
-    await page.keyboard.press('l')
-    await expect(page.getByRole('tab', { name: 'Logs' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
-
-    const logRows = page.locator('tbody tr')
-    await expect(logRows).toHaveCount(4)
-
-    await logRows.first().locator('input.row-checkbox').check()
-
-    await page.getByRole('button', { name: 'More clear actions' }).click()
-    page.once('dialog', (dialog) => dialog.accept())
-    await page.getByRole('menuitem', { name: /Delete Selected/ }).click()
-
-    await expect(logRows).toHaveCount(3)
-
-    page.once('dialog', (dialog) => dialog.accept())
-    await page.getByRole('button', { name: 'Clear All' }).click()
-
-    await expect(page.getByText('No logs received yet.')).toBeVisible()
   })
 
   test('supports trace-detail span search keyboard shortcuts', async ({

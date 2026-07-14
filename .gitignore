@@ -28,5 +28,6 @@ vite.config.ts.timestamp-*
 # Playwright
 /playwright-report
 /test-results
+.playwright-mcp
 
 .otel-gui

@@ -258,10 +258,50 @@ describe('Logs', () => {
       json: async () => sampleLogs,
     } as Response)
 
+    window.history.replaceState(
+      window.history.state,
+      '',
+      '/?tab=logs&search=checkout&severity=error',
+    )
+
     render(Logs)
 
+    const traceLink = await screen.findByRole('link', { name: 'trace-1' })
+    expect(traceLink).toHaveAttribute(
+      'href',
+      '/traces/trace-1?returnTo=%2F%3Ftab%3Dlogs%26search%3Dcheckout%26severity%3Derror',
+    )
+
     const spanLink = await screen.findByRole('link', { name: 'span-1' })
-    expect(spanLink).toHaveAttribute('href', '/traces/trace-1?spanId=span-1')
+    expect(spanLink).toHaveAttribute(
+      'href',
+      '/traces/trace-1?returnTo=%2F%3Ftab%3Dlogs%26search%3Dcheckout%26severity%3Derror&spanId=span-1',
+    )
+  })
+
+  it('updates trace links when filters change', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleLogs,
+    } as Response)
+
+    window.history.replaceState(window.history.state, '', '/?tab=logs')
+
+    render(Logs)
+
+    const searchInput = await screen.findByLabelText('Search logs')
+    await fireEvent.input(searchInput, { target: { value: 'checkout' } })
+
+    const severitySelect = screen.getByLabelText(
+      'Severity',
+    ) as HTMLSelectElement
+    await fireEvent.change(severitySelect, { target: { value: 'error' } })
+
+    const traceLink = await screen.findByRole('link', { name: 'trace-1' })
+    expect(traceLink).toHaveAttribute(
+      'href',
+      '/traces/trace-1?returnTo=%2F%3Ftab%3Dlogs%26search%3Dcheckout%26severity%3Derror',
+    )
   })
 
   it('shows logs retention footer', async () => {

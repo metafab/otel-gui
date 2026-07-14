@@ -72,6 +72,35 @@ test.describe('Logs flow', () => {
     await expect(logRow).toContainText('database timeout')
   })
 
+  test('activates log rows with Enter and Space', async ({ page, request }) => {
+    await request.post('/v1/logs', {
+      headers: { 'Content-Type': 'application/json' },
+      data: simpleLog,
+    })
+
+    await page.goto('/?tab=logs')
+
+    const logRow = page
+      .locator('tbody tr', { hasText: 'database timeout' })
+      .first()
+    await expect(logRow).toContainText('frontend')
+
+    await logRow.focus()
+    await page.keyboard.press('Enter')
+
+    await expect(page).toHaveURL(/\/logs\//)
+    await expect(page.getByRole('heading', { name: /Log / })).toBeVisible()
+
+    await page.getByRole('button', { name: '← Back to Logs' }).click()
+    await expect(page).toHaveURL(/\/\?tab=logs$/)
+
+    await logRow.focus()
+    await page.keyboard.press('Space')
+
+    await expect(page).toHaveURL(/\/logs\//)
+    await expect(page.getByRole('heading', { name: /Log / })).toBeVisible()
+  })
+
   test('follows trace and span links from log detail into trace detail', async ({
     page,
     request,
@@ -94,13 +123,13 @@ test.describe('Logs flow', () => {
     const spanLink = page.getByRole('link', { name: /span EEE19B7EC3C1B174/i })
     await expect(spanLink).toHaveAttribute(
       'href',
-      '/traces/5B8EFFF798038103D269B633813FC60C?spanId=EEE19B7EC3C1B174',
+      /\/traces\/5B8EFFF798038103D269B633813FC60C\?.*spanId=EEE19B7EC3C1B174/,
     )
 
     await spanLink.click()
 
     await expect(page).toHaveURL(
-      /\/traces\/5B8EFFF798038103D269B633813FC60C\?spanId=EEE19B7EC3C1B174/,
+      /\/traces\/5B8EFFF798038103D269B633813FC60C\?.*spanId=EEE19B7EC3C1B174/,
     )
     await expect(page.getByText('Trace Details')).toBeVisible()
     await expect(
@@ -125,5 +154,42 @@ test.describe('Logs flow', () => {
 
     await expect(page.getByText('Unlinked trace')).toBeVisible()
     await expect(page.getByText('span -')).toBeVisible()
+  })
+
+  test('supports logs tab delete selected and clear all interactions', async ({
+    page,
+    request,
+  }) => {
+    await request.post('/v1/logs', {
+      headers: { 'Content-Type': 'application/json' },
+      data: simpleLog,
+    })
+    await request.post('/v1/logs', {
+      headers: { 'Content-Type': 'application/json' },
+      data: unlinkedLog,
+    })
+
+    await page.goto('/?tab=logs')
+
+    await expect(page.getByRole('tab', { name: 'Logs' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+
+    const logRows = page.locator('tbody tr')
+    await expect(logRows).toHaveCount(4)
+
+    await logRows.first().locator('input.row-checkbox').check()
+
+    await page.getByRole('button', { name: 'More clear actions' }).click()
+    page.once('dialog', (dialog) => dialog.accept())
+    await page.getByRole('menuitem', { name: /Delete Selected/ }).click()
+
+    await expect(logRows).toHaveCount(3)
+
+    page.once('dialog', (dialog) => dialog.accept())
+    await page.getByRole('button', { name: 'Clear All' }).click()
+
+    await expect(page.getByText('No logs received yet.')).toBeVisible()
   })
 })
