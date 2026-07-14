@@ -286,7 +286,15 @@
       },
       { keys: ['t'], description: 'Switch to Traces tab' },
       { keys: ['l'], description: 'Switch to Logs tab' },
-      { keys: ['m'], description: 'Toggle Traces / Service Map tab' },
+      {
+        keys: ['m'],
+        description:
+          "Switch to Service Map tab or Toggle a trace's Service Map",
+      },
+      {
+        keys: ['Enter', 'Space'],
+        description: 'Activate focused rows in the Traces and Logs grids',
+      },
       { keys: ['?'], description: 'Toggle keyboard shortcuts help' },
     ]}
     onclose={() => (showShortcuts = false)}

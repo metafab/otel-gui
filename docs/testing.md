@@ -177,7 +177,8 @@ describe('OTLP E2E', () => {
 - Covers error span keyboard navigation on trace detail (`e` / `Shift+E`).
 - Covers waterfall tree keyboard navigation on trace detail (`↑↓←→`, `Enter`).
 - Covers sidebar section flows on trace detail (Events, Links, and Attributes filtering).
-- `tests/e2e/logs.spec.ts` covers browser-only logs flows: SSE-driven live refresh on the Logs tab, row navigation to `/logs/:logId`, back-to-logs behavior, trace/span deep links from log detail, and unlinked log detail rendering.
+- `tests/e2e/traces.spec.ts` covers browser-only trace flows: trace list/detail navigation, Enter/Space keyboard activation on the Traces grid, keyboard shortcuts, search behavior, mini service map toggling, error span navigation, waterfall tree navigation, and sidebar section flows.
+- `tests/e2e/logs.spec.ts` covers browser-only logs flows: SSE-driven live refresh on the Logs tab, row navigation to `/logs/:logId`, Enter/Space keyboard activation on the Logs grid, back-to-logs behavior, trace/span deep links from log detail, and unlinked log detail rendering.
 
 ### 5. SEA Binary Smoke Test (Release Validation)
 
