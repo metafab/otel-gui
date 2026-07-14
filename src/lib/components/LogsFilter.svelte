@@ -67,16 +67,17 @@
         bind:selectedSeverity={severityFilter}
       />
     </div>
+  </div>
 
+  <div class="filter-stats">
+    <div>
+      Showing <strong>{filteredCount}</strong> of <strong>{totalCount}</strong> logs
+    </div>
     {#if hasActiveFilters}
       <button onclick={handleClear} class="clear-filters-btn"
         >Clear Filters</button
       >
     {/if}
-  </div>
-
-  <div class="filter-stats">
-    Showing <strong>{filteredCount}</strong> of <strong>{totalCount}</strong> logs
   </div>
 </div>
 
@@ -138,13 +139,13 @@
   }
 
   .clear-filters-btn {
-    padding: 0.5rem 1rem;
+    padding: 0.2rem 0.4rem;
     background: var(--bg-muted);
     color: var(--text-secondary);
     border: 1px solid var(--border);
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     white-space: nowrap;
     align-self: flex-end;
     transition: background 0.15s ease;
@@ -156,6 +157,11 @@
   }
 
   .filter-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    block-size: 1.5rem;
+    gap: 0.75rem;
     font-size: 0.875rem;
     color: var(--text-secondary);
   }
@@ -175,6 +181,11 @@
     .severity-group {
       min-width: 100%;
       max-width: none;
+    }
+
+    .filter-stats {
+      flex-direction: column;
+      align-items: flex-start;
     }
   }
 </style>
