@@ -182,7 +182,7 @@ describe('traces/[traceId] page search UI', () => {
       ).toBeNull()
     })
 
-    const searchInput = screen.getByPlaceholderText('Search spans...')
+    const searchInput = screen.getByPlaceholderText('Search spans…')
     await fireEvent.input(searchInput, {
       target: { value: 'select * from products' },
     })
@@ -197,7 +197,7 @@ describe('traces/[traceId] page search UI', () => {
       expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
     })
 
-    const searchInput = screen.getByPlaceholderText('Search spans...')
+    const searchInput = screen.getByPlaceholderText('Search spans…')
     await fireEvent.input(searchInput, {
       target: { value: 'this-query-does-not-match-any-span' },
     })
@@ -212,7 +212,7 @@ describe('traces/[traceId] page search UI', () => {
       expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
     })
 
-    const searchInput = screen.getByPlaceholderText('Search spans...')
+    const searchInput = screen.getByPlaceholderText('Search spans…')
     searchInput.focus()
 
     await waitFor(() => {
@@ -246,7 +246,7 @@ describe('traces/[traceId] page search UI', () => {
 
     scrolledElements = []
 
-    const searchInput = screen.getByPlaceholderText('Search spans...')
+    const searchInput = screen.getByPlaceholderText('Search spans…')
     await fireEvent.input(searchInput, {
       target: { value: 'cart.i' },
     })
@@ -527,7 +527,7 @@ describe('traces/[traceId] page search UI', () => {
       expect(screen.queryByText('Loading trace…')).not.toBeInTheDocument()
     })
 
-    const searchInput = screen.getByPlaceholderText('Search spans...')
+    const searchInput = screen.getByPlaceholderText('Search spans…')
     await fireEvent.input(searchInput, {
       target: { value: 'select products' },
     })

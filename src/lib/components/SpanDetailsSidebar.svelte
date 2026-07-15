@@ -655,7 +655,7 @@
                     />
                   </svg>
                   {isLogDetailLoading
-                    ? 'Loading...'
+                    ? 'Loading…'
                     : openLogDetailIds.includes(log.id)
                       ? 'Hide details'
                       : 'Show details'}

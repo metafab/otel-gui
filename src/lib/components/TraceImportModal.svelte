@@ -236,9 +236,9 @@
         disabled={!preview || isPreviewLoading || isImporting}
       >
         {isPreviewLoading
-          ? 'Preparing preview...'
+          ? 'Preparing preview…'
           : isImporting
-            ? 'Importing...'
+            ? 'Importing…'
             : 'Confirm Import'}
       </button>
     </div>

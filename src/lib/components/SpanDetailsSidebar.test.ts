@@ -209,7 +209,7 @@ describe('SpanDetailsSidebar', () => {
         }),
       },
     })
-    const filterInput = screen.getByPlaceholderText('Filter attributes...')
+    const filterInput = screen.getByPlaceholderText('Filter attributes…')
     await fireEvent.input(filterInput, { target: { value: 'db' } })
     expect(screen.getByText('db.system')).toBeInTheDocument()
     expect(screen.queryByText('http.method')).not.toBeInTheDocument()
@@ -424,7 +424,7 @@ describe('SpanDetailsSidebar', () => {
     })
 
     const filterInput = screen.getByPlaceholderText(
-      'Filter logs by severity/text...',
+      'Filter logs by severity/text…',
     )
     await fireEvent.input(filterInput, { target: { value: 'cache' } })
 

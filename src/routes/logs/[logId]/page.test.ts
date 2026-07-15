@@ -210,7 +210,7 @@ describe('logs/[logId] page', () => {
     render(LogDetailPage)
     await screen.findByText('Log log-123')
 
-    const attributesFilter = screen.getByPlaceholderText('Filter attributes...')
+    const attributesFilter = screen.getByPlaceholderText('Filter attributes…')
     await fireEvent.input(attributesFilter, { target: { value: 'http' } })
 
     expect((attributesFilter as HTMLInputElement).value).toBe('http')

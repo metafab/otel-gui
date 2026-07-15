@@ -58,7 +58,7 @@
   onclick={onExportFiltered}
   disabled={filteredCount === 0 || isExporting}
 >
-  {isExporting ? 'Exporting...' : 'Export Filtered'}
+  {isExporting ? 'Exporting…' : 'Export Filtered'}
 </button>
 <button
   class="action-button secondary-action"
@@ -66,7 +66,7 @@
   disabled={selectedCount === 0 || isExporting}
 >
   {isExporting
-    ? 'Exporting...'
+    ? 'Exporting…'
     : `Export Selected${selectedCount > 0 ? ` (${selectedCount})` : ''}`}
 </button>
 <div
