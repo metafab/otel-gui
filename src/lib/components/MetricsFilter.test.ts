@@ -34,12 +34,12 @@ describe('MetricsFilter', () => {
     })
 
     const searchInput = screen.getByLabelText('Search metrics')
-    const typeSelect = screen.getByLabelText('Metric type')
-    const serviceSelect = screen.getByLabelText('Service')
+    const typePicker = screen.getByLabelText('Metric type')
+    const servicePicker = screen.getByLabelText('Service')
 
     expect(searchInput).toHaveValue('http')
-    expect(typeSelect).toHaveValue('sum')
-    expect(serviceSelect).toHaveValue('checkout')
+    expect(typePicker).toHaveTextContent('Sum')
+    expect(servicePicker).toHaveTextContent('checkout')
     expect(
       screen.getByRole('button', { name: 'Clear Filters' }),
     ).toBeInTheDocument()
@@ -47,8 +47,8 @@ describe('MetricsFilter', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Clear Filters' }))
 
     expect(searchInput).toHaveValue('')
-    expect(typeSelect).toHaveValue('all')
-    expect(serviceSelect).toHaveValue('all')
+    expect(typePicker).toHaveTextContent('All types')
+    expect(servicePicker).toHaveTextContent('All services')
   })
 
   it('does not show clear button without active filters', () => {
@@ -68,7 +68,7 @@ describe('MetricsFilter', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('filters down to a single type via the select', async () => {
+  it('filters down to a single type via the type picker', async () => {
     render(MetricsFilter, {
       props: {
         services: [],
@@ -80,12 +80,13 @@ describe('MetricsFilter', () => {
       },
     })
 
-    const typeSelect = screen.getByLabelText('Metric type') as HTMLSelectElement
-    await fireEvent.change(typeSelect, { target: { value: 'gauge' } })
-    expect(typeSelect.value).toBe('gauge')
+    const typePicker = screen.getByLabelText('Metric type')
+    await fireEvent.click(typePicker)
+    await fireEvent.click(screen.getByRole('button', { name: 'Gauge' }))
+    expect(typePicker).toHaveTextContent('Gauge')
   })
 
-  it('lists services and selects one via the select', async () => {
+  it('lists services and selects one via the service picker', async () => {
     render(MetricsFilter, {
       props: {
         services: ['api', 'checkout'],
@@ -97,9 +98,10 @@ describe('MetricsFilter', () => {
       },
     })
 
-    const serviceSelect = screen.getByLabelText('Service') as HTMLSelectElement
-    expect(screen.getByRole('option', { name: 'checkout' })).toBeInTheDocument()
-    await fireEvent.change(serviceSelect, { target: { value: 'checkout' } })
-    expect(serviceSelect.value).toBe('checkout')
+    const servicePicker = screen.getByLabelText('Service')
+    await fireEvent.click(servicePicker)
+    expect(screen.getByRole('listbox', { name: 'Service' })).toBeInTheDocument()
+    await fireEvent.click(screen.getByRole('button', { name: 'checkout' }))
+    expect(servicePicker).toHaveTextContent('checkout')
   })
 })

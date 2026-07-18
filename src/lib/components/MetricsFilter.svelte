@@ -1,9 +1,18 @@
 <script lang="ts">
+  import MetricTypePicker from '$lib/components/MetricTypePicker.svelte'
+  import ServicePicker from '$lib/components/ServicePicker.svelte'
+
   interface Props {
     /** Available service names for the dropdown. */
     services: string[]
     searchQuery: string
-    typeFilter: 'all' | 'gauge' | 'sum'
+    typeFilter:
+      | 'all'
+      | 'gauge'
+      | 'sum'
+      | 'histogram'
+      | 'exp_histogram'
+      | 'summary'
     /** Bound: selected service name, or "all". */
     selectedService: string
     filteredCount: number
@@ -48,31 +57,23 @@
 
     <div class="filter-group service-group">
       <label for="metrics-service">Service</label>
-      <select
+      <ServicePicker
         id="metrics-service"
-        bind:value={selectedService}
-        class="filter-select"
-        aria-label="Service"
-      >
-        <option value="all">All Services</option>
-        {#each services as service}
-          <option value={service}>{service}</option>
-        {/each}
-      </select>
+        ariaLabel="Service"
+        allLabel="All services"
+        {services}
+        bind:selectedService
+      />
     </div>
 
     <div class="filter-group type-group">
       <label for="metrics-type">Type</label>
-      <select
+      <MetricTypePicker
         id="metrics-type"
-        bind:value={typeFilter}
-        class="filter-select"
-        aria-label="Metric type"
-      >
-        <option value="all">All types</option>
-        <option value="gauge">Gauge</option>
-        <option value="sum">Sum</option>
-      </select>
+        ariaLabel="Metric type"
+        allLabel="All types"
+        bind:selectedType={typeFilter}
+      />
     </div>
 
     {#if hasActiveFilters}
@@ -130,8 +131,7 @@
     letter-spacing: 0.5px;
   }
 
-  .search-input,
-  .filter-select {
+  .search-input {
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -140,8 +140,7 @@
     color: var(--text-primary);
   }
 
-  .search-input:focus,
-  .filter-select:focus {
+  .search-input:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-ring);

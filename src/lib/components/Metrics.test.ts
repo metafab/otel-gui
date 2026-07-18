@@ -92,10 +92,11 @@ describe('Metrics', () => {
 
     await screen.findByText('http.server.duration')
 
-    const serviceSelect = screen.getByLabelText('Service') as HTMLSelectElement
-    await fireEvent.change(serviceSelect, {
-      target: { value: 'worker-service' },
-    })
+    const servicePicker = screen.getByLabelText('Service')
+    await fireEvent.click(servicePicker)
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'worker-service' }),
+    )
 
     expect(screen.queryByText('http.server.duration')).not.toBeInTheDocument()
     expect(screen.getByText('jobs.processed')).toBeInTheDocument()
@@ -111,8 +112,9 @@ describe('Metrics', () => {
 
     await screen.findByText('http.server.duration')
 
-    const typeSelect = screen.getByLabelText('Metric type') as HTMLSelectElement
-    await fireEvent.change(typeSelect, { target: { value: 'sum' } })
+    const typePicker = screen.getByLabelText('Metric type')
+    await fireEvent.click(typePicker)
+    await fireEvent.click(screen.getByRole('button', { name: 'Sum' }))
 
     expect(screen.queryByText('http.server.duration')).not.toBeInTheDocument()
     expect(screen.getByText('jobs.processed')).toBeInTheDocument()

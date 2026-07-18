@@ -51,10 +51,21 @@
       : DEFAULT_SORT_ORDER
   }
 
-  function parseTypeFilter(rawValue: string | null): 'all' | 'gauge' | 'sum' {
+  type MetricTypeFilter =
+    | 'all'
+    | 'gauge'
+    | 'sum'
+    | 'histogram'
+    | 'exp_histogram'
+    | 'summary'
+
+  function parseTypeFilter(rawValue: string | null): MetricTypeFilter {
     switch (rawValue) {
       case 'gauge':
       case 'sum':
+      case 'histogram':
+      case 'exp_histogram':
+      case 'summary':
         return rawValue
       default:
         return 'all'
@@ -114,7 +125,7 @@
   const initialParams = readParamsFromLocation()
 
   let searchQuery = $state(initialParams.searchQuery)
-  let typeFilter = $state<'all' | 'gauge' | 'sum'>(initialParams.typeFilter)
+  let typeFilter = $state<MetricTypeFilter>(initialParams.typeFilter)
   let selectedService = $state<string>(initialParams.selectedService)
   let sortBy = $state<MetricSortBy>(initialParams.sortBy)
   let sortOrder = $state<MetricSortOrder>(initialParams.sortOrder)
@@ -898,6 +909,24 @@
     color: #92400e;
     background: #fff7ed;
     border-color: #fed7aa;
+  }
+
+  .type-histogram {
+    color: #4c1d95;
+    background: #f5f3ff;
+    border-color: #ddd6fe;
+  }
+
+  .type-exp_histogram {
+    color: #155e75;
+    background: #ecfeff;
+    border-color: #a5f3fc;
+  }
+
+  .type-summary {
+    color: #166534;
+    background: #f0fdf4;
+    border-color: #bbf7d0;
   }
 
   .clear-filters-btn {
