@@ -103,8 +103,7 @@
     if (!ctx) return
 
     const { cols, rowLabels, maxC } = heat
-    const dpr =
-      typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
 
     const padLeft = 70
     const padBottom = 22

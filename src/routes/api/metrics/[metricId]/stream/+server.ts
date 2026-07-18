@@ -38,7 +38,9 @@ export const GET: RequestHandler = async ({ params }) => {
     start(controller) {
       const send = (event: string, data: string): boolean => {
         try {
-          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${data}\n\n`))
+          controller.enqueue(
+            encoder.encode(`event: ${event}\ndata: ${data}\n\n`),
+          )
           return true
         } catch {
           cleanup()
@@ -66,7 +68,8 @@ export const GET: RequestHandler = async ({ params }) => {
       let dirty = false
       const flush = () => {
         if (!dirty) return
-        if (controller.desiredSize !== null && controller.desiredSize <= 0) return
+        if (controller.desiredSize !== null && controller.desiredSize <= 0)
+          return
         dirty = false
         sendSnapshot()
       }

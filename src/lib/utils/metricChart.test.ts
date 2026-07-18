@@ -46,7 +46,11 @@ describe('defaultValueMode', () => {
       }),
     ).toBe('raw')
     expect(
-      defaultValueMode({ type: 'sum', isMonotonic: true, temporality: 'delta' }),
+      defaultValueMode({
+        type: 'sum',
+        isMonotonic: true,
+        temporality: 'delta',
+      }),
     ).toBe('raw')
     expect(defaultValueMode({ type: 'gauge' })).toBe('raw')
   })

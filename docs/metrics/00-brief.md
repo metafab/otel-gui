@@ -33,37 +33,37 @@ Two genuinely new problems sit on top of the copy-the-logs-pattern plumbing.
 
 An OTLP metric is a `name` + `unit` + exactly one of five shapes:
 
-| Type                  | Data point shape                    | Phase | Render as                     |
-| --------------------- | ----------------------------------- | ----- | ----------------------------- |
-| Gauge                 | number                              | 1     | line                          |
-| Sum (mono + temporal) | number                              | 1     | line / area (often a rate)    |
-| Histogram             | bucket counts + explicit bounds     | 2     | distribution bars / heatmap   |
-| Exponential Histogram | scale + zero count + scaled buckets | 2     | heatmap                       |
-| Summary (legacy)      | quantile values                     | 2     | line per quantile             |
+| Type                  | Data point shape                    | Phase | Render as                   |
+| --------------------- | ----------------------------------- | ----- | --------------------------- |
+| Gauge                 | number                              | 1     | line                        |
+| Sum (mono + temporal) | number                              | 1     | line / area (often a rate)  |
+| Histogram             | bucket counts + explicit bounds     | 2     | distribution bars / heatmap |
+| Exponential Histogram | scale + zero count + scaled buckets | 2     | heatmap                     |
+| Summary (legacy)      | quantile values                     | 2     | line per quantile           |
 
 Each data point carries an **attribute set**, so one metric name fans out into many
 **series** (e.g. `http.server.duration{route=/a}` vs `{route=/b}`). Storage is therefore
-keyed by *(metric name + attribute fingerprint)*, and each series holds a time-ordered
+keyed by _(metric name + attribute fingerprint)_, and each series holds a time-ordered
 ring of points — a cardinality/retention model the flat `Map<id, log>` does not have.
 **Temporality** (delta vs cumulative) and monotonicity must be tracked too.
 
 ### 2. Visualisation is the real lift
 
-A metric *list* (name, type, unit, #series, sparkline) mirrors the logs table cleanly.
-But the *detail* view needs interactive, live-appending time-series charts. There is
+A metric _list_ (name, type, unit, #series, sparkline) mirrors the logs table cleanly.
+But the _detail_ view needs interactive, live-appending time-series charts. There is
 nothing to build on today, so a charting layer is net-new.
 
 ---
 
 ## Decisions (locked)
 
-| # | Decision                | Choice                                                                 |
-| - | ----------------------- | ---------------------------------------------------------------------- |
-| 1 | Charting library        | **uPlot** — ~40 KB, no deps, built for streaming time-series (MIT)     |
-| 2 | Phase-1 metric types    | **Gauge + Sum only** (line charts); histograms/summary → Phase 2       |
-| 3 | Value display           | **Raw** in Phase 1; cumulative→rate computed **in Node** in Phase 2    |
-| 4 | Persistence             | **Memory-only**; server-authoritative; pglite deferred to Phase 3      |
-| 5 | Client-side persistence | **No IndexedDB** — client mirrors the SSE stream in memory, like logs  |
+| #   | Decision                | Choice                                                                |
+| --- | ----------------------- | --------------------------------------------------------------------- |
+| 1   | Charting library        | **uPlot** — ~40 KB, no deps, built for streaming time-series (MIT)    |
+| 2   | Phase-1 metric types    | **Gauge + Sum only** (line charts); histograms/summary → Phase 2      |
+| 3   | Value display           | **Raw** in Phase 1; cumulative→rate computed **in Node** in Phase 2   |
+| 4   | Persistence             | **Memory-only**; server-authoritative; pglite deferred to Phase 3     |
+| 5   | Client-side persistence | **No IndexedDB** — client mirrors the SSE stream in memory, like logs |
 
 ### Rationale: rate computation belongs in Node
 
@@ -78,7 +78,7 @@ no refetch. Negligible CPU.
 ### Rationale: no IndexedDB
 
 The app is server-authoritative + memory-only + snapshot-on-SSE-connect. If the browser
-cached a *longer* history than the server retains, a reload/reconnect would replay a
+cached a _longer_ history than the server retains, a reload/reconnect would replay a
 server snapshot that no longer contains those points — the client would display data the
 server has dropped. For a live-tail debugging tool that divergence is worse than not
 caching at all, and it adds async/quota/versioning/reconciliation complexity for no

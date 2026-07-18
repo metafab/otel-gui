@@ -29,9 +29,7 @@ export function isHistogramPoint(p: MetricWirePoint): p is HistogramPoint {
 export function isExpHistogramPoint(
   p: MetricWirePoint,
 ): p is ExpHistogramPoint {
-  return (
-    typeof p === 'object' && p !== null && 'scale' in p && 'positive' in p
-  )
+  return typeof p === 'object' && p !== null && 'scale' in p && 'positive' in p
 }
 
 function fmt(n: number): string {

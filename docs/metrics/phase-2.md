@@ -19,7 +19,7 @@ export interface HistogramPoint {
   sum?: number
   min?: number
   max?: number
-  bucketCounts: number[]    // length = explicitBounds.length + 1
+  bucketCounts: number[] // length = explicitBounds.length + 1
   explicitBounds: number[]
 }
 ```
