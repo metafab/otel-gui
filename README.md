@@ -247,7 +247,19 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\demo-ecommerce-trace.ps1
 ```
 
-This sends a realistic multi-service trace (frontend → backend-api → auth-service + database) with errors, retries, and incremental span arrival across two requests.
+This sends a realistic multi-service trace (frontend → backend-api → auth-service + database) with errors, retries, incremental span arrival across two requests, correlated logs, and staged metrics.
+
+Run the dedicated metrics-only demo:
+
+```sh
+./demo-metrics.sh
+```
+
+On Windows (PowerShell):
+
+```powershell
+.\demo-metrics.ps1
+```
 
 ### Manual curl examples
 
@@ -291,6 +303,30 @@ curl -X POST http://localhost:4318/v1/traces \
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @samples/sample-trace-links.json
+
+# Gauge metrics (memory usage)
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-gauge.json
+
+# Sum/Counter metrics (request count with cumulative points)
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-sum-counter.json
+
+# Histogram metrics (database latency distribution)
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-histogram.json
+
+# E-commerce metrics staged flow (part 1 then part 2)
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-ecommerce-part1.json
+
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-ecommerce-part2.json
 ```
 
 See [SAMPLE_TRACES.md](./samples/SAMPLE_TRACES.md) for a full feature exploration guide.

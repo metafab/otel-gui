@@ -1,0 +1,98 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "frontend"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "sample-demo.ecommerce",
+            "version": "1.0.0"
+          },
+          "metrics": [
+            {
+              "name": "process.runtime.memory.usage",
+              "description": "Runtime memory usage by state",
+              "unit": "By",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "state",
+                        "value": {
+                          "stringValue": "used"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000400000000000",
+                    "asInt": "112197632"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "backend-api"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "sample-demo.ecommerce",
+            "version": "1.0.0"
+          },
+          "metrics": [
+            {
+              "name": "http.server.request.count",
+              "description": "Checkout requests handled",
+              "unit": "1",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "http.route",
+                        "value": {
+                          "stringValue": "/checkout"
+                        }
+                      },
+                      {
+                        "key": "http.method",
+                        "value": {
+                          "stringValue": "POST"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000400000000000",
+                    "asDouble": 120
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

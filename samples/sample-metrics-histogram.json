@@ -1,0 +1,78 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "database"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "sample-demo",
+            "version": "1.0.0"
+          },
+          "metrics": [
+            {
+              "name": "db.client.operation.duration",
+              "description": "Database operation latency distribution",
+              "unit": "ms",
+              "histogram": {
+                "aggregationTemporality": 2,
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "db.system",
+                        "value": {
+                          "stringValue": "postgresql"
+                        }
+                      },
+                      {
+                        "key": "db.operation",
+                        "value": {
+                          "stringValue": "UPDATE"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000300000000000",
+                    "count": "8",
+                    "sum": 312,
+                    "bucketCounts": ["2", "3", "2", "1"],
+                    "explicitBounds": [10, 25, 50]
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "db.system",
+                        "value": {
+                          "stringValue": "postgresql"
+                        }
+                      },
+                      {
+                        "key": "db.operation",
+                        "value": {
+                          "stringValue": "UPDATE"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000306000000000",
+                    "count": "10",
+                    "sum": 356,
+                    "bucketCounts": ["3", "3", "3", "1"],
+                    "explicitBounds": [10, 25, 50]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

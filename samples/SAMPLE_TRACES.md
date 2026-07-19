@@ -1,6 +1,6 @@
 # Sample Traces & Demo Guide
 
-This directory contains sample OTLP trace data to help you explore the features of otel-gui.
+This directory contains sample OTLP trace, log, and metrics data to help you explore the features of otel-gui.
 
 ## Quick Start
 
@@ -25,7 +25,23 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\demo-ecommerce-trace.ps1
 ```
 
-This sends a realistic multi-service trace in two parts (simulating incremental span arrival) and shows you what to explore in the UI.
+This sends a realistic multi-service trace in two parts (simulating incremental span arrival), correlated logs, and staged metrics payloads.
+
+### Run the Metrics Demo
+
+Use the dedicated metrics demo to ingest Gauge, Sum/Counter, and Histogram samples:
+
+```bash
+./demo-metrics.sh
+```
+
+On Windows (PowerShell):
+
+```powershell
+.\demo-metrics.ps1
+```
+
+The demo sends three payloads step-by-step so you can inspect metric list updates and chart behavior after each stage.
 
 ### Run the Late Root Span Demo
 
@@ -219,6 +235,76 @@ Standalone OTLP logs example correlated with `sample-trace.json`:
 curl -X POST http://localhost:4318/v1/logs \
   -H "Content-Type: application/json" \
   -d @samples/sample-log.json
+```
+
+## Sample Metrics Overview
+
+### `sample-metrics-gauge.json`
+
+Gauge series for runtime memory usage across `frontend` and `backend-api`.
+
+- Metric type: Gauge
+- Metric name: `process.runtime.memory.usage`
+- Unit: `By`
+
+**Usage:**
+
+```bash
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-gauge.json
+```
+
+### `sample-metrics-sum-counter.json`
+
+Cumulative monotonic counter series for HTTP requests.
+
+- Metric type: Sum/Counter
+- Metric name: `http.server.request.count`
+- Includes two timestamps per route for server-side rate projection
+
+**Usage:**
+
+```bash
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-sum-counter.json
+```
+
+### `sample-metrics-histogram.json`
+
+Histogram series for database operation duration with explicit bucket bounds.
+
+- Metric type: Histogram
+- Metric name: `db.client.operation.duration`
+- Unit: `ms`
+
+**Usage:**
+
+```bash
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-histogram.json
+```
+
+### `sample-metrics-ecommerce-part1.json` & `sample-metrics-ecommerce-part2.json`
+
+Staged e-commerce metrics payloads used by `demo-ecommerce-trace.sh` and `demo-ecommerce-trace.ps1`.
+
+- Part 1: frontend Gauge + backend-api Sum
+- Part 2: backend-api Sum update + auth-service Sum + database Histogram
+- Designed to mirror the same two-step ingestion flow as trace/log e-commerce samples
+
+**Manual Usage:**
+
+```bash
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-ecommerce-part1.json
+
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-ecommerce-part2.json
 ```
 
 ## Features to Explore
