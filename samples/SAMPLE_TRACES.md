@@ -9,20 +9,20 @@ This directory contains sample OTLP trace, log, and metrics data to help you exp
 The easiest way to see all features is to run the automated demo:
 
 ```bash
-./demo-ecommerce-trace.sh
+./demo-ecommerce.sh
 ```
 
 On Windows (PowerShell):
 
 ```powershell
-.\demo-ecommerce-trace.ps1
+.\demo-ecommerce.ps1
 ```
 
 If script execution is blocked, run it for the current shell session only:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\demo-ecommerce-trace.ps1
+.\demo-ecommerce.ps1
 ```
 
 This sends a realistic multi-service trace in two parts (simulating incremental span arrival), correlated logs, and staged metrics payloads.
@@ -289,7 +289,7 @@ curl -X POST http://localhost:4318/v1/metrics \
 
 ### `sample-metrics-ecommerce-part1.json` & `sample-metrics-ecommerce-part2.json`
 
-Staged e-commerce metrics payloads used by `demo-ecommerce-trace.sh` and `demo-ecommerce-trace.ps1`.
+Staged e-commerce metrics payloads used by `demo-ecommerce.sh` and `demo-ecommerce.ps1`.
 
 - Part 1: frontend Gauge + backend-api Sum
 - Part 2: backend-api Sum update + auth-service Sum + database Histogram

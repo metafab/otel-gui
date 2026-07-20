@@ -231,20 +231,20 @@ Gauges, sums, histograms, exponential histograms, and summaries are all supporte
 Run the bundled e-commerce demo to see all features immediately:
 
 ```sh
-./demo-ecommerce-trace.sh
+./demo-ecommerce.sh
 ```
 
 On Windows (PowerShell):
 
 ```powershell
-.\demo-ecommerce-trace.ps1
+.\demo-ecommerce.ps1
 ```
 
 If script execution is blocked, run it for the current shell session only:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\demo-ecommerce-trace.ps1
+.\demo-ecommerce.ps1
 ```
 
 This sends a realistic multi-service trace (frontend → backend-api → auth-service + database) with errors, retries, incremental span arrival across two requests, correlated logs, and staged metrics.
