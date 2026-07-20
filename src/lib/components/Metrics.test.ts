@@ -7,7 +7,26 @@ import {
   waitFor,
   within,
 } from '@testing-library/svelte'
+import { goto, replaceState } from '$app/navigation'
 import Metrics from './Metrics.svelte'
+
+const sseState = vi.hoisted(() => ({
+  handlers: null as Record<string, (event: MessageEvent) => void> | null,
+}))
+
+vi.mock('$app/navigation', () => ({
+  goto: vi.fn(),
+  replaceState: vi.fn(),
+}))
+
+vi.mock('$lib/stores/sseClient', () => ({
+  onSSEEvents: (handlers: Record<string, (event: MessageEvent) => void>) => {
+    sseState.handlers = handlers
+    return () => {
+      sseState.handlers = null
+    }
+  },
+}))
 
 // Mock the metric store (only maxMetrics is read by the component).
 vi.mock('$lib/stores/metrics.svelte', () => ({
@@ -49,16 +68,45 @@ describe('Metrics', () => {
   const fetchMock = vi.fn<typeof fetch>()
 
   beforeEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
     fetchMock.mockReset()
+    vi.mocked(goto).mockReset()
+    vi.mocked(replaceState).mockReset()
     vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('EventSource', class MockEventSource {} as never)
     vi.stubGlobal(
       'confirm',
       vi.fn(() => true),
     )
+    sseState.handlers = null
     // Reset URL params between tests — the component seeds its filters from the
     // URL on init, and a prior test may have written ?type=… / ?search=… there.
     window.history.replaceState(window.history.state, '', '/?tab=metrics')
+  })
+
+  it('shows loading before the initial metrics fetch resolves', async () => {
+    let resolveFetch!: (value: Response) => void
+    const pendingFetch = new Promise<Response>((resolve) => {
+      resolveFetch = resolve
+    })
+
+    fetchMock.mockReturnValueOnce(pendingFetch)
+
+    render(Metrics)
+
+    expect(screen.getByText('Loading metrics...')).toBeInTheDocument()
+    expect(
+      screen.queryByText('No metrics received yet.'),
+    ).not.toBeInTheDocument()
+
+    resolveFetch({
+      ok: true,
+      json: async () => [],
+    } as Response)
+
+    expect(
+      await screen.findByText('No metrics received yet.'),
+    ).toBeInTheDocument()
   })
 
   it('loads and renders metric rows from a snapshot', async () => {
@@ -142,7 +190,7 @@ describe('Metrics', () => {
     })
 
     await fireEvent.click(checkbox)
-    await component.triggerDeleteSelected()
+    component.triggerDeleteSelected()
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenNthCalledWith(
@@ -161,6 +209,33 @@ describe('Metrics', () => {
     await waitFor(() => {
       expect(screen.queryByText('http.server.duration')).not.toBeInTheDocument()
     })
+  })
+
+  it('shows an error banner when deleting selected metrics fails', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => sampleMetrics,
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Internal Server Error',
+      } as Response)
+
+    const { component } = render(Metrics)
+
+    const checkbox = await screen.findByRole('checkbox', {
+      name: 'Select metric http.server.duration',
+    })
+    await fireEvent.click(checkbox)
+
+    component.triggerDeleteSelected()
+
+    expect(
+      await screen.findByText(
+        'Failed to delete selected metrics: Internal Server Error',
+      ),
+    ).toBeInTheDocument()
   })
 
   it('clears filters from filtered empty state', async () => {
@@ -204,5 +279,184 @@ describe('Metrics', () => {
     expect(retentionNotice).not.toBeNull()
     expect(retentionNotice).toHaveTextContent('Keeping last 1000 metric series')
     expect(retentionNotice).toHaveTextContent('in memory only')
+  })
+
+  it('restores metrics filters from URL query params', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleMetrics,
+    } as Response)
+
+    const originalUrl = window.location.href
+    window.history.replaceState(
+      window.history.state,
+      '',
+      '/?tab=metrics&search=jobs&service=worker-service&type=sum&sort=name&order=asc',
+    )
+
+    render(Metrics)
+
+    const table = await screen.findByRole('table')
+    expect(await within(table).findByText('jobs.processed')).toBeInTheDocument()
+    expect(
+      within(table).queryByText('http.server.duration'),
+    ).not.toBeInTheDocument()
+
+    const searchInput = screen.getByLabelText(
+      'Search metrics',
+    ) as HTMLInputElement
+    expect(searchInput.value).toBe('jobs')
+
+    const servicePicker = screen.getByLabelText('Service')
+    expect(servicePicker).toHaveTextContent('worker-service')
+
+    const typePicker = screen.getByLabelText('Metric type')
+    expect(typePicker).toHaveTextContent('Sum')
+
+    window.history.replaceState(window.history.state, '', originalUrl)
+  })
+
+  it('sorts metrics by header clicks and updates URL params', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleMetrics,
+    } as Response)
+
+    render(Metrics)
+
+    await screen.findByRole('table')
+
+    const getRowIds = () =>
+      screen
+        .getAllByTestId('metric-row')
+        .map((row) => row.getAttribute('data-metric-id'))
+
+    // Default sort is updated desc, so newer worker metric is first.
+    expect(getRowIds()[0]).toBe('worker-service jobs.processed')
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
+
+    expect(getRowIds()[0]).toBe('checkout-service http.server.duration')
+    expect(vi.mocked(replaceState)).toHaveBeenCalled()
+  })
+
+  it('navigates to metric detail when row is activated with Enter and Space', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleMetrics,
+    } as Response)
+
+    render(Metrics)
+
+    const rows = await screen.findAllByTestId('metric-row')
+    const firstRow = rows[0] as HTMLElement
+
+    await fireEvent.keyDown(firstRow, { key: 'Enter' })
+    await fireEvent.keyDown(firstRow, { key: ' ' })
+
+    expect(vi.mocked(goto)).toHaveBeenNthCalledWith(
+      1,
+      '/metrics/worker-service%20jobs.processed',
+    )
+    expect(vi.mocked(goto)).toHaveBeenNthCalledWith(
+      2,
+      '/metrics/worker-service%20jobs.processed',
+    )
+  })
+
+  it('filters by search + service + type together', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleMetrics,
+    } as Response)
+
+    render(Metrics)
+
+    const searchInput = await screen.findByLabelText('Search metrics')
+    await fireEvent.input(searchInput, { target: { value: 'jobs' } })
+
+    const servicePicker = screen.getByLabelText('Service')
+    await fireEvent.click(servicePicker)
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'worker-service' }),
+    )
+
+    const typePicker = screen.getByLabelText('Metric type')
+    await fireEvent.click(typePicker)
+    await fireEvent.click(screen.getByRole('button', { name: 'Sum' }))
+
+    expect(await screen.findByText('jobs.processed')).toBeInTheDocument()
+    expect(screen.queryByText('http.server.duration')).not.toBeInTheDocument()
+  })
+
+  it('applies incoming metrics-snapshot stream events', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [],
+    } as Response)
+
+    render(Metrics)
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+
+    sseState.handlers?.['metrics-snapshot']?.({
+      data: JSON.stringify({ metrics: sampleMetrics }),
+    } as MessageEvent)
+
+    expect(await screen.findByText('http.server.duration')).toBeInTheDocument()
+    expect(await screen.findByText('jobs.processed')).toBeInTheDocument()
+  })
+
+  it('upserts incoming metrics-append stream events', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleMetrics,
+    } as Response)
+
+    render(Metrics)
+
+    await screen.findByText('http.server.duration')
+
+    sseState.handlers?.['metrics-append']?.({
+      data: JSON.stringify({
+        metrics: [
+          {
+            id: 'checkout-service http.server.duration',
+            name: 'http.server.duration',
+            type: 'gauge',
+            unit: 'ms',
+            serviceName: 'checkout-service',
+            seriesCount: 5,
+            lastUpdated: 1715803203000,
+            sparkline: [1, 2, 3],
+          },
+          {
+            id: 'payments-service http.client.duration',
+            name: 'http.client.duration',
+            type: 'histogram',
+            unit: 'ms',
+            serviceName: 'payments-service',
+            seriesCount: 2,
+            lastUpdated: 1715803204000,
+            sparkline: [4, 8, 6],
+          },
+        ],
+      }),
+    } as MessageEvent)
+
+    await screen.findByText('http.client.duration')
+
+    const renderedIds = screen
+      .getAllByTestId('metric-row')
+      .map((row) => row.getAttribute('data-metric-id'))
+
+    expect(
+      renderedIds.filter(
+        (id) => id === 'checkout-service http.server.duration',
+      ),
+    ).toHaveLength(1)
+    expect(renderedIds).toContain('payments-service http.client.duration')
   })
 })

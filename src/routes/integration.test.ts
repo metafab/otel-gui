@@ -1607,6 +1607,88 @@ describe('GET /api/metrics', () => {
     const metrics = await response.json()
     expect(metrics).toHaveLength(1)
   })
+
+  it('applies limit filtering by returning only the newest metric first', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(gaugeMetricPayload()),
+    } as any)
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(sumMetricPayload()),
+    } as any)
+
+    const response = await getMetricList({
+      url: makeUrl('/api/metrics', { limit: '1' }),
+    } as any)
+    const metrics = await response.json()
+
+    const fullListResponse = await getMetricList({
+      url: makeUrl('/api/metrics'),
+    } as any)
+    const fullList = await fullListResponse.json()
+
+    expect(metrics).toHaveLength(1)
+    expect(metrics[0].id).toBe(fullList[0].id)
+  })
+
+  it('ignores invalid limit values and falls back to default behavior', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(gaugeMetricPayload()),
+    } as any)
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(sumMetricPayload()),
+    } as any)
+
+    const invalidLimitResponse = await getMetricList({
+      url: makeUrl('/api/metrics', { limit: 'abc' }),
+    } as any)
+    const nonPositiveLimitResponse = await getMetricList({
+      url: makeUrl('/api/metrics', { limit: '0' }),
+    } as any)
+
+    const invalidLimitMetrics = await invalidLimitResponse.json()
+    const nonPositiveLimitMetrics = await nonPositiveLimitResponse.json()
+
+    expect(invalidLimitMetrics).toHaveLength(2)
+    expect(nonPositiveLimitMetrics).toHaveLength(2)
+  })
+
+  it('returns metrics sorted newest-first', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(gaugeMetricPayload()),
+    } as any)
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(sumMetricPayload()),
+    } as any)
+
+    const response = await getMetricList({
+      url: makeUrl('/api/metrics'),
+    } as any)
+    const metrics = await response.json()
+
+    for (let i = 1; i < metrics.length; i++) {
+      expect(metrics[i - 1].lastUpdated >= metrics[i].lastUpdated).toBe(true)
+    }
+  })
+
+  it('each metric item has required MetricListItem fields', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(gaugeMetricPayload()),
+    } as any)
+
+    const response = await getMetricList({
+      url: makeUrl('/api/metrics'),
+    } as any)
+    const [metric] = await response.json()
+
+    expect(typeof metric.id).toBe('string')
+    expect(typeof metric.name).toBe('string')
+    expect(typeof metric.type).toBe('string')
+    expect(typeof metric.unit).toBe('string')
+    expect(typeof metric.serviceName).toBe('string')
+    expect(typeof metric.seriesCount).toBe('number')
+    expect(typeof metric.lastUpdated).toBe('number')
+    expect(Array.isArray(metric.sparkline)).toBe(true)
+  })
 })
 
 // ─── GET /api/metrics/:metricId ───────────────────────────────────────────────
@@ -1787,6 +1869,70 @@ describe('DELETE /api/metrics', () => {
     const remaining = await afterResponse.json()
     expect(remaining).toHaveLength(1)
     expect(remaining.find((m: any) => m.id === idToDelete)).toBeUndefined()
+  })
+
+  it('filters invalid ids and deletes only valid matching IDs', async () => {
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(gaugeMetricPayload()),
+    } as any)
+
+    const beforeResponse = await getMetricList({
+      url: makeUrl('/api/metrics'),
+    } as any)
+    const before = await beforeResponse.json()
+    const targetId = before[0].id
+
+    const deleteRequest = new Request('http://localhost/api/metrics', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ids: [targetId, 123, null, 'missing-id'],
+      }),
+    })
+
+    const deleteResponse = await deleteMetrics({
+      request: deleteRequest,
+    } as any)
+    const deleteBody = await deleteResponse.json()
+
+    expect(deleteBody.success).toBe(true)
+    expect(deleteBody.mode).toBe('selected')
+    expect(deleteBody.deletedCount).toBe(1)
+
+    const afterResponse = await getMetricList({
+      url: makeUrl('/api/metrics'),
+    } as any)
+    const after = await afterResponse.json()
+
+    expect(after).toHaveLength(before.length - 1)
+    expect(after.find((m: any) => m.id === targetId)).toBeUndefined()
+  })
+
+  it('does not affect logs when clearing metrics', async () => {
+    await postOtlpLogs({ request: makeLogsPostRequest(simpleLog) } as any)
+    await postOtlpMetrics({
+      request: makeMetricsPostRequest(gaugeMetricPayload()),
+    } as any)
+
+    await deleteMetrics({} as any)
+
+    const logsResponse = await getLogList({ url: makeUrl('/api/logs') } as any)
+    const logs = await logsResponse.json()
+    expect(logs.length).toBeGreaterThan(0)
+  })
+
+  it('returns 400 for malformed JSON body', async () => {
+    const deleteRequest = new Request('http://localhost/api/metrics', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{bad json',
+    })
+
+    const response = await deleteMetrics({ request: deleteRequest } as any)
+    expect(response.status).toBe(400)
+
+    const body = await response.json()
+    expect(body.error).toMatch(/malformed json/i)
   })
 })
 
