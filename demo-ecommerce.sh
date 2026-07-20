@@ -16,6 +16,7 @@ echo ""
 echo "Features demonstrated:"
 echo "  ✓ Multi-service distributed trace"
 echo "  ✓ Trace-correlated logs"
+echo "  ✓ Metrics ingestion (Gauge, Sum, Histogram)"
 echo "  ✓ Incremental span arrival (realistic behavior)"
 echo "  ✓ Parent-child span hierarchy"
 echo "  ✓ Error handling (database deadlock with retry)"
@@ -53,9 +54,24 @@ else
 fi
 
 echo ""
+echo "📤 Sending initial metrics data (frontend + backend-api)..."
+curl -X POST "$HOST/v1/metrics" \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-ecommerce-part1.json \
+  -s -o /dev/null
+
+if [ $? -eq 0 ]; then
+  echo "✅ Metrics part 1 sent successfully"
+else
+  echo "❌ Failed to send metrics part 1"
+  exit 1
+fi
+
+echo ""
 echo "🔍 Check the UI - you should see the initial spans from frontend and backend-api"
 echo "   Trace ID: 7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c"
 echo "   Tip: open Span Details > Correlated Logs for a span"
+echo "   Tip: open the Metrics tab to see initial Gauge and Sum series"
 echo ""
 read -r -p "⏳ Press Enter to send remaining spans..."
 
@@ -89,6 +105,20 @@ else
 fi
 
 echo ""
+echo "📤 Sending delayed metrics data (auth-service + database)..."
+curl -X POST "$HOST/v1/metrics" \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-ecommerce-part2.json \
+  -s -o /dev/null
+
+if [ $? -eq 0 ]; then
+  echo "✅ Metrics part 2 sent successfully"
+else
+  echo "❌ Failed to send metrics part 2"
+  exit 1
+fi
+
+echo ""
 echo "✨ Demo complete!"
 echo ""
 echo "🎯 What to explore in the UI:"
@@ -97,8 +127,10 @@ echo "  2. Notice spans from 4 different services (color-coded)"
 echo "  3. Expand/collapse the 'process payment' span to see its children"
 echo "  4. Use error navigation buttons to find the database deadlock"
 echo "  5. Click on the error span to see retry logic"
-echo "  6. Open Correlated Logs in the sidebar and filter by ERROR"
-echo "  7. Use keyboard navigation (↑↓←→ Enter) to explore the tree"
+echo "  6. Use keyboard navigation (↑↓←→ Enter) to explore the tree"
+echo "  7. Open Correlated Logs in the sidebar and filter by ERROR"
+echo "  8. Switch to Logs tab and inspect log messages"
+echo "  9. Switch to Metrics tab and inspect counter rate + histogram buckets"
 echo ""
 echo "📊 Trace Structure:"
 echo "  POST /checkout (frontend)"

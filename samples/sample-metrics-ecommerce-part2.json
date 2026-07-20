@@ -1,0 +1,159 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "backend-api"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "sample-demo.ecommerce",
+            "version": "1.0.0"
+          },
+          "metrics": [
+            {
+              "name": "http.server.request.count",
+              "description": "Checkout requests handled",
+              "unit": "1",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "http.route",
+                        "value": {
+                          "stringValue": "/checkout"
+                        }
+                      },
+                      {
+                        "key": "http.method",
+                        "value": {
+                          "stringValue": "POST"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000406000000000",
+                    "asDouble": 168
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "auth-service"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "sample-demo.ecommerce",
+            "version": "1.0.0"
+          },
+          "metrics": [
+            {
+              "name": "http.server.request.count",
+              "description": "Auth checks handled",
+              "unit": "1",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "http.route",
+                        "value": {
+                          "stringValue": "/session/verify"
+                        }
+                      },
+                      {
+                        "key": "http.method",
+                        "value": {
+                          "stringValue": "GET"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000406000000000",
+                    "asDouble": 96
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "database"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "sample-demo.ecommerce",
+            "version": "1.0.0"
+          },
+          "metrics": [
+            {
+              "name": "db.client.operation.duration",
+              "description": "Database update latency distribution",
+              "unit": "ms",
+              "histogram": {
+                "aggregationTemporality": 2,
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "db.system",
+                        "value": {
+                          "stringValue": "postgresql"
+                        }
+                      },
+                      {
+                        "key": "db.operation",
+                        "value": {
+                          "stringValue": "UPDATE"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000406000000000",
+                    "count": "6",
+                    "sum": 244,
+                    "bucketCounts": ["1", "2", "2", "1"],
+                    "explicitBounds": [10, 25, 50]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

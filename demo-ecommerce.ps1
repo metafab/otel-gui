@@ -32,6 +32,7 @@ Write-Host ""
 Write-Host "Features demonstrated:"
 Write-Host "  [OK] Multi-service distributed trace"
 Write-Host "  [OK] Trace-correlated logs"
+Write-Host "  [OK] Metrics ingestion (Gauge, Sum, Histogram)"
 Write-Host "  [OK] Incremental span arrival (realistic behavior)"
 Write-Host "  [OK] Parent-child span hierarchy"
 Write-Host "  [OK] Error handling (database deadlock with retry)"
@@ -42,6 +43,8 @@ $tracePart1 = Join-Path $scriptDir 'samples/sample-trace-ecommerce-part1.json'
 $logPart1 = Join-Path $scriptDir 'samples/sample-log-ecommerce-part1.json'
 $tracePart2 = Join-Path $scriptDir 'samples/sample-trace-ecommerce-part2.json'
 $logPart2 = Join-Path $scriptDir 'samples/sample-log-ecommerce-part2.json'
+$metricsPart1 = Join-Path $scriptDir 'samples/sample-metrics-ecommerce-part1.json'
+$metricsPart2 = Join-Path $scriptDir 'samples/sample-metrics-ecommerce-part2.json'
 
 Write-Host "Sending initial trace data (frontend + backend-api)..."
 try {
@@ -67,9 +70,22 @@ catch {
 }
 
 Write-Host ""
+Write-Host "Sending initial metrics data (frontend + backend-api)..."
+try {
+    Send-OtlpJson -Uri "$host_/v1/metrics" -JsonFile $metricsPart1
+    Write-Host "Metrics part 1 sent successfully"
+}
+catch {
+    Write-Host "Failed to send metrics part 1"
+    Write-Host $_.Exception.Message
+    exit 1
+}
+
+Write-Host ""
 Write-Host "Check the UI - you should see the initial spans from frontend and backend-api"
 Write-Host "   Trace ID: 7c9e4f8a3b2d1e6f5a4c3b2a1d0e9f8c"
 Write-Host "   Tip: open Span Details > Correlated Logs for a span"
+Write-Host "   Tip: open the Metrics tab to see initial Gauge and Sum series"
 Write-Host ""
 Read-Host "Press Enter to send remaining spans"
 
@@ -98,6 +114,18 @@ catch {
 }
 
 Write-Host ""
+Write-Host "Sending delayed metrics data (auth-service + database)..."
+try {
+    Send-OtlpJson -Uri "$host_/v1/metrics" -JsonFile $metricsPart2
+    Write-Host "Metrics part 2 sent successfully"
+}
+catch {
+    Write-Host "Failed to send metrics part 2"
+    Write-Host $_.Exception.Message
+    exit 1
+}
+
+Write-Host ""
 Write-Host "Demo complete!"
 Write-Host ""
 Write-Host "What to explore in the UI:"
@@ -106,8 +134,10 @@ Write-Host "  2. Notice spans from 4 different services (color-coded)"
 Write-Host "  3. Expand/collapse the 'process payment' span to see its children"
 Write-Host "  4. Use error navigation buttons to find the database deadlock"
 Write-Host "  5. Click on the error span to see retry logic"
-Write-Host "  6. Open Correlated Logs in the sidebar and filter by ERROR"
-Write-Host "  7. Use keyboard navigation (up/down/left/right Enter) to explore the tree"
+Write-Host "  6. Use keyboard navigation (up/down/left/right Enter) to explore the tree"
+Write-Host "  7. Open Correlated Logs in the sidebar and filter by ERROR"
+Write-Host "  8. Switch to Logs tab and inspect log messages"
+Write-Host "  9. Switch to Metrics tab and inspect counter rate + histogram buckets"
 Write-Host ""
 Write-Host "Trace Structure:"
 Write-Host "  POST /checkout (frontend)"

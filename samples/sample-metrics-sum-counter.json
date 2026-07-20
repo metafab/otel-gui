@@ -1,0 +1,109 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "backend-api"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "sample-demo",
+            "version": "1.0.0"
+          },
+          "metrics": [
+            {
+              "name": "http.server.request.count",
+              "description": "Total HTTP requests handled",
+              "unit": "1",
+              "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "http.route",
+                        "value": {
+                          "stringValue": "/checkout"
+                        }
+                      },
+                      {
+                        "key": "http.method",
+                        "value": {
+                          "stringValue": "POST"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000200000000000",
+                    "asDouble": 120
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "http.route",
+                        "value": {
+                          "stringValue": "/checkout"
+                        }
+                      },
+                      {
+                        "key": "http.method",
+                        "value": {
+                          "stringValue": "POST"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000206000000000",
+                    "asDouble": 168
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "http.route",
+                        "value": {
+                          "stringValue": "/auth/session"
+                        }
+                      },
+                      {
+                        "key": "http.method",
+                        "value": {
+                          "stringValue": "GET"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000200000000000",
+                    "asDouble": 90
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "http.route",
+                        "value": {
+                          "stringValue": "/auth/session"
+                        }
+                      },
+                      {
+                        "key": "http.method",
+                        "value": {
+                          "stringValue": "GET"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000206000000000",
+                    "asDouble": 114
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

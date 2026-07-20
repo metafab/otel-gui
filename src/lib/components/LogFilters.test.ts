@@ -47,8 +47,8 @@ describe('LogFilters', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Clear Filters' }))
 
     expect(searchInput).toHaveValue('')
-    expect(servicePicker).toHaveTextContent('All services')
-    expect(severityPicker).toHaveTextContent('All severities')
+    expect(servicePicker).toHaveTextContent('All Services')
+    expect(severityPicker).toHaveTextContent('All Severities')
   })
 
   it('selects a service from the custom picker', async () => {

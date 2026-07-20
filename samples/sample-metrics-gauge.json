@@ -1,0 +1,114 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "frontend"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "sample-demo",
+            "version": "1.0.0"
+          },
+          "metrics": [
+            {
+              "name": "process.runtime.memory.usage",
+              "description": "Runtime memory usage by state",
+              "unit": "By",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "state",
+                        "value": {
+                          "stringValue": "used"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000100000000000",
+                    "asInt": "104857600"
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "state",
+                        "value": {
+                          "stringValue": "used"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000105000000000",
+                    "asInt": "118489088"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "backend-api"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "sample-demo",
+            "version": "1.0.0"
+          },
+          "metrics": [
+            {
+              "name": "process.runtime.memory.usage",
+              "description": "Runtime memory usage by state",
+              "unit": "By",
+              "gauge": {
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "state",
+                        "value": {
+                          "stringValue": "used"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000100000000000",
+                    "asInt": "159383552"
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "state",
+                        "value": {
+                          "stringValue": "used"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000105000000000",
+                    "asInt": "173015040"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

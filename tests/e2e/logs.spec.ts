@@ -244,4 +244,44 @@ test.describe('Logs flow', () => {
 
     await expect(page.getByText('No logs received yet.')).toBeVisible()
   })
+
+  test('restores logs filters after opening detail and going back', async ({
+    page,
+    request,
+  }) => {
+    await page.goto('/?tab=logs')
+
+    await request.post('/v1/logs', {
+      headers: { 'Content-Type': 'application/json' },
+      data: simpleLog,
+    })
+    await request.post('/v1/logs', {
+      headers: { 'Content-Type': 'application/json' },
+      data: unlinkedLog,
+    })
+
+    await page.locator('tbody tr').first().waitFor({ timeout: 10_000 })
+
+    await page.getByLabel('Search logs').fill('database')
+    await page.locator('#logs-severity').click()
+    await page.getByRole('button', { name: 'Error+' }).click()
+
+    const filteredRow = page
+      .locator('tbody tr', { hasText: 'database timeout' })
+      .first()
+    await expect(filteredRow).toBeVisible()
+
+    await filteredRow.click()
+    await expect(page).toHaveURL(/\/logs\//)
+
+    await page.getByRole('button', { name: '← Back to Logs' }).click()
+    await expect(page).toHaveURL(/\/?\?tab=logs.*search=database/)
+
+    const restoredUrl = new URL(page.url())
+    expect(restoredUrl.searchParams.get('search')).toBe('database')
+    expect(restoredUrl.searchParams.get('severity')).toBe('error')
+
+    await expect(page.getByLabel('Search logs')).toHaveValue('database')
+    await expect(page.locator('#logs-severity')).toContainText('Error+')
+  })
 })

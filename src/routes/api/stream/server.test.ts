@@ -73,6 +73,7 @@ describe('GET /api/stream (multiplexed SSE)', () => {
   beforeEach(() => {
     traceStore.clearTraces()
     traceStore.clearLogs()
+    traceStore.clearMetrics()
   })
 
   it('emits an initial event for every multiplexed sub-stream on connect', async () => {
@@ -83,11 +84,15 @@ describe('GET /api/stream (multiplexed SSE)', () => {
       'event: traces',
       'event: logs-count',
       'event: logs-snapshot',
+      'event: metrics-count',
+      'event: metrics-snapshot',
     ])
 
     expect(text).toContain('event: traces')
     expect(text).toContain('event: logs-count')
     expect(text).toContain('event: logs-snapshot')
+    expect(text).toContain('event: metrics-count')
+    expect(text).toContain('event: metrics-snapshot')
   })
 
   it('includes ingested trace data in the initial traces event', async () => {

@@ -34,6 +34,35 @@ function resolveMaxLogs(): number {
   return parsed
 }
 
+// Bounds the number of distinct metrics (series collections) retained in
+// memory. Note: this counts metric name+service combinations, not points.
+function resolveMaxMetrics(): number {
+  const raw = env.OTEL_GUI_MAX_METRICS
+  if (raw === undefined || raw === '') return 1000
+  const parsed = Number.parseInt(raw, 10)
+  if (Number.isNaN(parsed) || parsed < 1 || parsed > 10_000) {
+    console.warn(
+      `[otel-gui] Invalid OTEL_GUI_MAX_METRICS="${raw}". Must be an integer between 1 and 10000. Falling back to 1000.`,
+    )
+    return 1000
+  }
+  return parsed
+}
+
+// Bounds the number of points retained per series (the per-series ring size).
+function resolveMaxMetricPoints(): number {
+  const raw = env.OTEL_GUI_MAX_METRIC_POINTS
+  if (raw === undefined || raw === '') return 600
+  const parsed = Number.parseInt(raw, 10)
+  if (Number.isNaN(parsed) || parsed < 10 || parsed > 10_000) {
+    console.warn(
+      `[otel-gui] Invalid OTEL_GUI_MAX_METRIC_POINTS="${raw}". Must be an integer between 10 and 10000. Falling back to 600.`,
+    )
+    return 600
+  }
+  return parsed
+}
+
 function resolvePersistenceMode(): 'memory' | 'pglite' {
   const raw = env.OTEL_GUI_PERSISTENCE_MODE
   if (raw === undefined || raw === '') return 'memory'
@@ -65,6 +94,8 @@ function resolveFlushMs(): number {
 
 const maxTraces = resolveMaxTraces()
 const maxLogs = resolveMaxLogs()
+const maxMetrics = resolveMaxMetrics()
+const maxMetricPoints = resolveMaxMetricPoints()
 const persistenceMode = resolvePersistenceMode()
 const persistencePath = resolvePersistencePath()
 const flushMs = resolveFlushMs()
@@ -232,6 +263,8 @@ async function createTraceStore(): Promise<TraceStoreWithPersistenceStatus> {
       const store = await backend({
         maxTraces,
         maxLogs,
+        maxMetrics,
+        maxMetricPoints,
         persistencePath,
         flushMs,
       })
@@ -275,6 +308,8 @@ async function createTraceStore(): Promise<TraceStoreWithPersistenceStatus> {
   const memoryStore = await memoryBackend({
     maxTraces,
     maxLogs,
+    maxMetrics,
+    maxMetricPoints,
     persistencePath,
     flushMs,
   })
