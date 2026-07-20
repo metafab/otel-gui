@@ -357,14 +357,8 @@ describe('Metrics', () => {
     const expectedHref =
       '/metrics/worker-service%20jobs.processed?returnTo=%2F%3Ftab%3Dmetrics'
 
-    expect(vi.mocked(goto)).toHaveBeenNthCalledWith(
-      1,
-      expectedHref,
-    )
-    expect(vi.mocked(goto)).toHaveBeenNthCalledWith(
-      2,
-      expectedHref,
-    )
+    expect(vi.mocked(goto)).toHaveBeenNthCalledWith(1, expectedHref)
+    expect(vi.mocked(goto)).toHaveBeenNthCalledWith(2, expectedHref)
   })
 
   it('filters by search + service + type together', async () => {
