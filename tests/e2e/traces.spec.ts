@@ -273,6 +273,40 @@ test.describe('Trace ingestion flow', () => {
     await expect(page.locator('tbody tr')).toHaveCount(2)
   })
 
+  test('restores trace filters after opening detail and going back', async ({
+    page,
+    request,
+  }) => {
+    await page.goto('/')
+
+    await request.post('/v1/traces', {
+      headers: { 'Content-Type': 'application/json' },
+      data: simpleTrace,
+    })
+    await request.post('/v1/traces', {
+      headers: { 'Content-Type': 'application/json' },
+      data: errorTrace,
+    })
+
+    await page.locator('tbody tr').first().waitFor({ timeout: 10_000 })
+
+    await page.locator('#search').fill('payment')
+    await expect(page.locator('tbody tr')).toHaveCount(1)
+
+    const filteredRow = page.locator('tbody tr').first()
+    await filteredRow.click()
+
+    await expect(page).toHaveURL(/\/traces\//)
+    await page.getByRole('button', { name: /Back to Traces/i }).click()
+
+    await expect(page).toHaveURL(/\/?search=payment/)
+    const restoredUrl = new URL(page.url())
+    expect(restoredUrl.searchParams.get('search')).toBe('payment')
+
+    await expect(page.locator('#search')).toHaveValue('payment')
+    await expect(page.locator('tbody tr')).toHaveCount(1)
+  })
+
   test('supports trace-detail span search keyboard shortcuts', async ({
     page,
     request,
