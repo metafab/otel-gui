@@ -15,7 +15,7 @@
     selectedService = $bindable('all'),
     id = 'service-picker',
     ariaLabel = 'Service',
-    allLabel = 'All services',
+    allLabel = 'All Services',
   }: Props = $props()
 
   const ALL_SERVICES_VALUE = 'all'

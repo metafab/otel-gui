@@ -20,7 +20,7 @@
     selectedType = $bindable('all'),
     id = 'metric-type-picker',
     ariaLabel = 'Metric type',
-    allLabel = 'All types',
+    allLabel = 'All Types',
   }: Props = $props()
 
   const typeOptions = $derived([

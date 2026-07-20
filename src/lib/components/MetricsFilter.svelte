@@ -57,23 +57,12 @@
 
     <div class="filter-group service-group">
       <label for="metrics-service">Service</label>
-      <ServicePicker
-        id="metrics-service"
-        ariaLabel="Service"
-        allLabel="All services"
-        {services}
-        bind:selectedService
-      />
+      <ServicePicker id="metrics-service" {services} bind:selectedService />
     </div>
 
     <div class="filter-group type-group">
       <label for="metrics-type">Type</label>
-      <MetricTypePicker
-        id="metrics-type"
-        ariaLabel="Metric type"
-        allLabel="All types"
-        bind:selectedType={typeFilter}
-      />
+      <MetricTypePicker id="metrics-type" bind:selectedType={typeFilter} />
     </div>
   </div>
 

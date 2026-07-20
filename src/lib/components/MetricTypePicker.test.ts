@@ -11,7 +11,7 @@ describe('MetricTypePicker', () => {
       },
     })
 
-    expect(screen.getByLabelText('Metric type')).toHaveTextContent('All types')
+    expect(screen.getByLabelText('Metric type')).toHaveTextContent('All Types')
   })
 
   it('renders selected type badge text when a type is selected', () => {

@@ -20,7 +20,7 @@
     selectedSeverity = $bindable('all'),
     id = 'severity-picker',
     ariaLabel = 'Severity',
-    allLabel = 'All severities',
+    allLabel = 'All Severities',
   }: Props = $props()
 
   const severityOptions = $derived([

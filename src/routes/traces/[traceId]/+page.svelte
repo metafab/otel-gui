@@ -1108,7 +1108,7 @@
             showTraceDetails = !showTraceDetails
             restoreWaterfallFocus()
           }}
-          title={showTraceDetails ? 'Hide trace details' : 'Show trace details'}
+          title={showTraceDetails ? 'Hide Trace Details' : 'Show Trace Details'}
         >
           <svg
             width="14"
@@ -1153,7 +1153,7 @@
             showSpanDetails = !showSpanDetails
             restoreWaterfallFocus()
           }}
-          title={showSpanDetails ? 'Hide span details' : 'Show span details'}
+          title={showSpanDetails ? 'Hide Span Details' : 'Show Span Details'}
         >
           <svg
             width="14"

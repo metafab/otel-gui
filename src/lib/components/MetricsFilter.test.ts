@@ -47,8 +47,8 @@ describe('MetricsFilter', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Clear Filters' }))
 
     expect(searchInput).toHaveValue('')
-    expect(typePicker).toHaveTextContent('All types')
-    expect(servicePicker).toHaveTextContent('All services')
+    expect(typePicker).toHaveTextContent('All Types')
+    expect(servicePicker).toHaveTextContent('All Services')
   })
 
   it('does not show clear button without active filters', () => {
