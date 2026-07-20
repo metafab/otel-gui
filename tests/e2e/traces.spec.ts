@@ -236,7 +236,7 @@ test.describe('Trace ingestion flow', () => {
     await page.locator('tbody tr').first().waitFor({ timeout: 10_000 })
     await expect(page.locator('tbody tr')).toHaveCount(2)
 
-    await page.keyboard.press('m')
+    await page.keyboard.press('s')
     await expect(
       page.getByRole('tab', { name: 'Service Map' }),
     ).toHaveAttribute('aria-selected', 'true')
@@ -322,7 +322,7 @@ test.describe('Trace ingestion flow', () => {
     await expect(page.locator('.mini-map-wrap')).toHaveCount(0)
   })
 
-  test('toggles mini service map with m shortcut on trace detail', async ({
+  test('toggles mini service map with s shortcut on trace detail', async ({
     page,
     request,
   }) => {
@@ -339,10 +339,10 @@ test.describe('Trace ingestion flow', () => {
     await expect(miniMapToggle).toBeVisible()
     await expect(miniMapToggle).toHaveAttribute('aria-expanded', 'false')
 
-    await page.keyboard.press('m')
+    await page.keyboard.press('s')
     await expect(miniMapToggle).toHaveAttribute('aria-expanded', 'true')
 
-    await page.keyboard.press('m')
+    await page.keyboard.press('s')
     await expect(miniMapToggle).toHaveAttribute('aria-expanded', 'false')
   })
 

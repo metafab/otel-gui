@@ -998,8 +998,8 @@
       return
     }
 
-    // 'm': toggle mini service map
-    if (e.key === 'm' && !isInputFocused()) {
+    // 's': toggle mini service map
+    if (e.key === 's' && !isInputFocused()) {
       e.preventDefault()
       showMiniMap = !showMiniMap
       return
@@ -1496,7 +1496,7 @@
       { keys: ['↑ / ↓'], description: 'Navigate spans up / down' },
       { keys: ['← / →'], description: 'Collapse / expand selected span' },
       { keys: ['Enter'], description: 'Toggle collapse on selected span' },
-      { keys: ['m'], description: 'Toggle mini service map' },
+      { keys: ['s'], description: 'Toggle mini service map' },
       { keys: ['?'], description: 'Toggle keyboard shortcuts help' },
     ]}
     onclose={() => (showShortcuts = false)}

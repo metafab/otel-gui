@@ -179,15 +179,15 @@
       return
     }
 
-    // 'c': switch directly to Metrics tab ("counters"; t/l/m are taken)
-    if (e.key === 'c' && !isInputFocused()) {
+    // 'm': switch directly to Metrics tab
+    if (e.key === 'm' && !isInputFocused()) {
       e.preventDefault()
       switchTab('metrics')
       return
     }
 
-    // 'm': switch to Map tab
-    if (e.key === 'm' && !isInputFocused()) {
+    // 's': switch to Service Map tab
+    if (e.key === 's' && !isInputFocused()) {
       e.preventDefault()
       switchTab('map')
       return
@@ -370,9 +370,9 @@
       },
       { keys: ['t'], description: 'Switch to Traces tab' },
       { keys: ['l'], description: 'Switch to Logs tab' },
-      { keys: ['c'], description: 'Switch to Metrics tab' },
+      { keys: ['m'], description: 'Switch to Metrics tab' },
       {
-        keys: ['m'],
+        keys: ['s'],
         description:
           "Switch to Service Map tab or Toggle a trace's Service Map",
       },
