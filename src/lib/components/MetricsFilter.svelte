@@ -49,7 +49,7 @@
         id="metrics-search"
         type="text"
         bind:value={searchQuery}
-        placeholder="Search name, unit, or any series attribute…"
+        placeholder="Search by name, unit, service, or any series attribute…"
         class="search-input"
         aria-label="Search metrics"
       />
