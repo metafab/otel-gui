@@ -8,7 +8,10 @@
   import HistogramHeatmap from '$lib/components/HistogramHeatmap.svelte'
   import MetricSeriesLegend from '$lib/components/MetricSeriesLegend.svelte'
   import type { MetricDetail } from '$lib/types'
-  import { shouldUseHistoryBackForTarget } from '$lib/utils/returnNavigation'
+  import {
+    resolveReturnTarget,
+    shouldUseHistoryBackForTarget,
+  } from '$lib/utils/returnNavigation'
   import { isInputFocused } from '$lib/utils/keyboard'
   import {
     buildLines,
@@ -21,6 +24,7 @@
   import type uPlot from 'uplot'
 
   const metricId = $derived($page.params.metricId ?? '')
+  const returnToFromUrl = $derived($page.url.searchParams.get('returnTo'))
 
   let metric = $state<MetricDetail | null>(null)
   let isLoading = $state(true)
@@ -103,8 +107,25 @@
     metric ? new Date(metric.lastUpdated).toLocaleString() : '-',
   )
 
+  function resolveBackTarget(): string {
+    const baseOrigin =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'http://localhost'
+
+    return resolveReturnTarget(returnToFromUrl, {
+      fallback: '/?tab=metrics',
+      baseOrigin,
+      expectedPathname: '/',
+      invalidTabs: ['logs', 'map', 'traces'],
+      normalizeTab: (_tab, searchParams) => {
+        searchParams.set('tab', 'metrics')
+      },
+    })
+  }
+
   function handleBack() {
-    const target = '/?tab=metrics'
+    const target = resolveBackTarget()
 
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       if (

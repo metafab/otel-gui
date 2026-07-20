@@ -354,13 +354,16 @@ describe('Metrics', () => {
     await fireEvent.keyDown(firstRow, { key: 'Enter' })
     await fireEvent.keyDown(firstRow, { key: ' ' })
 
+    const expectedHref =
+      '/metrics/worker-service%20jobs.processed?returnTo=%2F%3Ftab%3Dmetrics'
+
     expect(vi.mocked(goto)).toHaveBeenNthCalledWith(
       1,
-      '/metrics/worker-service%20jobs.processed',
+      expectedHref,
     )
     expect(vi.mocked(goto)).toHaveBeenNthCalledWith(
       2,
-      '/metrics/worker-service%20jobs.processed',
+      expectedHref,
     )
   })
 

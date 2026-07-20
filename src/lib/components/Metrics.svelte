@@ -462,10 +462,21 @@
   }
 
   function handleRowClick(metricId: string) {
+    const returnTo =
+      typeof window !== 'undefined'
+        ? `${window.location.pathname}${window.location.search}${window.location.hash}`
+        : '/?tab=metrics'
+
+    const detailUrl = new URL(
+      `/metrics/${encodeURIComponent(metricId)}`,
+      'http://localhost',
+    )
+    detailUrl.searchParams.set('returnTo', returnTo)
+
     // Client-side navigation — see Traces.svelte: a full-page load tears down and
     // re-establishes every SSE stream on each open, stalling against the browser's
     // 6-connection-per-origin limit.
-    void goto(`/metrics/${encodeURIComponent(metricId)}`)
+    void goto(`${detailUrl.pathname}${detailUrl.search}${detailUrl.hash}`)
   }
 
   // Keyboard activation for the row (Enter/Space), only when the row itself —
