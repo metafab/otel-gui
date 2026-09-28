@@ -9,6 +9,7 @@
   import { onMount, onDestroy, tick } from 'svelte'
   import uPlot from 'uplot'
   import { themeStore } from '$lib/stores/theme.svelte'
+  import { metricTimeRange } from '$lib/utils/metricChart'
   import 'uplot/dist/uPlot.min.css'
 
   interface Props {
@@ -72,7 +73,10 @@
       height,
       // Raw values, time x-axis (uPlot default time scale = unix seconds).
       scales: {
-        x: { time: true },
+        x: {
+          time: true,
+          range: (plot, min, max) => metricTimeRange(min, max, plot.data[0]),
+        },
       },
       series: [{}, ...series],
       legend: { show: true, live: true },

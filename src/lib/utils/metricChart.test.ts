@@ -4,6 +4,7 @@ import {
   filterLines,
   buildAlignedData,
   defaultValueMode,
+  metricTimeRange,
   seriesLabel,
 } from './metricChart'
 import type { MetricDetail } from '$lib/types'
@@ -53,6 +54,19 @@ describe('defaultValueMode', () => {
       }),
     ).toBe('raw')
     expect(defaultValueMode({ type: 'gauge' })).toBe('raw')
+  })
+})
+
+describe('metricTimeRange', () => {
+  it('replaces uPlot’s expanded range with a one-day window for one timestamp', () => {
+    const timestamp = 1_700_000_206
+    expect(
+      metricTimeRange(timestamp, timestamp + 86_400_000, [timestamp]),
+    ).toEqual([timestamp - 43_200, timestamp + 43_200])
+  })
+
+  it('preserves the range when multiple timestamps exist', () => {
+    expect(metricTimeRange(100, 200, [100, 200])).toEqual([100, 200])
   })
 })
 

@@ -31,6 +31,20 @@ export const METRIC_PALETTE = [
 // by latest value; the UI surfaces a "showing N of M" note (never silent).
 export const DEFAULT_SERIES_CAP = 20
 
+const SINGLE_POINT_TIME_WINDOW_SECONDS = 24 * 60 * 60
+
+// Keep a single timestamp readable even if uPlot has already expanded its range.
+export function metricTimeRange(
+  min: number,
+  max: number,
+  timestamps: ArrayLike<number>,
+): [number, number] {
+  if (timestamps.length !== 1) return [min, max]
+
+  const halfWindow = SINGLE_POINT_TIME_WINDOW_SECONDS / 2
+  return [timestamps[0] - halfWindow, timestamps[0] + halfWindow]
+}
+
 // One logical line to plot: a label, the (t,v) samples, and the originating
 // series id so the legend checkbox state maps back to a series.
 export interface ChartLine {
