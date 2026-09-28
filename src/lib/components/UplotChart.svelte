@@ -6,8 +6,9 @@
   // re-create the instance. Re-creating on every live append is what causes the
   // chart to flash/reset zoom, so the $effect below is careful to drive the
   // existing instance instead.
-  import { onMount, onDestroy } from 'svelte'
+  import { onMount, onDestroy, tick } from 'svelte'
   import uPlot from 'uplot'
+  import { themeStore } from '$lib/stores/theme.svelte'
   import 'uplot/dist/uPlot.min.css'
 
   interface Props {
@@ -23,6 +24,22 @@
   let containerEl = $state<HTMLDivElement | null>(null)
   let chart: uPlot | null = null
   let resizeObserver: ResizeObserver | null = null
+  let colorSchemeQuery: MediaQueryList | null = null
+
+  // Canvas stroke styles need resolved colors; they cannot use CSS var() directly.
+  function themeColor(token: string): string {
+    return getComputedStyle(document.documentElement)
+      .getPropertyValue(token)
+      .trim()
+  }
+
+  function redrawAfterThemeChange(): void {
+    void tick().then(() => chart?.redraw())
+  }
+
+  function handleColorSchemeChange(): void {
+    if (themeStore.current === 'system') redrawAfterThemeChange()
+  }
 
   function buildOptions(width: number): uPlot.Options {
     return {
@@ -39,14 +56,14 @@
       },
       axes: [
         {
-          stroke: 'var(--text-secondary)',
-          grid: { stroke: 'var(--border-light)', width: 1 },
-          ticks: { stroke: 'var(--border)' },
+          stroke: () => themeColor('--text-secondary'),
+          grid: { stroke: () => themeColor('--border-light'), width: 1 },
+          ticks: { stroke: () => themeColor('--border') },
         },
         {
-          stroke: 'var(--text-secondary)',
-          grid: { stroke: 'var(--border-light)', width: 1 },
-          ticks: { stroke: 'var(--border)' },
+          stroke: () => themeColor('--text-secondary'),
+          grid: { stroke: () => themeColor('--border-light'), width: 1 },
+          ticks: { stroke: () => themeColor('--border') },
         },
       ],
     }
@@ -66,13 +83,25 @@
       })
       resizeObserver.observe(containerEl)
     }
+
+    if (typeof window.matchMedia === 'function') {
+      colorSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)')
+      colorSchemeQuery.addEventListener('change', handleColorSchemeChange)
+    }
   })
 
   onDestroy(() => {
     resizeObserver?.disconnect()
     resizeObserver = null
+    colorSchemeQuery?.removeEventListener('change', handleColorSchemeChange)
+    colorSchemeQuery = null
     chart?.destroy()
     chart = null
+  })
+
+  $effect(() => {
+    void themeStore.current
+    if (chart) redrawAfterThemeChange()
   })
 
   // Drive live updates into the EXISTING instance. Re-creating the chart here
