@@ -1,4 +1,5 @@
 <script lang="ts">
+  import './list-panel.css'
   import { goto, replaceState } from '$app/navigation'
   import ServiceBadge from '$lib/components/ServiceBadge.svelte'
   import MetricsFilter from '$lib/components/MetricsFilter.svelte'
@@ -778,74 +779,6 @@
 </div>
 
 <style>
-  .metrics-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    min-height: 0;
-    flex: 1;
-  }
-
-  .table-wrapper {
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--bg-surface);
-    margin-bottom: 0.25rem;
-  }
-
-  .bottom-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    margin: auto 0 0.75rem;
-  }
-
-  .retention-notice {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    margin: 0;
-  }
-
-  .retention-limit {
-    text-decoration: underline;
-    text-decoration-style: dotted;
-    text-underline-offset: 2px;
-    cursor: help;
-  }
-
-  .persistence-mode {
-    color: var(--text-secondary);
-  }
-
-  .persistence-docs-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 14px;
-    height: 14px;
-    margin-left: 4px;
-    border-radius: 50%;
-    border: 1px solid var(--text-secondary);
-    color: var(--text-secondary);
-    font-size: 10px;
-    font-weight: bold;
-    line-height: 1;
-    text-decoration: none;
-    vertical-align: middle;
-    opacity: 0.7;
-    transition: opacity 0.15s;
-  }
-
-  .persistence-docs-link:hover {
-    opacity: 1;
-    color: var(--accent, #3b82f6);
-    border-color: var(--accent, #3b82f6);
-  }
-
   table {
     width: 100%;
     border-collapse: collapse;
