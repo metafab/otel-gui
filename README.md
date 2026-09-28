@@ -339,7 +339,7 @@ See [SAMPLE_TRACES.md](./samples/SAMPLE_TRACES.md) for a full feature exploratio
 | `OTEL_GUI_CORS_ALLOWED_ORIGINS`       | `*`                | Allowed CORS origin(s) for the OTLP ingest (`/v1/*`) and read API (`/api/*`) endpoints, so browser-based OTLP exporters can post telemetry cross-origin. Use `*` to allow any origin, or a comma-separated list of exact origins (e.g. `https://app.example.com,http://localhost:5173`). For non-local/public deployments, prefer an explicit origin list to avoid exposing trace data to arbitrary websites. |
 | `OTEL_GUI_MAX_TRACES`                 | `1000`             | Maximum number of traces kept in memory (1–10 000). Oldest traces are evicted first when the limit is reached. Requires a restart.                                                                                                                                                                                                                                                                            |
 | `OTEL_GUI_MAX_LOGS`                   | `1000`             | Maximum number of log records kept in memory (1–10 000). Oldest records are evicted first when the limit is reached. Requires a restart.                                                                                                                                                                                                                                                                      |
-| `OTEL_GUI_MAX_METRICS`                | `1000`             | Maximum number of metric entries keyed by `service.name` + metric name (1–10 000). Each entry may contain multiple attribute series; this does not cap series cardinality or points per series. Oldest-created entries are evicted first. Requires a restart.                                                                                                                                                       |
+| `OTEL_GUI_MAX_METRICS`                | `1000`             | Maximum number of metric entries keyed by `service.name` + metric name (1–10 000). Each entry may contain multiple attribute series; this does not cap series cardinality or points per series. Oldest-created entries are evicted first. Requires a restart.                                                                                                                                                 |
 | `OTEL_GUI_MAX_METRIC_POINTS`          | `600`              | Maximum number of data points retained per metric series (10–10 000). Oldest points are evicted first. Requires a restart.                                                                                                                                                                                                                                                                                    |
 | `OTEL_GUI_PERSISTENCE_MODE`           | `memory`           | Persistence backend mode. Use `memory` (default, no disk writes) or `pglite` (requires an external backend module, typically enterprise).                                                                                                                                                                                                                                                                     |
 | `OTEL_GUI_PERSISTENCE_PATH`           | `.otel-gui/pglite` | Directory path for local PGlite data when persistence mode is `pglite`.                                                                                                                                                                                                                                                                                                                                       |
@@ -458,16 +458,30 @@ Notes:
 ```
 POST /v1/traces          ← OTLP receiver (JSON + Protobuf)
 POST /v1/logs            ← OTLP logs receiver (JSON + Protobuf)
+POST /v1/metrics         ← OTLP metrics receiver (JSON + Protobuf)
+
 GET  /api/traces         ← trace list for the UI
 DELETE /api/traces       ← clear all traces or delete selected traceIds
 GET  /api/traces/:id     ← single trace
 GET  /api/traces/:id/logs ← trace-scoped correlated logs
+GET  /api/traces/:id/logs/:logId ← single trace-scoped log detail
 GET  /api/traces/:id/export ← export a single trace envelope
 POST /api/traces/export  ← export filtered/selected traceIds
 POST /api/traces/import/preview ← validate + preview import metadata
 POST /api/traces/import  ← import otel-gui envelope or raw OTLP JSON
-GET  /api/traces/stream  ← SSE stream (real-time push)
+
+GET  /api/logs           ← global log list for the UI
+DELETE /api/logs         ← clear all logs or delete selected logIds
+GET  /api/logs/:id       ← single log detail
+
+GET  /api/metrics        ← metric list for the UI
+DELETE /api/metrics      ← clear all metrics or delete selected ids
+GET  /api/metrics/:id    ← metric detail and chart data
+GET  /api/metrics/:id/stream ← SSE stream for metric detail updates
+
 GET  /api/service-map    ← aggregated service graph
+GET  /api/stream         ← multiplexed SSE stream for traces, logs, and metrics
+GET  /api/config         ← runtime limits and persistence status
 ```
 
 Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limit defaults to 1000 traces (`OTEL_GUI_MAX_TRACES`) and 1000 log records (`OTEL_GUI_MAX_LOGS`).
