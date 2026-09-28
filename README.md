@@ -13,7 +13,7 @@ A lightweight, zero-config OpenTelemetry viewer for local development — traces
 
 Drop-in replacement for a collector endpoint — point your OTLP exporter at it and see your telemetry immediately. No database required.
 
-![Trace list view](docs/screenshots/trace-detail.png)
+![Overview (trace detail)](docs/screenshots/trace-detail.png)
 
 <div align="center">
 <strong>
@@ -368,7 +368,7 @@ PORT=4318 node build
 
 The production build uses `@sveltejs/adapter-node`. In-memory state is kept alive by the Node.js process — no external store required for local use.
 
-In Docker, traces are still in-memory only and are lost when the container stops.
+In Docker, with the default configuration,traces are in-memory only and are lost when the container stops.
 
 ### Self-contained executable (SEA)
 
@@ -484,7 +484,7 @@ GET  /api/stream         ← multiplexed SSE stream for traces, logs, and metric
 GET  /api/config         ← runtime limits and persistence status
 ```
 
-Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limit defaults to 1000 traces (`OTEL_GUI_MAX_TRACES`) and 1000 log records (`OTEL_GUI_MAX_LOGS`).
+Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limits default to 1000 traces (`OTEL_GUI_MAX_TRACES`), 1000 log records (`OTEL_GUI_MAX_LOGS`), 1000 metric entries (`OTEL_GUI_MAX_METRICS`), and 600 points per metric series (`OTEL_GUI_MAX_METRIC_POINTS`).
 <br />
 SSE subscribers are notified on every write and receive a debounced `event: traces` message.
 <br />
@@ -504,7 +504,7 @@ Additional persistence backends (including `pglite`) are loaded via `OTEL_GUI_PE
 - [SvelteKit 2](https://kit.svelte.dev) with Svelte 5 runes (`$state`, `$derived`, `$effect`)
 - [`@sveltejs/adapter-node`](https://kit.svelte.dev/docs/adapter-node) for persistent in-memory state
 - [`protobufjs`](https://github.com/protobufjs/protobuf.js) for Protobuf decoding
-- No UI library — custom waterfall, service map SVG, and all components from scratch
+- No UI framework — custom waterfall and service-map SVG, with uPlot for metric charts
 - TypeScript throughout
 
 ## 🤝 Contributing
