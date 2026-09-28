@@ -13,6 +13,7 @@
     shouldUseHistoryBackForTarget,
   } from '$lib/utils/returnNavigation'
   import { isInputFocused } from '$lib/utils/keyboard'
+  import { formatDateTimeLocal } from '$lib/utils/time'
   import {
     buildLines,
     filterLines,
@@ -104,7 +105,7 @@
   }
 
   const lastUpdatedLabel = $derived(
-    metric ? new Date(metric.lastUpdated).toLocaleString() : '-',
+    metric ? formatDateTimeLocal(metric.lastUpdated) : '-',
   )
 
   function resolveBackTarget(): string {

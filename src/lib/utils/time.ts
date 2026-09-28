@@ -150,12 +150,20 @@ export function formatTimestamp(nanoString: string): string {
   return new Date(ms).toISOString()
 }
 
+export function formatDateTimeLocal(ms: number): string {
+  return new Date(ms).toLocaleString()
+}
+
+export function formatUnixTimestampLocal(seconds: number): string {
+  return formatDateTimeLocal(seconds * 1000)
+}
+
 /**
  * Returns a human-readable local time string
  */
 export function formatTimestampLocal(nanoString: string): string {
   const ms = Number(BigInt(nanoString) / 1_000_000n)
-  return new Date(ms).toLocaleString()
+  return formatDateTimeLocal(ms)
 }
 
 export function getDurationMs(startNano: string, endNano: string): number {

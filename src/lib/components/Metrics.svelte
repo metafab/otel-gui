@@ -6,6 +6,7 @@
   import { metricStore } from '$lib/stores/metrics.svelte'
   import { onSSEEvents } from '$lib/stores/sseClient'
   import type { MetricListItem } from '$lib/types'
+  import { formatDateTimeLocal } from '$lib/utils/time'
 
   // Bindable props so parent can read reactive state for header action buttons.
   let {
@@ -173,7 +174,7 @@
   function formatUpdated(ms: number): string {
     if (!ms) return '-'
     try {
-      return new Date(ms).toLocaleString()
+      return formatDateTimeLocal(ms)
     } catch {
       return '-'
     }

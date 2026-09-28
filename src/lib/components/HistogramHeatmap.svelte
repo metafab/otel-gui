@@ -15,6 +15,7 @@
     type DistBucket,
   } from '$lib/utils/histogram'
   import type { MetricWirePoint } from '$lib/types'
+  import { formatDateTimeLocal } from '$lib/utils/time'
 
   interface Props {
     // Points of the chosen series (already type-narrowed to histogram-ish).
@@ -39,9 +40,7 @@
   const maxCount = $derived(
     distBuckets.reduce((m, b) => (b.count > m ? b.count : m), 0),
   )
-  const latestTimeLabel = $derived(
-    latest ? new Date(latest.t).toLocaleTimeString() : '',
-  )
+  const latestTimeLabel = $derived(latest ? formatDateTimeLocal(latest.t) : '')
 
   // ── Heatmap rows: union of bucket layouts across time ───────────────────────
   // Each time-column is one histogram point; a row is a bucket index. We use the
@@ -164,7 +163,7 @@
     for (let i = 0; i < xTicks; i++) {
       const cIdx = Math.round((i / Math.max(1, xTicks - 1)) * (cols.length - 1))
       const x = padLeft + cIdx * cellW + cellW / 2
-      const label = new Date(cols[cIdx].t).toLocaleTimeString()
+      const label = formatDateTimeLocal(cols[cIdx].t)
       ctx.fillText(label, x, padTop + plotH + 4)
     }
     ctx.textAlign = 'start'

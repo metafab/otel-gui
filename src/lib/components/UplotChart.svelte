@@ -10,6 +10,7 @@
   import uPlot from 'uplot'
   import { themeStore } from '$lib/stores/theme.svelte'
   import { metricTimeRange } from '$lib/utils/metricChart'
+  import { formatUnixTimestampLocal } from '$lib/utils/time'
   import 'uplot/dist/uPlot.min.css'
 
   interface Props {
@@ -67,10 +68,39 @@
     )
   }
 
+  function xAxisEdgePadding(plot: uPlot): number {
+    const scale = plot.scales.x
+    const axis = plot.axes[0]
+    const timestamps = [scale.min, scale.max].filter(
+      (timestamp): timestamp is number => typeof timestamp === 'number',
+    )
+    const ctx = plot.ctx
+
+    ctx.save()
+    if (axis.font) ctx.font = axis.font
+    const widestLabel = timestamps.reduce(
+      (widest, timestamp) =>
+        Math.max(
+          widest,
+          ctx.measureText(formatUnixTimestampLocal(timestamp)).width,
+        ),
+      0,
+    )
+    ctx.restore()
+
+    return Math.ceil(widestLabel / uPlot.pxRatio / 2 + 4)
+  }
+
   function buildOptions(width: number): uPlot.Options {
     return {
       width,
       height,
+      padding: [
+        null,
+        (plot) => xAxisEdgePadding(plot),
+        null,
+        (plot) => xAxisEdgePadding(plot),
+      ],
       // Raw values, time x-axis (uPlot default time scale = unix seconds).
       scales: {
         x: {
@@ -78,7 +108,13 @@
           range: (plot, min, max) => metricTimeRange(min, max, plot.data[0]),
         },
       },
-      series: [{}, ...series],
+      series: [
+        {
+          value: (_plot, timestamp, _seriesIdx, idx) =>
+            idx === null ? '--' : formatUnixTimestampLocal(timestamp),
+        },
+        ...series,
+      ],
       legend: { show: true, live: true },
       cursor: {
         focus: { prox: 16 },
@@ -88,6 +124,9 @@
           stroke: () => themeColor('--text-secondary'),
           grid: { stroke: () => themeColor('--border-light'), width: 1 },
           ticks: { stroke: () => themeColor('--border') },
+          space: 160,
+          values: (_plot, timestamps) =>
+            timestamps.map(formatUnixTimestampLocal),
         },
         {
           stroke: () => themeColor('--text-secondary'),
