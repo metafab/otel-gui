@@ -41,6 +41,31 @@
     if (themeStore.current === 'system') redrawAfterThemeChange()
   }
 
+  function yAxisSize(
+    plot: uPlot,
+    values: string[] | null,
+    axisIdx: number,
+  ): number {
+    if (!values) return 50
+
+    const axis = plot.axes[axisIdx]
+    const ctx = plot.ctx
+    ctx.save()
+    if (axis.font) ctx.font = axis.font
+    const labelWidth = values.reduce(
+      (widest, value) => Math.max(widest, ctx.measureText(value).width),
+      0,
+    )
+    ctx.restore()
+
+    return Math.ceil(
+      labelWidth / uPlot.pxRatio +
+        (axis.gap ?? 0) +
+        (axis.ticks?.size ?? 0) +
+        8,
+    )
+  }
+
   function buildOptions(width: number): uPlot.Options {
     return {
       width,
@@ -64,6 +89,7 @@
           stroke: () => themeColor('--text-secondary'),
           grid: { stroke: () => themeColor('--border-light'), width: 1 },
           ticks: { stroke: () => themeColor('--border') },
+          size: yAxisSize,
         },
       ],
     }
