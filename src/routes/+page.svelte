@@ -298,7 +298,12 @@
   </header>
 
   {#if activeTab === 'traces'}
-    <div role="tabpanel" id="panel-traces" aria-labelledby="tab-traces">
+    <div
+      class="traces-tab-container"
+      role="tabpanel"
+      id="panel-traces"
+      aria-labelledby="tab-traces"
+    >
       <Traces
         bind:this={tracesRef}
         bind:filteredCount
@@ -481,7 +486,8 @@
   }
 
   .logs-tab,
-  .metrics-tab {
+  .metrics-tab,
+  .traces-tab-container {
     flex: 1;
     min-height: 0;
     display: flex;

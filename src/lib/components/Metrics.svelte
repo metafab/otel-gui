@@ -758,12 +758,20 @@
         title="Set OTEL_GUI_MAX_METRICS=<number> (1–10 000) and restart to change this limit."
         >{maxMetrics}</span
       >
-      metric series
+      metric entries
       <span
         class="persistence-mode persistence-mode--memory"
-        title="Metrics are memory-only in Phase 1"
+        title="Optional persistence can be activated — see documentation"
       >
         in memory only
+        <a
+          href="https://github.com/metafab/otel-gui#%EF%B8%8F-configuration"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="persistence-docs-link"
+          title="View persistence configuration docs"
+          aria-label="Persistence documentation">?</a
+        >
       </span>
     </p>
   </div>
@@ -811,6 +819,31 @@
 
   .persistence-mode {
     color: var(--text-secondary);
+  }
+
+  .persistence-docs-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin-left: 4px;
+    border-radius: 50%;
+    border: 1px solid var(--text-secondary);
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: bold;
+    line-height: 1;
+    text-decoration: none;
+    vertical-align: middle;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+  }
+
+  .persistence-docs-link:hover {
+    opacity: 1;
+    color: var(--accent, #3b82f6);
+    border-color: var(--accent, #3b82f6);
   }
 
   table {

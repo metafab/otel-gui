@@ -277,8 +277,19 @@ describe(Metrics, () => {
     await screen.findByText('http.server.duration')
     const retentionNotice = document.querySelector('.retention-notice')
     expect(retentionNotice).not.toBeNull()
-    expect(retentionNotice).toHaveTextContent('Keeping last 1000 metric series')
+    expect(retentionNotice).toHaveTextContent(
+      'Keeping last 1000 metric entries',
+    )
     expect(retentionNotice).toHaveTextContent('in memory only')
+    const persistenceLink = within(retentionNotice as HTMLElement).getByRole(
+      'link',
+      { name: 'Persistence documentation' },
+    )
+    expect(persistenceLink).toHaveAttribute(
+      'href',
+      'https://github.com/metafab/otel-gui#%EF%B8%8F-configuration',
+    )
+    expect(persistenceLink).toHaveAttribute('target', '_blank')
   })
 
   it('restores metrics filters from URL query params', async () => {
