@@ -168,7 +168,8 @@ Shortcuts implemented:
 | `Alt/⌥+⌫` | Clear all traces | — |
 | `t` | Switch to Traces tab | — |
 | `l` | Switch to Logs tab | — |
-| `m` | Toggle Traces/Map tab | Toggle mini service map |
+| `m` | Switch to Metrics tab | — |
+| `s` | Switch to Service Map tab | Toggle mini service map |
 | `Enter` / `Shift+Enter` | — | Next / prev match (when search focused) |
 | `n` / `Shift+N` | — | Next / prev search match |
 | `e` / `Shift+E` | — | Next / prev error span |
@@ -239,5 +240,5 @@ The service map (`GET /api/service-map?traceId=`) aggregates cross-service relat
 
 **UI integration**:
 
-- Trace list page: **Traces / Service Map** tab switcher (`m` to toggle). Map re-fetches whenever `traceStore.traces.length` changes.
-- Trace detail page: collapsible **Service Map** section in the trace-identification area (`m` to toggle). Scoped to the current `traceId`. Only shown when there are >1 node or >0 edges.
+- Trace list page: **Service Map** tab shortcut is `s`. Map re-fetches whenever `traceStore.traces.length` changes.
+- Trace detail page: collapsible **Service Map** section in the trace-identification area (`s` to toggle). Scoped to the current `traceId`. Only shown when there are >1 node or >0 edges.

@@ -566,7 +566,6 @@
           <SeverityPicker
             id="span-logs-severity"
             ariaLabel="Log severity"
-            allLabel="All severities"
             bind:selectedSeverity={logSeverityFilter}
           />
         </div>

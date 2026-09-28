@@ -22,6 +22,9 @@ export default defineConfig({
   },
   server: {
     port: 4318, // Standard OTLP/HTTP port
+    // Allow OTLP exporters reaching the dev server from Docker containers via
+    // host.docker.internal — Vite otherwise 403s requests with a non-local Host.
+    allowedHosts: ['host.docker.internal'],
   },
   preview: {
     port: 4318, // Standard OTLP/HTTP port

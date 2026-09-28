@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "@otel-gui/core": "workspace:*",
-    "protobufjs": "^8.6.4"
+    "protobufjs": "^8.6.4",
+    "uplot": "^1.6.32"
   }
 }

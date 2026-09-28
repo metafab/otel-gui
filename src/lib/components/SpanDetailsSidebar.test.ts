@@ -83,7 +83,7 @@ function makeLogDetail(
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
-describe('SpanDetailsSidebar', () => {
+describe(SpanDetailsSidebar, () => {
   // ── Basic field rendering ─────────────────────────────────────────────────
 
   it('renders the span name', () => {

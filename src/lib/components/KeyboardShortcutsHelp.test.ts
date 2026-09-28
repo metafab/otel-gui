@@ -10,7 +10,7 @@ const SHORTCUTS = [
   { keys: ['?'], description: 'Toggle this overlay' },
 ]
 
-describe('KeyboardShortcutsHelp', () => {
+describe(KeyboardShortcutsHelp, () => {
   // ── Rendering ────────────────────────────────────────────────────────────
 
   it('renders all shortcut descriptions', () => {

@@ -144,6 +144,60 @@ These metrics are the acceptance criteria for v2 usability and performance.
 - Publish machine profile (CPU/RAM/OS/Node version) with each benchmark run.
 - Track trends across releases; regressions beyond 10% require explicit sign-off.
 
+#### Validate the v2 product targets
+
+The v2 setup, startup, memory, and time-to-root-cause targets above have not yet
+been measured. Record actual measurements using the process in
+[`testing.md`](./testing.md); `scripts/benchmark-contract.mjs` is currently a
+scaffold, not an implemented measurement harness.
+
+### Metrics Support Follow-up
+
+Metrics ingestion and the list/detail views, all five OTLP metric types,
+server-side Sum rates, and streaming are implemented. This section tracks the
+remaining work against the current implementation.
+
+#### Bound attribute-series cardinality
+
+`OTEL_GUI_MAX_METRICS` caps distinct `(service.name, metric name)` entries. Each
+entry can contain multiple attribute series, so this setting does not bound the
+number of series held in memory. `OTEL_GUI_MAX_METRIC_POINTS` independently caps
+points retained per series.
+
+- Decide on an explicit series-retention policy and whether its limit is global or
+  per metric.
+- Implement the bound and expose any new configuration in `/api/config` and the
+  environment documentation.
+- Add tests for the chosen eviction behavior and ensure list/detail SSE remains
+  consistent when series are removed.
+
+#### Make histogram series selectable
+
+Histogram and exponential-histogram detail views currently display only the first
+series. Add series selection and attribute filtering for these views, consistent
+with the line-chart experience, and clearly indicate which series is displayed.
+Cover selection, filtering, and live updates in component tests.
+
+#### Optional: persistence and exemplar links
+
+Pursue these only when there is a concrete requirement.
+
+- **Persistence:** Metrics currently use the in-memory store. Extend the external
+  backend registered through `OTEL_GUI_PERSISTENCE_BACKEND_MODULE` to store and
+  restore metric entries, attribute series, and typed points. Keep retention
+  consistent with `maxMetrics` and `maxMetricPoints`, and verify restart
+  restoration and eviction behavior in the backend's tests. Metrics
+  import/export parity can be considered if users need it; it is not a
+  prerequisite otherwise.
+- **Exemplar-to-trace links:** Metric data points do not currently retain or
+  display exemplars. If implemented, preserve exemplar trace/span IDs during
+  ingestion, display them on the relevant chart, and link to the matching trace
+  (and span when available). Check that the referenced trace is still present;
+  show an unlinked marker if it was evicted or deleted. Test ingestion, rendering,
+  and navigation for present and absent traces.
+- **Downsampling:** Defer unless retained point counts make charts or memory use
+  problematic.
+
 ## OTLP/gRPC Positioning
 
 ### Current Decision (v2)

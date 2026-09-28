@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/svelte'
 import ChevronIcon from './ChevronIcon.svelte'
 
-describe('ChevronIcon', () => {
+describe(ChevronIcon, () => {
   it('renders an SVG element', () => {
     const { container } = render(ChevronIcon)
     expect(container.querySelector('svg')).toBeTruthy()

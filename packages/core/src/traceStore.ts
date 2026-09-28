@@ -26,6 +26,37 @@ export function createLogId(logRecord: any, index: number): string {
   ].join(':')
 }
 
+export function createMetricKey(serviceName: string, name: string): string {
+  return `${serviceName} ${name}`
+}
+
+export function createSeriesId(attributes: Record<string, unknown>): string {
+  // stable: sort keys, join k=v with separators; '' when no attributes
+  return Object.keys(attributes)
+    .sort()
+    .map((k) => `${k}=${String(attributes[k])}`)
+    .join(' ')
+}
+
+// Exponential-histogram bucket → value bounds.
+//
+// Per the OTLP spec, with base = 2^(2^-scale), bucket `index` covers the
+// half-open interval (base^index, base^(index+1)]. This returns the lower and
+// upper value bound for a bucket index at a given scale, so the frontend can
+// place exp-histogram buckets on the same value axis as explicit histograms.
+//
+// Works for positive bucket indices (the magnitude axis). Negative-bucket
+// callers apply these bounds to |value| and negate.
+export function expoBoundsForBucket(
+  scale: number,
+  index: number,
+): { lower: number; upper: number } {
+  const base = Math.pow(2, Math.pow(2, -scale))
+  const lower = Math.pow(base, index)
+  const upper = Math.pow(base, index + 1)
+  return { lower, upper }
+}
+
 function resolveRootSpan(trace: StoredTrace): StoredSpan | undefined {
   const spans = Array.from(trace.spans.values())
   const rootSpan = spans.find((s) => !s.parentSpanId || s.parentSpanId === '')

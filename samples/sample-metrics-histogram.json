@@ -1,0 +1,246 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "database"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "sample-demo",
+            "version": "1.0.0"
+          },
+          "metrics": [
+            {
+              "name": "db.client.operation.duration",
+              "description": "Database operation latency distribution",
+              "unit": "ms",
+              "histogram": {
+                "aggregationTemporality": 2,
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "db.system",
+                        "value": {
+                          "stringValue": "postgresql"
+                        }
+                      },
+                      {
+                        "key": "db.operation",
+                        "value": {
+                          "stringValue": "UPDATE"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000300000000000",
+                    "count": "8",
+                    "sum": 312,
+                    "bucketCounts": ["2", "3", "2", "1"],
+                    "explicitBounds": [10, 25, 50]
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "db.system",
+                        "value": {
+                          "stringValue": "postgresql"
+                        }
+                      },
+                      {
+                        "key": "db.operation",
+                        "value": {
+                          "stringValue": "UPDATE"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000306000000000",
+                    "count": "10",
+                    "sum": 356,
+                    "bucketCounts": ["3", "3", "3", "1"],
+                    "explicitBounds": [10, 25, 50]
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "db.system",
+                        "value": {
+                          "stringValue": "postgresql"
+                        }
+                      },
+                      {
+                        "key": "db.operation",
+                        "value": {
+                          "stringValue": "UPDATE"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000312000000000",
+                    "count": "12",
+                    "sum": 438,
+                    "bucketCounts": ["4", "4", "3", "1"],
+                    "explicitBounds": [10, 25, 50]
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "db.system",
+                        "value": {
+                          "stringValue": "postgresql"
+                        }
+                      },
+                      {
+                        "key": "db.operation",
+                        "value": {
+                          "stringValue": "UPDATE"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000318000000000",
+                    "count": "12",
+                    "sum": 438,
+                    "bucketCounts": ["4", "4", "3", "1"],
+                    "explicitBounds": [10, 25, 50]
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "db.system",
+                        "value": {
+                          "stringValue": "postgresql"
+                        }
+                      },
+                      {
+                        "key": "db.operation",
+                        "value": {
+                          "stringValue": "UPDATE"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000324000000000",
+                    "count": "18",
+                    "sum": 702,
+                    "bucketCounts": ["6", "6", "4", "2"],
+                    "explicitBounds": [10, 25, 50]
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "db.system",
+                        "value": {
+                          "stringValue": "postgresql"
+                        }
+                      },
+                      {
+                        "key": "db.operation",
+                        "value": {
+                          "stringValue": "UPDATE"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000330000000000",
+                    "count": "24",
+                    "sum": 1032,
+                    "bucketCounts": ["9", "7", "6", "2"],
+                    "explicitBounds": [10, 25, 50]
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "db.system",
+                        "value": {
+                          "stringValue": "postgresql"
+                        }
+                      },
+                      {
+                        "key": "db.operation",
+                        "value": {
+                          "stringValue": "UPDATE"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000336000000000",
+                    "count": "24",
+                    "sum": 1032,
+                    "bucketCounts": ["9", "7", "6", "2"],
+                    "explicitBounds": [10, 25, 50]
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "db.system",
+                        "value": {
+                          "stringValue": "postgresql"
+                        }
+                      },
+                      {
+                        "key": "db.operation",
+                        "value": {
+                          "stringValue": "UPDATE"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000342000000000",
+                    "count": "31",
+                    "sum": 1426,
+                    "bucketCounts": ["12", "9", "7", "3"],
+                    "explicitBounds": [10, 25, 50]
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "db.system",
+                        "value": {
+                          "stringValue": "postgresql"
+                        }
+                      },
+                      {
+                        "key": "db.operation",
+                        "value": {
+                          "stringValue": "UPDATE"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000348000000000",
+                    "count": "28",
+                    "sum": 1274,
+                    "bucketCounts": ["10", "8", "7", "3"],
+                    "explicitBounds": [10, 25, 50]
+                  },
+                  {
+                    "attributes": [
+                      {
+                        "key": "db.system",
+                        "value": {
+                          "stringValue": "postgresql"
+                        }
+                      },
+                      {
+                        "key": "db.operation",
+                        "value": {
+                          "stringValue": "UPDATE"
+                        }
+                      }
+                    ],
+                    "timeUnixNano": "1700000354000000000",
+                    "count": "36",
+                    "sum": 1728,
+                    "bucketCounts": ["14", "10", "8", "4"],
+                    "explicitBounds": [10, 25, 50]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

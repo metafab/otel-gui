@@ -84,13 +84,7 @@
           <span>Root Only</span>
         </label>
       </div>
-      <ServicePicker
-        id="service"
-        ariaLabel="Service"
-        allLabel="All Services"
-        {services}
-        bind:selectedService
-      />
+      <ServicePicker id="service" {services} bind:selectedService />
     </div>
 
     <div class="filter-group status-group">

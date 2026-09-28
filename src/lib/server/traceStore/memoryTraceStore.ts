@@ -4,6 +4,13 @@ import { createInternalTraceStore } from './core'
 export function createMemoryTraceStore(config: {
   maxTraces: number
   maxLogs: number
+  maxMetrics: number
+  maxMetricPoints: number
 }): TraceStore {
-  return createInternalTraceStore(config.maxTraces, config.maxLogs)
+  return createInternalTraceStore(
+    config.maxTraces,
+    config.maxLogs,
+    config.maxMetrics,
+    config.maxMetricPoints,
+  )
 }

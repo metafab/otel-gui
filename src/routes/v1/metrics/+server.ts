@@ -1,9 +1,86 @@
 import { json } from '@sveltejs/kit'
+import { promisify } from 'node:util'
+import { gunzip } from 'node:zlib'
 import type { RequestHandler } from './$types'
+import { traceStore } from '$lib/server/traceStore'
+import { decodeProtobufMetrics } from '$lib/server/protobuf'
 
-export const POST: RequestHandler = async () => {
-  return json(
-    { error: 'OTLP metrics ingestion is not implemented yet' },
-    { status: 501 },
-  )
+const gunzipAsync = promisify(gunzip)
+
+export const POST: RequestHandler = async ({ request }) => {
+  try {
+    const contentType = request.headers.get('content-type') || ''
+    const contentEncoding = request.headers.get('content-encoding') || ''
+
+    const arrayBuffer = await request.arrayBuffer()
+    let buffer = new Uint8Array(arrayBuffer)
+
+    if (contentEncoding.includes('gzip')) {
+      try {
+        buffer = new Uint8Array(await gunzipAsync(buffer))
+      } catch {
+        return json({ error: 'Malformed gzip payload' }, { status: 400 })
+      }
+    }
+
+    let body: { resourceMetrics: any[] }
+
+    if (
+      contentType.includes('application/x-protobuf') ||
+      contentType.includes('application/protobuf')
+    ) {
+      try {
+        body = await decodeProtobufMetrics(buffer)
+      } catch {
+        return json({ error: 'Malformed protobuf payload' }, { status: 400 })
+      }
+    } else if (contentType.includes('application/json')) {
+      try {
+        body = JSON.parse(new TextDecoder().decode(buffer))
+      } catch {
+        return json({ error: 'Malformed JSON payload' }, { status: 400 })
+      }
+    } else {
+      return json(
+        {
+          error:
+            'Unsupported Content-Type. Expected application/json or application/x-protobuf.',
+        },
+        { status: 400 },
+      )
+    }
+
+    if (!body.resourceMetrics) {
+      return json(
+        { error: 'Invalid OTLP payload: missing resourceMetrics' },
+        { status: 400 },
+      )
+    }
+
+    traceStore.ingestMetrics(body.resourceMetrics)
+
+    // Return successful response. OTLP HTTP spec requires the response
+    // Content-Type to match the request Content-Type. An empty message
+    // is a valid ExportMetricsServiceResponse in protobuf.
+    if (
+      contentType.includes('application/x-protobuf') ||
+      contentType.includes('application/protobuf')
+    ) {
+      const responseContentType = contentType.includes('application/protobuf')
+        ? 'application/protobuf'
+        : 'application/x-protobuf'
+      return new Response(new Uint8Array(0), {
+        status: 200,
+        headers: { 'Content-Type': responseContentType },
+      })
+    }
+
+    return json({}, { status: 200 })
+  } catch (error) {
+    console.error('Error processing OTLP metrics request:', error)
+    return json(
+      { error: 'Internal server error processing metrics' },
+      { status: 500 },
+    )
+  }
 }

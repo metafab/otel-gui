@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/svelte'
 import TraceFilters from './TraceFilters.svelte'
 
-describe('TraceFilters', () => {
+describe(TraceFilters, () => {
   const services = ['checkout-service', 'inventory-service']
 
   it('renders service options and stats', () => {

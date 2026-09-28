@@ -1,4 +1,5 @@
-// Unified SSE endpoint — multiplexes traces and logs onto a SINGLE connection.
+// Unified SSE endpoint — multiplexes traces, logs, and metrics onto a SINGLE
+// connection.
 //
 // Browsers cap HTTP/1.1 at ~6 connections per origin. Previously the app opened
 // a separate SSE stream per signal (/api/traces|logs/stream), each holding one
@@ -22,6 +23,8 @@ export const GET: RequestHandler = async () => {
   // Per-connection cursors, one set per multiplexed sub-stream.
   let lastLogSeq = 0
   let lastLogRemovalSeq = traceStore.getLogRemovalSeq()
+  let lastMetricSeq = 0
+  let lastMetricRemovalSeq = traceStore.getMetricRemovalSeq()
 
   function cleanup() {
     unsubscribe?.()
@@ -77,16 +80,43 @@ export const GET: RequestHandler = async () => {
         return true
       }
 
+      // ── metrics ───────────────────────────────────────────────────────────
+      const sendMetricCount = () =>
+        send('metrics-count', String(traceStore.getMetricCount()))
+
+      const sendMetricSnapshot = () => {
+        const metrics = traceStore.getMetricList(traceStore.maxMetrics)
+        lastMetricSeq = traceStore.getMaxMetricSeq()
+        lastMetricRemovalSeq = traceStore.getMetricRemovalSeq()
+        return send('metrics-snapshot', JSON.stringify({ metrics }))
+      }
+
+      const sendMetricAppend = () => {
+        const maxSeq = traceStore.getMaxMetricSeq()
+        if (maxSeq <= lastMetricSeq) return true
+        const metrics = traceStore.getMetricsSince(
+          lastMetricSeq,
+          traceStore.maxMetrics,
+        )
+        lastMetricSeq = maxSeq
+        if (metrics.length > 0) {
+          return send('metrics-append', JSON.stringify({ metrics }))
+        }
+        return true
+      }
+
       // Send full current state for every sub-stream on connect.
       sendTraces()
       sendLogCount()
       sendLogSnapshot()
+      sendMetricCount()
+      sendMetricSnapshot()
 
       // Backpressure-aware flush. A web ReadableStream's enqueue() never blocks —
       // it just drives desiredSize negative and keeps buffering the encoded bytes
       // off-heap. So we only flush when the consumer has drained enough to accept
       // more (desiredSize > 0); otherwise we stay `dirty` and let pull() re-invoke
-      // us the moment the client catches up. Pending logs sit in the
+      // us the moment the client catches up. Pending logs/metrics sit in the
       // bounded store (never an unbounded socket queue) until then, so nothing is
       // dropped and off-heap memory stays bounded to ~one flush.
       let dirty = false
@@ -105,6 +135,14 @@ export const GET: RequestHandler = async () => {
         if (traceStore.getLogRemovalSeq() !== lastLogRemovalSeq) {
           if (!sendLogSnapshot()) return
         } else if (!sendLogAppend()) {
+          return
+        }
+
+        // metrics: same delta protocol as logs.
+        if (!sendMetricCount()) return
+        if (traceStore.getMetricRemovalSeq() !== lastMetricRemovalSeq) {
+          if (!sendMetricSnapshot()) return
+        } else if (!sendMetricAppend()) {
           return
         }
       }

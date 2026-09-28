@@ -7,6 +7,8 @@ export const GET: RequestHandler = async () => {
   return json({
     maxTraces: traceStore.maxTraces,
     maxLogs: traceStore.maxLogs,
+    maxMetrics: traceStore.maxMetrics,
+    maxMetricPoints: traceStore.maxMetricPoints,
     persistence: getPersistenceStatus(),
   })
 }

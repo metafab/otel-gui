@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/svelte'
 import LogFilters from './LogFilters.svelte'
 
-describe('LogFilters', () => {
+describe(LogFilters, () => {
   it('renders filter stats', () => {
     const { container } = render(LogFilters, {
       props: {
@@ -47,8 +47,8 @@ describe('LogFilters', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Clear Filters' }))
 
     expect(searchInput).toHaveValue('')
-    expect(servicePicker).toHaveTextContent('All services')
-    expect(severityPicker).toHaveTextContent('All severities')
+    expect(servicePicker).toHaveTextContent('All Services')
+    expect(severityPicker).toHaveTextContent('All Severities')
   })
 
   it('selects a service from the custom picker', async () => {

@@ -82,7 +82,7 @@ const sampleLogs = [
   },
 ]
 
-describe('Logs', () => {
+describe(Logs, () => {
   const fetchMock = vi.fn<typeof fetch>()
 
   beforeEach(() => {

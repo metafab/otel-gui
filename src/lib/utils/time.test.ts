@@ -4,6 +4,8 @@ import {
   formatDurationFromMs,
   formatDurationFromNs,
   formatTimestamp,
+  formatDateTimeLocal,
+  formatUnixTimestampLocal,
   getDurationMs,
   formatRelativeTime,
 } from '$lib/utils/time'
@@ -167,6 +169,24 @@ describe(formatTimestamp, () => {
 
   it('encodes epoch start correctly', () => {
     expect(formatTimestamp('0')).toBe('1970-01-01T00:00:00.000Z')
+  })
+})
+
+describe(formatDateTimeLocal, () => {
+  it('formats epoch milliseconds using the local date and time format', () => {
+    const timestamp = 1_715_803_200_000
+    expect(formatDateTimeLocal(timestamp)).toBe(
+      new Date(timestamp).toLocaleString(),
+    )
+  })
+})
+
+describe(formatUnixTimestampLocal, () => {
+  it('formats unix seconds using the local date and time format', () => {
+    const timestamp = 1_715_803_200
+    expect(formatUnixTimestampLocal(timestamp)).toBe(
+      new Date(timestamp * 1000).toLocaleString(),
+    )
   })
 })
 

@@ -70,7 +70,7 @@ vi.mock('$lib/stores/traces.svelte', () => ({
 
 import Traces from './Traces.svelte'
 
-describe('Traces', () => {
+describe(Traces, () => {
   beforeEach(() => {
     mockReplaceState.mockClear()
     traceStoreMock.tracesLoaded = true

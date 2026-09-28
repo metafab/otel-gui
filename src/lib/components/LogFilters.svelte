@@ -49,21 +49,13 @@
 
     <div class="filter-group severity-group">
       <label for="logs-service">Service</label>
-      <ServicePicker
-        id="logs-service"
-        ariaLabel="Service"
-        allLabel="All services"
-        {services}
-        bind:selectedService
-      />
+      <ServicePicker id="logs-service" {services} bind:selectedService />
     </div>
 
     <div class="filter-group severity-group">
       <label for="logs-severity">Severity</label>
       <SeverityPicker
         id="logs-severity"
-        ariaLabel="Severity"
-        allLabel="All severities"
         bind:selectedSeverity={severityFilter}
       />
     </div>

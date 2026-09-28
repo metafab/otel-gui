@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/svelte'
 import ServiceBadge from './ServiceBadge.svelte'
 
-describe('ServiceBadge', () => {
+describe(ServiceBadge, () => {
   it('renders the service name', () => {
     const { getByText } = render(ServiceBadge, {
       props: { serviceName: 'frontend' },

@@ -9,11 +9,11 @@
 &nbsp;[![Privacy: local](https://img.shields.io/badge/privacy-100%25_local-green?style=flat-square&logo=lock&logoColor=white)](#-features)
 &nbsp;[![Latest release](https://img.shields.io/github/v/release/metafab/otel-gui?sort=semver&display_name=tag&label=latest&color=7c4dff&style=flat-square&logo=github&logoColor=white)](https://github.com/metafab/otel-gui/releases/latest)
 
-A lightweight, zero-config OpenTelemetry trace and log viewer for local development.
+A lightweight, zero-config OpenTelemetry viewer for local development — traces, logs, and metrics in one place.
 
-Drop-in replacement for a collector endpoint — point your OTLP exporter at it and see traces and logs immediately. No database required.
+Drop-in replacement for a collector endpoint — point your OTLP exporter at it and see your telemetry immediately. No database required.
 
-![Trace list view](docs/screenshots/trace-detail.png)
+![Overview (trace detail)](docs/screenshots/trace-detail.png)
 
 <div align="center">
 <strong>
@@ -27,13 +27,14 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 
 - **Zero config** — listens on port 4318, the standard OTLP/HTTP port. Most exporters work without changing a single setting
 - **OTLP JSON & Protobuf** — accepts both `application/json` and `application/x-protobuf` payloads
-- **Real-time updates** — new traces appear instantly via SSE (Server-Sent Events), no polling
+- **Real-time streaming** — traces, logs, and metrics all update live over SSE (Server-Sent Events) using an incremental snapshot + delta protocol, so views refresh in place without flicker or polling
+- **Metrics** — dedicated Metrics tab accepting OTLP metrics (`POST /v1/metrics`): gauges, sums (with server-computed per-second rates and counter-reset detection), histograms, exponential histograms, and summaries; flicker-free time-series charts (uPlot), histogram distribution + heatmap views, and per-series filtering
 - **Waterfall timeline** — Honeycomb-style span waterfall with resizable name column and sidebar
 - **Service map** — auto-generated graph of cross-service calls with error rates and latency (p50/p99)
 - **Search & filter** — filter lists by text, service, status, and duration range; search spans inside a trace based on attributes, events, and span name or id
 - **Import/export traces** — export one trace, filtered traces, or selected traces as OTLP JSON envelope; import from OTLP JSON or otel-gui export files with metadata preview before confirmation
 - **Bulk list actions** — trace and log lists support multi-select export and split delete actions (`Clear All` + `Delete Selected (n)`)
-- **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `t`/`l`/`m` to jump to Traces/Logs/Service Map tabs, Enter/Space to activate focused rows in the Traces and Logs grids, escape key to clear search and go back to the list, `?` for shortcuts help
+- **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `t`/`l`/`m`/`s` to jump to Traces/Logs/Metrics/Service Map tabs, Enter/Space to activate focused rows in the Traces and Logs grids, escape key to clear search and go back to the list, `?` for shortcuts help
 - **Error navigation** — jump between error spans with one key
 - **Span details** — attributes, events with timeline markers, resource attributes, instrumentation scope, span links, correlated logs
 - **Global logs workflow** — browse all logs in a dedicated tab, open full log details, and jump from logs to the owning trace/span
@@ -69,6 +70,10 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 ### Global logs
 
 ![Global logs](docs/screenshots/global-logs.png)
+
+### Metrics
+
+![Global Metrics](docs/screenshots/metrics-list.png)
 
 ## 🛠️ Quick Start
 
@@ -211,28 +216,50 @@ POST /v1/logs
 
 Use the same `traceId`/`spanId` values as your spans to get correlated logs in trace detail sidebar.
 
+### Sending Metrics
+
+The viewer also accepts OTLP metrics at:
+
+```sh
+POST /v1/metrics
+```
+
+Gauges, sums, histograms, exponential histograms, and summaries are all supported and appear in the **Metrics** tab. Sums get a server-computed per-second rate (with counter-reset detection); histograms render as both a distribution and a time/bucket heatmap.
+
 ### Try the demo
 
 Run the bundled e-commerce demo to see all features immediately:
 
 ```sh
-./demo-ecommerce-trace.sh
+./demo-ecommerce.sh
 ```
 
 On Windows (PowerShell):
 
 ```powershell
-.\demo-ecommerce-trace.ps1
+.\demo-ecommerce.ps1
 ```
 
 If script execution is blocked, run it for the current shell session only:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\demo-ecommerce-trace.ps1
+.\demo-ecommerce.ps1
 ```
 
-This sends a realistic multi-service trace (frontend → backend-api → auth-service + database) with errors, retries, and incremental span arrival across two requests.
+This sends a realistic multi-service trace (frontend → backend-api → auth-service + database) with errors, retries, incremental span arrival across two requests, correlated logs, and staged metrics.
+
+Run the dedicated metrics-only demo:
+
+```sh
+./demo-metrics.sh
+```
+
+On Windows (PowerShell):
+
+```powershell
+.\demo-metrics.ps1
+```
 
 ### Manual curl examples
 
@@ -276,6 +303,30 @@ curl -X POST http://localhost:4318/v1/traces \
 curl -X POST http://localhost:4318/v1/traces \
   -H "Content-Type: application/json" \
   -d @samples/sample-trace-links.json
+
+# Gauge metrics (memory usage)
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-gauge.json
+
+# Sum/Counter metrics (request count with cumulative points)
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-sum-counter.json
+
+# Histogram metrics (database latency distribution)
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-histogram.json
+
+# E-commerce metrics staged flow (part 1 then part 2)
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-ecommerce-part1.json
+
+curl -X POST http://localhost:4318/v1/metrics \
+  -H "Content-Type: application/json" \
+  -d @samples/sample-metrics-ecommerce-part2.json
 ```
 
 See [SAMPLE_TRACES.md](./samples/SAMPLE_TRACES.md) for a full feature exploration guide.
@@ -288,6 +339,8 @@ See [SAMPLE_TRACES.md](./samples/SAMPLE_TRACES.md) for a full feature exploratio
 | `OTEL_GUI_CORS_ALLOWED_ORIGINS`       | `*`                | Allowed CORS origin(s) for the OTLP ingest (`/v1/*`) and read API (`/api/*`) endpoints, so browser-based OTLP exporters can post telemetry cross-origin. Use `*` to allow any origin, or a comma-separated list of exact origins (e.g. `https://app.example.com,http://localhost:5173`). For non-local/public deployments, prefer an explicit origin list to avoid exposing trace data to arbitrary websites. |
 | `OTEL_GUI_MAX_TRACES`                 | `1000`             | Maximum number of traces kept in memory (1–10 000). Oldest traces are evicted first when the limit is reached. Requires a restart.                                                                                                                                                                                                                                                                            |
 | `OTEL_GUI_MAX_LOGS`                   | `1000`             | Maximum number of log records kept in memory (1–10 000). Oldest records are evicted first when the limit is reached. Requires a restart.                                                                                                                                                                                                                                                                      |
+| `OTEL_GUI_MAX_METRICS`                | `1000`             | Maximum number of metric entries keyed by `service.name` + metric name (1–10 000). Each entry may contain multiple attribute series; this does not cap series cardinality or points per series. Oldest-created entries are evicted first. Requires a restart.                                                                                                                                                 |
+| `OTEL_GUI_MAX_METRIC_POINTS`          | `600`              | Maximum number of data points retained per metric series (10–10 000). Oldest points are evicted first. Requires a restart.                                                                                                                                                                                                                                                                                    |
 | `OTEL_GUI_PERSISTENCE_MODE`           | `memory`           | Persistence backend mode. Use `memory` (default, no disk writes) or `pglite` (requires an external backend module, typically enterprise).                                                                                                                                                                                                                                                                     |
 | `OTEL_GUI_PERSISTENCE_PATH`           | `.otel-gui/pglite` | Directory path for local PGlite data when persistence mode is `pglite`.                                                                                                                                                                                                                                                                                                                                       |
 | `OTEL_GUI_PERSISTENCE_FLUSH_MS`       | `750`              | Debounce interval for batched persistence flushes in milliseconds (50–60000).                                                                                                                                                                                                                                                                                                                                 |
@@ -315,7 +368,7 @@ PORT=4318 node build
 
 The production build uses `@sveltejs/adapter-node`. In-memory state is kept alive by the Node.js process — no external store required for local use.
 
-In Docker, traces are still in-memory only and are lost when the container stops.
+In Docker, with the default configuration,traces are in-memory only and are lost when the container stops.
 
 ### Self-contained executable (SEA)
 
@@ -391,8 +444,9 @@ Notes:
 | `Esc`            | Everywhere   | Clear search / go back    |
 | `t`              | Everywhere   | Switch to Traces tab      |
 | `l`              | Everywhere   | Switch to Logs tab        |
-| `m`              | Trace list   | Switch to Service Map tab |
-| `m`              | Trace detail | Toggle Service Map        |
+| `m`              | Everywhere   | Switch to Metrics tab     |
+| `s`              | Trace list   | Switch to Service Map tab |
+| `s`              | Trace detail | Toggle Service Map        |
 | `Alt+Backspace`  | Trace list   | Clear all traces          |
 | `↑↓←→` / `Enter` | Trace detail | Navigate span tree        |
 | `n` / `N`        | Trace detail | Next / prev search match  |
@@ -404,19 +458,33 @@ Notes:
 ```
 POST /v1/traces          ← OTLP receiver (JSON + Protobuf)
 POST /v1/logs            ← OTLP logs receiver (JSON + Protobuf)
+POST /v1/metrics         ← OTLP metrics receiver (JSON + Protobuf)
+
 GET  /api/traces         ← trace list for the UI
 DELETE /api/traces       ← clear all traces or delete selected traceIds
 GET  /api/traces/:id     ← single trace
 GET  /api/traces/:id/logs ← trace-scoped correlated logs
+GET  /api/traces/:id/logs/:logId ← single trace-scoped log detail
 GET  /api/traces/:id/export ← export a single trace envelope
 POST /api/traces/export  ← export filtered/selected traceIds
 POST /api/traces/import/preview ← validate + preview import metadata
 POST /api/traces/import  ← import otel-gui envelope or raw OTLP JSON
-GET  /api/traces/stream  ← SSE stream (real-time push)
+
+GET  /api/logs           ← global log list for the UI
+DELETE /api/logs         ← clear all logs or delete selected logIds
+GET  /api/logs/:id       ← single log detail
+
+GET  /api/metrics        ← metric list for the UI
+DELETE /api/metrics      ← clear all metrics or delete selected ids
+GET  /api/metrics/:id    ← metric detail and chart data
+GET  /api/metrics/:id/stream ← SSE stream for metric detail updates
+
 GET  /api/service-map    ← aggregated service graph
+GET  /api/stream         ← multiplexed SSE stream for traces, logs, and metrics
+GET  /api/config         ← runtime limits and persistence status
 ```
 
-Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limit defaults to 1000 traces (`OTEL_GUI_MAX_TRACES`) and 1000 log records (`OTEL_GUI_MAX_LOGS`).
+Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limits default to 1000 traces (`OTEL_GUI_MAX_TRACES`), 1000 log records (`OTEL_GUI_MAX_LOGS`), 1000 metric entries (`OTEL_GUI_MAX_METRICS`), and 600 points per metric series (`OTEL_GUI_MAX_METRIC_POINTS`).
 <br />
 SSE subscribers are notified on every write and receive a debounced `event: traces` message.
 <br />
@@ -436,7 +504,7 @@ Additional persistence backends (including `pglite`) are loaded via `OTEL_GUI_PE
 - [SvelteKit 2](https://kit.svelte.dev) with Svelte 5 runes (`$state`, `$derived`, `$effect`)
 - [`@sveltejs/adapter-node`](https://kit.svelte.dev/docs/adapter-node) for persistent in-memory state
 - [`protobufjs`](https://github.com/protobufjs/protobuf.js) for Protobuf decoding
-- No UI library — custom waterfall, service map SVG, and all components from scratch
+- No UI framework — custom waterfall and service-map SVG, with uPlot for metric charts
 - TypeScript throughout
 
 ## 🤝 Contributing

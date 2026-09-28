@@ -76,7 +76,7 @@ function makeSpan(overrides: Partial<StoredSpan> = {}): StoredSpan {
   }
 }
 
-describe('traces/[traceId] page search UI', () => {
+describe(TracePage, () => {
   beforeEach(() => {
     scrolledElements = []
     mutableTraceStore.traces = []

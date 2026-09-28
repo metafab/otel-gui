@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/svelte'
 import ServicePicker from './ServicePicker.svelte'
 
-describe('ServicePicker', () => {
+describe(ServicePicker, () => {
   const services = ['checkout-service', 'worker-service']
 
   it('renders all label when all is selected', () => {
@@ -14,7 +14,7 @@ describe('ServicePicker', () => {
       },
     })
 
-    expect(screen.getByLabelText('Service')).toHaveTextContent('All services')
+    expect(screen.getByLabelText('Service')).toHaveTextContent('All Services')
   })
 
   it('renders selected service badge text when a service is selected', () => {
@@ -91,7 +91,7 @@ describe('ServicePicker', () => {
     const reopenedListbox = screen.getByRole('listbox', { name: 'Service' })
     await fireEvent.keyDown(reopenedListbox, { key: 'Home' })
     await fireEvent.keyDown(reopenedListbox, { key: 'Enter' })
-    expect(trigger).toHaveTextContent('All services')
+    expect(trigger).toHaveTextContent('All Services')
   })
 
   it('closes menu on Escape and returns focus to trigger', async () => {

@@ -35,7 +35,7 @@ class FakeEventSource {
   }
 }
 
-describe('sseClient', () => {
+describe(onSSE, () => {
   beforeEach(() => {
     FakeEventSource.instances = []
     vi.stubGlobal(
@@ -87,29 +87,6 @@ describe('sseClient', () => {
     expect(received).toEqual(['first'])
   })
 
-  it('onSSEEvents unsubscribes all of its listeners at once', () => {
-    // Arrange
-    const hits: string[] = []
-    const off = onSSEEvents({
-      'logs-count': () => hits.push('count'),
-      'logs-append': () => hits.push('append'),
-    })
-    const es = FakeEventSource.instances[0]
-
-    // Act
-    es.emit('logs-count', '5')
-    es.emit('logs-append', '{}')
-    // Assert
-    expect(hits).toEqual(['count', 'append'])
-
-    // Act
-    off()
-    es.emit('logs-count', '6')
-    es.emit('logs-append', '{}')
-    // Assert
-    expect(hits).toEqual(['count', 'append'])
-  })
-
   it('returns a no-op unsubscribe when EventSource is unavailable (SSR)', () => {
     // Arrange
     __resetSSEConnectionForTests()
@@ -121,5 +98,45 @@ describe('sseClient', () => {
     // Assert
     expect(typeof off).toBe('function')
     expect(() => off()).not.toThrow()
+  })
+})
+
+describe(onSSEEvents, () => {
+  beforeEach(() => {
+    FakeEventSource.instances = []
+    vi.stubGlobal(
+      'EventSource',
+      FakeEventSource as unknown as typeof EventSource,
+    )
+  })
+
+  afterEach(() => {
+    __resetSSEConnectionForTests()
+    vi.unstubAllGlobals()
+  })
+
+  it('unsubscribes all of its listeners at once', () => {
+    // Arrange
+    const hits: string[] = []
+    const off = onSSEEvents({
+      'logs-count': () => hits.push('count'),
+      'logs-append': () => hits.push('append'),
+    })
+    const es = FakeEventSource.instances[0]
+
+    // Act
+    es.emit('logs-count', '5')
+    es.emit('logs-append', '{}')
+
+    // Assert
+    expect(hits).toEqual(['count', 'append'])
+
+    // Act
+    off()
+    es.emit('logs-count', '6')
+    es.emit('logs-append', '{}')
+
+    // Assert
+    expect(hits).toEqual(['count', 'append'])
   })
 })

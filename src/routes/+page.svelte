@@ -5,38 +5,49 @@
   import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
   import Logs from '$lib/components/Logs.svelte'
   import LogsCommands from '$lib/components/LogsCommands.svelte'
+  import Metrics from '$lib/components/Metrics.svelte'
+  import MetricsCommands from '$lib/components/MetricsCommands.svelte'
   import ServiceMap from '$lib/components/ServiceMap.svelte'
   import TracesCommands from '$lib/components/TracesCommands.svelte'
   import Traces from '$lib/components/Traces.svelte'
+  import { metricStore } from '$lib/stores/metrics.svelte'
   import { traceStore } from '$lib/stores/traces.svelte'
   import type { ServiceMapData } from '$lib/types'
   import { isInputFocused, isMac } from '$lib/utils/keyboard'
 
   // Connect to SSE stream for real-time trace updates
   traceStore.connectSSE()
+  // Connect to the metrics list stream — drives the tab count badge.
+  metricStore.connectSSE()
 
   // Reactive state from store (for tab count badge only)
   const traces = $derived(traceStore.traces)
+  const metricsBadgeTotal = $derived(metricStore.count)
 
   // Tab navigation
   const initialTab = $page.url.searchParams.get('tab')
-  let activeTab = $state<'traces' | 'logs' | 'map'>(
-    initialTab === 'map' || initialTab === 'logs' ? initialTab : 'traces',
+  let activeTab = $state<'traces' | 'logs' | 'metrics' | 'map'>(
+    initialTab === 'map' || initialTab === 'logs' || initialTab === 'metrics'
+      ? initialTab
+      : 'traces',
   )
 
   // Store the last URL for each tab to restore when switching back.
-  let tabUrlMap = $state<Record<'traces' | 'logs' | 'map', string>>({
-    traces: '/',
-    logs: '/?tab=logs',
-    map: '/?tab=map',
-  })
+  let tabUrlMap = $state<Record<'traces' | 'logs' | 'metrics' | 'map', string>>(
+    {
+      traces: '/',
+      logs: '/?tab=logs',
+      metrics: '/?tab=metrics',
+      map: '/?tab=map',
+    },
+  )
 
-  function tabFromUrl(url: URL): 'traces' | 'logs' | 'map' {
+  function tabFromUrl(url: URL): 'traces' | 'logs' | 'metrics' | 'map' {
     const tab = url.searchParams.get('tab')
-    return tab === 'map' || tab === 'logs' ? tab : 'traces'
+    return tab === 'map' || tab === 'logs' || tab === 'metrics' ? tab : 'traces'
   }
 
-  async function switchTab(nextTab: 'traces' | 'logs' | 'map') {
+  async function switchTab(nextTab: 'traces' | 'logs' | 'metrics' | 'map') {
     if (typeof window === 'undefined' || nextTab === activeTab) return
 
     // Let pending child effects flush URL filter changes before snapshotting.
@@ -128,6 +139,15 @@
   let logsSelected = $state(0)
   let logsDeleting = $state(false)
 
+  // Metrics ref and reactive state for MetricsCommands
+  let metricsRef: {
+    triggerClearAll: () => void
+    triggerDeleteSelected: () => void
+  } | null = $state(null)
+  let metricsTotal = $state(0)
+  let metricsSelected = $state(0)
+  let metricsDeleting = $state(false)
+
   async function handleMapNodeSelect(serviceName: string) {
     await switchTab('traces')
     // Traces is conditionally rendered by tab; wait for mount so bind:this is set.
@@ -159,8 +179,15 @@
       return
     }
 
-    // 'm': switch to Map tab
+    // 'm': switch directly to Metrics tab
     if (e.key === 'm' && !isInputFocused()) {
+      e.preventDefault()
+      switchTab('metrics')
+      return
+    }
+
+    // 's': switch to Service Map tab
+    if (e.key === 's' && !isInputFocused()) {
       e.preventDefault()
       switchTab('map')
       return
@@ -174,7 +201,9 @@
       ? 'Service Map'
       : activeTab === 'logs'
         ? 'Logs'
-        : 'Traces'}</title
+        : activeTab === 'metrics'
+          ? 'Metrics'
+          : 'Traces'}</title
   >
 </svelte:head>
 
@@ -185,7 +214,9 @@
     <div class="tab-bar" role="tablist">
       <button
         role="tab"
+        id="tab-traces"
         aria-selected={activeTab === 'traces'}
+        aria-controls="panel-traces"
         class="tab-btn"
         class:active={activeTab === 'traces'}
         onclick={() => switchTab('traces')}
@@ -195,7 +226,9 @@
       >
       <button
         role="tab"
+        id="tab-logs"
         aria-selected={activeTab === 'logs'}
+        aria-controls="panel-logs"
         class="tab-btn"
         class:active={activeTab === 'logs'}
         onclick={() => switchTab('logs')}
@@ -205,7 +238,21 @@
       >
       <button
         role="tab"
+        id="tab-metrics"
+        aria-selected={activeTab === 'metrics'}
+        aria-controls="panel-metrics"
+        class="tab-btn"
+        class:active={activeTab === 'metrics'}
+        onclick={() => switchTab('metrics')}
+        >Metrics {#if metricsBadgeTotal > 0}<span class="tab-count"
+            >{metricsBadgeTotal}</span
+          >{/if}</button
+      >
+      <button
+        role="tab"
+        id="tab-map"
         aria-selected={activeTab === 'map'}
+        aria-controls="panel-map"
         class="tab-btn"
         class:active={activeTab === 'map'}
         onclick={() => switchTab('map')}>Service Map</button
@@ -238,19 +285,34 @@
           onClearAll={() => logsRef?.triggerClearAll()}
           onDeleteSelected={() => logsRef?.triggerDeleteSelected()}
         />
+      {:else if activeTab === 'metrics'}
+        <MetricsCommands
+          totalCount={metricsTotal}
+          selectedCount={metricsSelected}
+          isDeleting={metricsDeleting}
+          onClearAll={() => metricsRef?.triggerClearAll()}
+          onDeleteSelected={() => metricsRef?.triggerDeleteSelected()}
+        />
       {/if}
     </div>
   </header>
 
   {#if activeTab === 'traces'}
-    <Traces
-      bind:this={tracesRef}
-      bind:filteredCount
-      bind:selectedCount
-      bind:isExportingBound={isExporting}
-    />
+    <div role="tabpanel" id="panel-traces" aria-labelledby="tab-traces">
+      <Traces
+        bind:this={tracesRef}
+        bind:filteredCount
+        bind:selectedCount
+        bind:isExportingBound={isExporting}
+      />
+    </div>
   {:else if activeTab === 'logs'}
-    <div class="logs-tab" role="region" aria-label="Logs">
+    <div
+      class="logs-tab"
+      role="tabpanel"
+      id="panel-logs"
+      aria-labelledby="tab-logs"
+    >
       <Logs
         bind:this={logsRef}
         bind:totalCount={logsTotal}
@@ -258,9 +320,28 @@
         bind:isDeletingBound={logsDeleting}
       />
     </div>
+  {:else if activeTab === 'metrics'}
+    <div
+      class="metrics-tab"
+      role="tabpanel"
+      id="panel-metrics"
+      aria-labelledby="tab-metrics"
+    >
+      <Metrics
+        bind:this={metricsRef}
+        bind:totalCount={metricsTotal}
+        bind:selectedCount={metricsSelected}
+        bind:isDeletingBound={metricsDeleting}
+      />
+    </div>
   {:else}
     <!-- Service Map tab -->
-    <div class="map-content">
+    <div
+      class="map-content"
+      role="tabpanel"
+      id="panel-map"
+      aria-labelledby="tab-map"
+    >
       {#if serviceMapLoading}
         <div class="loading" role="status">Loading service map…</div>
       {:else if serviceMapError}
@@ -289,8 +370,9 @@
       },
       { keys: ['t'], description: 'Switch to Traces tab' },
       { keys: ['l'], description: 'Switch to Logs tab' },
+      { keys: ['m'], description: 'Switch to Metrics tab' },
       {
-        keys: ['m'],
+        keys: ['s'],
         description:
           "Switch to Service Map tab or Toggle a trace's Service Map",
       },
@@ -398,7 +480,8 @@
     gap: 0.5rem;
   }
 
-  .logs-tab {
+  .logs-tab,
+  .metrics-tab {
     flex: 1;
     min-height: 0;
     display: flex;

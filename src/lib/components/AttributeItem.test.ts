@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/svelte'
 import AttributeItem from './AttributeItem.svelte'
 
-describe('AttributeItem', () => {
+describe(AttributeItem, () => {
   // ── Rendering ───────────────────────────────────────────────────────────
 
   it('renders the attribute key', () => {
