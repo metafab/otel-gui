@@ -34,8 +34,8 @@ function resolveMaxLogs(): number {
   return parsed
 }
 
-// Bounds the number of distinct metrics (series collections) retained in
-// memory. Note: this counts metric name+service combinations, not points.
+// Bounds distinct service.name + metric name entries, not attribute series or
+// points. A single metric entry may contain multiple attribute series.
 function resolveMaxMetrics(): number {
   const raw = env.OTEL_GUI_MAX_METRICS
   if (raw === undefined || raw === '') return 1000
