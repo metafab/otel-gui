@@ -27,7 +27,7 @@ function sumMetric(): Pick<MetricDetail, 'name' | 'type' | 'series'> {
   }
 }
 
-describe('defaultValueMode', () => {
+describe(defaultValueMode, () => {
   it('defaults to rate for monotonic cumulative sums', () => {
     expect(
       defaultValueMode({
@@ -57,7 +57,7 @@ describe('defaultValueMode', () => {
   })
 })
 
-describe('metricTimeRange', () => {
+describe(metricTimeRange, () => {
   it('replaces uPlot’s expanded range with a one-day window for one timestamp', () => {
     const timestamp = 1_700_000_206
     expect(
@@ -70,7 +70,7 @@ describe('metricTimeRange', () => {
   })
 })
 
-describe('buildLines (sum raw vs rate)', () => {
+describe(buildLines, () => {
   it('raw mode plots v for every point', () => {
     const lines = buildLines(sumMetric(), 'raw')
     expect(lines).toHaveLength(1)
@@ -84,7 +84,7 @@ describe('buildLines (sum raw vs rate)', () => {
   })
 })
 
-describe('buildLines (summary -> one line per quantile)', () => {
+describe(buildLines, () => {
   const summary: Pick<MetricDetail, 'name' | 'type' | 'series'> = {
     name: 'rpc.duration',
     type: 'summary',
@@ -126,7 +126,7 @@ describe('buildLines (summary -> one line per quantile)', () => {
   })
 })
 
-describe('filterLines (attribute filter + top-N cap)', () => {
+describe(filterLines, () => {
   function manyLines(n: number) {
     return Array.from({ length: n }, (_, i) => ({
       seriesId: `s${i}`,
@@ -164,7 +164,7 @@ describe('filterLines (attribute filter + top-N cap)', () => {
   })
 })
 
-describe('buildAlignedData', () => {
+describe(buildAlignedData, () => {
   it('builds a unified seconds x-axis with nulls for gaps', () => {
     const build = buildAlignedData([
       { seriesId: 'a', label: 'a', points: [{ t: 1000, v: 1 }] },
@@ -184,7 +184,7 @@ describe('buildAlignedData', () => {
   })
 })
 
-describe('seriesLabel', () => {
+describe(seriesLabel, () => {
   it('joins sorted attributes', () => {
     expect(seriesLabel({ attributes: { b: 2, a: 1 } }, 'm')).toBe('a=1, b=2')
   })

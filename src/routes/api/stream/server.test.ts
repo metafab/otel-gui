@@ -69,7 +69,7 @@ function makeLogsPost(body: unknown): Request {
   })
 }
 
-describe('GET /api/stream (multiplexed SSE)', () => {
+describe(GET, () => {
   beforeEach(() => {
     traceStore.clearTraces()
     traceStore.clearLogs()

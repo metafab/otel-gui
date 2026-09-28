@@ -14,7 +14,7 @@ vi.mock('$lib/server/traceStore', () => ({
 
 import { GET } from './+server'
 
-describe('GET /api/config', () => {
+describe(GET, () => {
   beforeEach(() => {
     mocks.getPersistenceStatus.mockReset()
   })

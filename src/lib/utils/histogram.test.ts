@@ -8,7 +8,7 @@ import {
 } from './histogram'
 import type { HistogramPoint, ExpHistogramPoint } from '$lib/types'
 
-describe('explicitBuckets', () => {
+describe(explicitBuckets, () => {
   it('maps bucketCounts onto bounds with -inf/+inf overflow edges', () => {
     const p: HistogramPoint = {
       t: 1000,
@@ -17,7 +17,9 @@ describe('explicitBuckets', () => {
       bucketCounts: [1, 2, 3], // length = bounds.length + 1
       explicitBounds: [5, 10],
     }
+
     const b = explicitBuckets(p)
+
     expect(b).toHaveLength(3)
     expect(b[0].lower).toBe(-Infinity)
     expect(b[0].upper).toBe(5)
@@ -30,7 +32,7 @@ describe('explicitBuckets', () => {
   })
 })
 
-describe('expoBuckets', () => {
+describe(expoBuckets, () => {
   it('uses expoBoundsForBucket for positive buckets', () => {
     const p: ExpHistogramPoint = {
       t: 1000,
@@ -40,7 +42,9 @@ describe('expoBuckets', () => {
       positive: { offset: 0, bucketCounts: [1, 2] },
       negative: { offset: 0, bucketCounts: [] },
     }
+
     const b = expoBuckets(p)
+
     expect(b).toHaveLength(2)
     const expected0 = expoBoundsForBucket(0, 0)
     expect(b[0].lower).toBeCloseTo(expected0.lower)
@@ -57,7 +61,9 @@ describe('expoBuckets', () => {
       positive: { offset: 0, bucketCounts: [1] },
       negative: { offset: 0, bucketCounts: [1, 1] },
     }
+
     const b = expoBuckets(p)
+
     // negatives first (ascending value => most negative first), then zero, then positive
     expect(b[0].upper).toBeLessThan(0)
     const zero = b.find((x) => x.lower === 0 && x.upper === 0)
@@ -67,7 +73,7 @@ describe('expoBuckets', () => {
   })
 })
 
-describe('bucketsForPoint + latestHistPoint', () => {
+describe(bucketsForPoint, () => {
   it('dispatches on point shape', () => {
     const hist: HistogramPoint = {
       t: 1,
@@ -75,16 +81,23 @@ describe('bucketsForPoint + latestHistPoint', () => {
       bucketCounts: [1],
       explicitBounds: [],
     }
-    expect(bucketsForPoint(hist)).toHaveLength(1)
+
+    const buckets = bucketsForPoint(hist)
+
+    expect(buckets).toHaveLength(1)
   })
 
-  it('picks the latest histogram point by t', () => {
-    const pts: HistogramPoint[] = [
-      { t: 1000, count: 1, bucketCounts: [1], explicitBounds: [] },
-      { t: 3000, count: 3, bucketCounts: [3], explicitBounds: [] },
-      { t: 2000, count: 2, bucketCounts: [2], explicitBounds: [] },
-    ]
-    const latest = latestHistPoint(pts)
-    expect(latest?.t).toBe(3000)
+  describe(latestHistPoint, () => {
+    it('picks the latest histogram point by t', () => {
+      const pts: HistogramPoint[] = [
+        { t: 1000, count: 1, bucketCounts: [1], explicitBounds: [] },
+        { t: 3000, count: 3, bucketCounts: [3], explicitBounds: [] },
+        { t: 2000, count: 2, bucketCounts: [2], explicitBounds: [] },
+      ]
+
+      const latest = latestHistPoint(pts)
+
+      expect(latest?.t).toBe(3000)
+    })
   })
 })

@@ -125,7 +125,7 @@ function stubFetchOnce(detail: unknown) {
 
 import MetricDetailPage from './+page.svelte'
 
-describe('metrics/[metricId] page', () => {
+describe(MetricDetailPage, () => {
   beforeEach(() => {
     mockGoto.mockReset()
     // No EventSource in jsdom -> the page relies on the initial fetch only.

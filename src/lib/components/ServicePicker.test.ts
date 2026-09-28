@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/svelte'
 import ServicePicker from './ServicePicker.svelte'
 
-describe('ServicePicker', () => {
+describe(ServicePicker, () => {
   const services = ['checkout-service', 'worker-service']
 
   it('renders all label when all is selected', () => {

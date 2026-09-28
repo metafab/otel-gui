@@ -13,7 +13,7 @@ beforeEach(() => {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe('CopyButton', () => {
+describe(CopyButton, () => {
   // ── Rendering ─────────────────────────────────────────────────────────────
 
   it('renders a button with default aria-label "Copy value"', () => {

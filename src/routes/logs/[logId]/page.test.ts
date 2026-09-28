@@ -30,7 +30,7 @@ vi.mock('$app/stores', () => {
 
 import LogDetailPage from './+page.svelte'
 
-describe('logs/[logId] page', () => {
+describe(LogDetailPage, () => {
   beforeEach(() => {
     mockGoto.mockReset()
     mockPageState.params = { logId: 'log-123' }

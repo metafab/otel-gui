@@ -64,7 +64,7 @@ const sampleMetrics = [
   },
 ]
 
-describe('Metrics', () => {
+describe(Metrics, () => {
   const fetchMock = vi.fn<typeof fetch>()
 
   beforeEach(() => {

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/svelte'
 import MetricsFilter from './MetricsFilter.svelte'
 
-describe('MetricsFilter', () => {
+describe(MetricsFilter, () => {
   it('renders filter stats', () => {
     const { container } = render(MetricsFilter, {
       props: {

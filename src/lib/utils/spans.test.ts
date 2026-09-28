@@ -29,7 +29,7 @@ function makeSpan(
   }
 }
 
-describe('spanKindLabel', () => {
+describe(spanKindLabel, () => {
   const cases: [number, string][] = [
     [0, 'UNSPECIFIED'],
     [1, 'INTERNAL'],
@@ -47,7 +47,7 @@ describe('spanKindLabel', () => {
   }
 })
 
-describe('statusLabel', () => {
+describe(statusLabel, () => {
   const cases: [number, string][] = [
     [0, 'UNSET'],
     [1, 'OK'],
@@ -62,7 +62,7 @@ describe('statusLabel', () => {
   }
 })
 
-describe('buildSpanTree', () => {
+describe(buildSpanTree, () => {
   it('returns empty array for empty input', () => {
     expect(buildSpanTree([])).toEqual([])
   })

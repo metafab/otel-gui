@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/svelte'
 import MetricTypePicker from './MetricTypePicker.svelte'
 
-describe('MetricTypePicker', () => {
+describe(MetricTypePicker, () => {
   it('renders all label when all is selected', () => {
     render(MetricTypePicker, {
       props: {

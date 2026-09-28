@@ -11,7 +11,7 @@ beforeEach(() => {
 
 const ATTR = { key: 'http.url', value: 'https://example.com/api/users?page=2' }
 
-describe('FullscreenValueModal', () => {
+describe(FullscreenValueModal, () => {
   // ── Hidden state ──────────────────────────────────────────────────────────
 
   it('renders nothing when attr is null', () => {
