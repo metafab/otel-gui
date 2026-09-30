@@ -19,7 +19,7 @@ license: MIT
 description:
   Lightweight, zero-config OpenTelemetry viewer for local development with
   support for traces, logs, and metrics, real-time updates, search, and service
-  zmap visualization.
+  map visualization.
 authors:
   - name: Fabrice Marguerie
     url: https://github.com/metafab
