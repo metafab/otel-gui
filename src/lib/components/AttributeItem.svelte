@@ -299,7 +299,8 @@
     transition: opacity 0.1s ease;
   }
 
-  .attribute-item:hover .attr-actions {
+  .attribute-item:hover .attr-actions,
+  .attr-actions:focus-within {
     opacity: 1;
   }
 
