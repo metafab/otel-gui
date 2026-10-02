@@ -2,12 +2,7 @@
   import { tick } from 'svelte'
 
   export type MetricTypeFilter =
-    | 'all'
-    | 'gauge'
-    | 'sum'
-    | 'histogram'
-    | 'exp_histogram'
-    | 'summary'
+    'all' | 'gauge' | 'sum' | 'histogram' | 'exp_histogram' | 'summary'
 
   interface Props {
     selectedType: MetricTypeFilter

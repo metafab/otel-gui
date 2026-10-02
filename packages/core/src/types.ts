@@ -68,11 +68,7 @@ export interface StoredTrace {
 // ─── Metrics ─────────────────────────────────────────────────────────────────
 
 export type MetricType =
-  | 'gauge'
-  | 'sum'
-  | 'histogram'
-  | 'exp_histogram'
-  | 'summary'
+  'gauge' | 'sum' | 'histogram' | 'exp_histogram' | 'summary'
 export type MetricTemporality = 'delta' | 'cumulative'
 
 // Gauge + Sum: a point is a single scalar value.
@@ -132,10 +128,7 @@ export interface SummaryPoint {
 //   exp_histogram       -> ExpHistogramPoint[]
 //   summary             -> SummaryPoint[]
 export type MetricSeriesPoints =
-  | MetricPoint[]
-  | HistogramPoint[]
-  | ExpHistogramPoint[]
-  | SummaryPoint[]
+  MetricPoint[] | HistogramPoint[] | ExpHistogramPoint[] | SummaryPoint[]
 
 export interface MetricSeries {
   seriesId: string // attribute fingerprint
@@ -168,10 +161,7 @@ export interface MetricScalarWirePoint {
 }
 
 export type MetricWirePoint =
-  | MetricScalarWirePoint
-  | HistogramPoint
-  | ExpHistogramPoint
-  | SummaryPoint
+  MetricScalarWirePoint | HistogramPoint | ExpHistogramPoint | SummaryPoint
 
 export interface MetricSeriesDetail {
   seriesId: string

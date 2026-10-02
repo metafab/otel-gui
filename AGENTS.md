@@ -161,20 +161,21 @@ if (e.key === '/' && !isInputFocused()) {
 ```
 
 Shortcuts implemented:
-| Key | Trace list | Trace detail |
-|-----|-----------|--------------|
-| `/` | Focus search | Focus span search |
-| `Esc` | Clear search (if focused) | Clear search or go back |
-| `Alt/⌥+⌫` | Clear all traces | — |
-| `t` | Switch to Traces tab | — |
-| `l` | Switch to Logs tab | — |
-| `m` | Switch to Metrics tab | — |
-| `s` | Switch to Service Map tab | Toggle mini service map |
-| `Enter` / `Shift+Enter` | — | Next / prev match (when search focused) |
-| `n` / `Shift+N` | — | Next / prev search match |
-| `e` / `Shift+E` | — | Next / prev error span |
-| `↑↓←→` / `Enter` | — | Waterfall tree navigation |
-| `?` | Toggle shortcuts overlay | Toggle shortcuts overlay |
+
+| Key                     | Trace list                | Trace detail                            |
+| ----------------------- | ------------------------- | --------------------------------------- |
+| `/`                     | Focus search              | Focus span search                       |
+| `Esc`                   | Clear search (if focused) | Clear search or go back                 |
+| `Alt/⌥+⌫`               | Clear all traces          | —                                       |
+| `t`                     | Switch to Traces tab      | —                                       |
+| `l`                     | Switch to Logs tab        | —                                       |
+| `m`                     | Switch to Metrics tab     | —                                       |
+| `s`                     | Switch to Service Map tab | Toggle mini service map                 |
+| `Enter` / `Shift+Enter` | —                         | Next / prev match (when search focused) |
+| `n` / `Shift+N`         | —                         | Next / prev search match                |
+| `e` / `Shift+E`         | —                         | Next / prev error span                  |
+| `↑↓←→` / `Enter`        | —                         | Waterfall tree navigation               |
+| `?`                     | Toggle shortcuts overlay  | Toggle shortcuts overlay                |
 
 ## Key Constraints
 

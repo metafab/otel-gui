@@ -484,7 +484,7 @@
           </div>
           {#if Object.keys(event.attributes).length > 0}
             <div class="event-attributes">
-              {#each Object.entries(event.attributes).sort( ([a], [b]) => a.localeCompare(b), ) as [key, value]}
+              {#each Object.entries(event.attributes).sort( ([a], [b]) => a.localeCompare(b) ) as [key, value]}
                 <AttributeItem
                   attrKey={key}
                   {value}
@@ -537,7 +537,7 @@
         </div>
         {#if Object.keys(link.attributes).length > 0}
           <div class="link-attributes">
-            {#each Object.entries(link.attributes).sort( ([a], [b]) => a.localeCompare(b), ) as [key, value]}
+            {#each Object.entries(link.attributes).sort( ([a], [b]) => a.localeCompare(b) ) as [key, value]}
               <AttributeItem attrKey={key} {value} {onFullscreen} />
             {/each}
           </div>
@@ -726,7 +726,7 @@
                       <div class="log-detail-group">
                         <div class="log-detail-heading">Attributes</div>
                         <div class="attributes">
-                          {#each Object.entries(logDetail.attributes).sort( ([a], [b]) => a.localeCompare(b), ) as [key, value]}
+                          {#each Object.entries(logDetail.attributes).sort( ([a], [b]) => a.localeCompare(b) ) as [key, value]}
                             <AttributeItem
                               attrKey={key}
                               {value}
@@ -741,7 +741,7 @@
                       <div class="log-detail-group">
                         <div class="log-detail-heading">Resource</div>
                         <div class="attributes">
-                          {#each Object.entries(logDetail.resource).sort( ([a], [b]) => a.localeCompare(b), ) as [key, value]}
+                          {#each Object.entries(logDetail.resource).sort( ([a], [b]) => a.localeCompare(b) ) as [key, value]}
                             <AttributeItem
                               attrKey={key}
                               {value}
@@ -769,7 +769,7 @@
                         {/if}
                         {#if Object.keys(logDetail.scopeAttributes).length > 0}
                           <div class="attributes">
-                            {#each Object.entries(logDetail.scopeAttributes).sort( ([a], [b]) => a.localeCompare(b), ) as [key, value]}
+                            {#each Object.entries(logDetail.scopeAttributes).sort( ([a], [b]) => a.localeCompare(b) ) as [key, value]}
                               <AttributeItem
                                 attrKey={key}
                                 {value}

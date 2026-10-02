@@ -7,12 +7,7 @@
     services: string[]
     searchQuery: string
     typeFilter:
-      | 'all'
-      | 'gauge'
-      | 'sum'
-      | 'histogram'
-      | 'exp_histogram'
-      | 'summary'
+      'all' | 'gauge' | 'sum' | 'histogram' | 'exp_histogram' | 'summary'
     /** Bound: selected service name, or "all". */
     selectedService: string
     filteredCount: number

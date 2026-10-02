@@ -2,12 +2,7 @@
   import { tick } from 'svelte'
 
   export type SeverityFilter =
-    | 'all'
-    | 'trace'
-    | 'debug'
-    | 'info'
-    | 'warn'
-    | 'error'
+    'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error'
 
   interface Props {
     selectedSeverity: SeverityFilter

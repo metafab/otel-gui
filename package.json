@@ -50,7 +50,7 @@
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
     "postject": "^1.0.0-alpha.6",
-    "prettier": "^3.8.4",
+    "prettier": "^3.9.9",
     "prettier-plugin-svelte": "^4.1.1",
     "svelte": "^5.57.1",
     "svelte-check": "^4.7.5",

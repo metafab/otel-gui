@@ -73,8 +73,7 @@ export function buildServiceMap(
         const dbSystem = span.attributes['db.system'] as string | undefined
         const dbName = span.attributes['db.name'] as string | undefined
         const msgSystem = span.attributes['messaging.system'] as
-          | string
-          | undefined
+          string | undefined
         const rpcSystem = span.attributes['rpc.system'] as string | undefined
         const peerService =
           (span.attributes['peer.service'] as string | undefined) ||

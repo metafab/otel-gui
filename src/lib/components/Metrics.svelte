@@ -24,12 +24,7 @@
   let loadError = $state<string | null>(null)
 
   type MetricSortBy =
-    | 'name'
-    | 'type'
-    | 'unit'
-    | 'service'
-    | 'series'
-    | 'updated'
+    'name' | 'type' | 'unit' | 'service' | 'series' | 'updated'
   type MetricSortOrder = 'asc' | 'desc'
 
   const DEFAULT_SORT_BY: MetricSortBy = 'updated'
@@ -56,12 +51,7 @@
   }
 
   type MetricTypeFilter =
-    | 'all'
-    | 'gauge'
-    | 'sum'
-    | 'histogram'
-    | 'exp_histogram'
-    | 'summary'
+    'all' | 'gauge' | 'sum' | 'histogram' | 'exp_histogram' | 'summary'
 
   function parseTypeFilter(rawValue: string | null): MetricTypeFilter {
     switch (rawValue) {
