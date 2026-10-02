@@ -1,6 +1,5 @@
-import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { traceStore } from '$lib/server/traceStore'
+import { traceStore } from '#lib/server/traceStore.js'
 
 export const GET: RequestHandler = async ({ url }) => {
   const limitParam = url.searchParams.get('limit')
@@ -16,13 +15,13 @@ export const GET: RequestHandler = async ({ url }) => {
     }
   }
 
-  return json(traceStore.getLogList(limit))
+  return Response.json(traceStore.getLogList(limit))
 }
 
 export const DELETE: RequestHandler = async ({ request }) => {
   if (!request) {
     traceStore.clearLogs()
-    return json({ success: true, deletedCount: null, mode: 'all' })
+    return Response.json({ success: true, deletedCount: null, mode: 'all' })
   }
 
   const contentType = request.headers.get('content-type') || ''
@@ -38,13 +37,13 @@ export const DELETE: RequestHandler = async ({ request }) => {
         )
 
         const deletedCount = traceStore.deleteLogs(validLogIds)
-        return json({ success: true, deletedCount, mode: 'selected' })
+        return Response.json({ success: true, deletedCount, mode: 'selected' })
       }
     } catch {
-      return json({ error: 'Malformed JSON payload' }, { status: 400 })
+      return Response.json({ error: 'Malformed JSON payload' }, { status: 400 })
     }
   }
 
   traceStore.clearLogs()
-  return json({ success: true, deletedCount: null, mode: 'all' })
+  return Response.json({ success: true, deletedCount: null, mode: 'all' })
 }

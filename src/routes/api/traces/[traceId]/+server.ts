@@ -1,8 +1,8 @@
 // API endpoint to get individual trace detail
-import { json, error } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { traceStore } from '$lib/server/traceStore'
-import { resolveRootServiceName, resolveRootSpanName } from '@otel-gui/core'
+import { traceStore } from '#lib/server/traceStore.js'
+import { resolveRootServiceName, resolveRootSpanName } from '#otel-gui/core'
 
 export const GET: RequestHandler = async ({ params }) => {
   const { traceId } = params
@@ -19,7 +19,7 @@ export const GET: RequestHandler = async ({ params }) => {
     spansRecord[id] = span
   }
 
-  return json({
+  return Response.json({
     ...trace,
     rootSpanName: resolveRootSpanName(trace),
     serviceName:

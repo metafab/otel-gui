@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   getPersistenceStatus: vi.fn(),
 }))
 
-vi.mock('$lib/server/traceStore', () => ({
+vi.mock('#lib/server/traceStore.js', () => ({
   traceStore: {
     maxTraces: 1000,
     maxLogs: 1000,

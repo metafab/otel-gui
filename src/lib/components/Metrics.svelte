@@ -1,13 +1,13 @@
 <script lang="ts">
   import './list-panel.css'
-  import { goto, replaceState } from '$app/navigation'
-  import ServiceBadge from '$lib/components/ServiceBadge.svelte'
-  import MetricsFilter from '$lib/components/MetricsFilter.svelte'
-  import VersionInfo from '$lib/components/VersionInfo.svelte'
-  import { metricStore } from '$lib/stores/metrics.svelte'
-  import { onSSEEvents } from '$lib/stores/sseClient'
-  import type { MetricListItem } from '$lib/types'
-  import { formatDateTimeLocal } from '$lib/utils/time'
+  import { goto } from '$app/navigation'
+  import ServiceBadge from '#lib/components/ServiceBadge.svelte'
+  import MetricsFilter from '#lib/components/MetricsFilter.svelte'
+  import VersionInfo from '#lib/components/VersionInfo.svelte'
+  import { metricStore } from '#lib/stores/metrics.svelte.js'
+  import { onSSEEvents } from '#lib/stores/sseClient.js'
+  import type { MetricListItem } from '#lib/types.js'
+  import { formatDateTimeLocal } from '#lib/utils/time.js'
 
   // Bindable props so parent can read reactive state for header action buttons.
   let {
@@ -20,6 +20,7 @@
   // Only true until the first snapshot (or fallback load) arrives. Background
   // delta updates never toggle this, so the table is never torn down/remounted.
   let isLoading = $state(true)
+
   let loadError = $state<string | null>(null)
 
   type MetricSortBy =
@@ -30,6 +31,7 @@
     | 'series'
     | 'updated'
   type MetricSortOrder = 'asc' | 'desc'
+
   const DEFAULT_SORT_BY: MetricSortBy = 'updated'
   const DEFAULT_SORT_ORDER: MetricSortOrder = 'desc'
 
@@ -125,7 +127,6 @@
   }
 
   const initialParams = readParamsFromLocation()
-
   let searchQuery = $state(initialParams.searchQuery)
   let typeFilter = $state<MetricTypeFilter>(initialParams.typeFilter)
   let selectedService = $state<string>(initialParams.selectedService)
@@ -165,7 +166,7 @@
     applyParams(nextUrl)
     if (nextUrl.search === window.location.search) return
     try {
-      replaceState(nextUrl, {})
+      goto(nextUrl, { shallow: true, replace: true })
     } catch {
       // Component tests can run before SvelteKit router bootstraps.
       window.history.replaceState(window.history.state, '', nextUrl)
@@ -236,6 +237,7 @@
 
   const filteredMetrics = $derived.by(() => {
     if (!Array.isArray(metrics)) return []
+
     const query = searchQuery.trim().toLowerCase()
 
     return metrics.filter((m) => {
@@ -347,10 +349,12 @@
     if (incoming.length === 0) return
 
     const byId = new Map<string, MetricListItem>()
+
     for (const m of metrics) byId.set(m.id, m)
     for (const m of incoming) byId.set(m.id, m)
 
     let merged = Array.from(byId.values())
+
     if (merged.length > maxMetrics) {
       merged.sort((a, b) => b.lastUpdated - a.lastUpdated)
       merged = merged.slice(0, maxMetrics)
@@ -473,6 +477,7 @@
       `/metrics/${encodeURIComponent(metricId)}`,
       'http://localhost',
     )
+
     detailUrl.searchParams.set('returnTo', returnTo)
 
     // Client-side navigation — see Traces.svelte: a full-page load tears down and
@@ -516,6 +521,7 @@
     // If an SSE snapshot lands while that REST seed is still in flight (e.g. a
     // concurrent clear), the seed must not overwrite it — track that here.
     let sseSnapshotApplied = false
+
     void loadMetrics(() => !sseSnapshotApplied)
 
     // No EventSource (SSR/legacy) — the REST load above is all we get.
@@ -731,7 +737,7 @@
                         fill="none"
                         stroke="var(--accent)"
                         stroke-width="1.5"
-                      />
+                      ></polyline>
                     </svg>
                   {:else}
                     <span class="muted">-</span>

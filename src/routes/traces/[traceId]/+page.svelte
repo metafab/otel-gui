@@ -1,20 +1,20 @@
 <script lang="ts">
-  import { goto, replaceState } from '$app/navigation'
-  import { page } from '$app/stores'
-  import FullscreenValueModal from '$lib/components/FullscreenValueModal.svelte'
-  import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
-  import SpanDetailsSidebar from '$lib/components/SpanDetailsSidebar.svelte'
-  import TraceHeader from '$lib/components/TraceHeader.svelte'
-  import WaterfallRow from '$lib/components/WaterfallRow.svelte'
-  import { traceStore } from '$lib/stores/traces.svelte'
-  import { isInputFocused } from '$lib/utils/keyboard'
+  import { goto } from '$app/navigation'
+  import { page } from '$app/state'
+  import FullscreenValueModal from '#lib/components/FullscreenValueModal.svelte'
+  import KeyboardShortcutsHelp from '#lib/components/KeyboardShortcutsHelp.svelte'
+  import SpanDetailsSidebar from '#lib/components/SpanDetailsSidebar.svelte'
+  import TraceHeader from '#lib/components/TraceHeader.svelte'
+  import WaterfallRow from '#lib/components/WaterfallRow.svelte'
+  import { traceStore } from '#lib/stores/traces.svelte.js'
+  import { isInputFocused } from '#lib/utils/keyboard.js'
   import {
     resolveReturnTarget,
     shouldUseHistoryBackForTarget,
-  } from '$lib/utils/returnNavigation'
-  import { buildSpanTree, flattenSpanTree } from '$lib/utils/spans'
-  import { findMatchingSpanIds } from '$lib/utils/spanSearch'
-  import { formatDuration } from '$lib/utils/time'
+  } from '#lib/utils/returnNavigation.js'
+  import { buildSpanTree, flattenSpanTree } from '#lib/utils/spans.js'
+  import { findMatchingSpanIds } from '#lib/utils/spanSearch.js'
+  import { formatDuration } from '#lib/utils/time.js'
 
   import type {
     ServiceMapData,
@@ -22,16 +22,17 @@
     StoredTrace,
     TraceLogDetail,
     TraceLogListItem,
-  } from '$lib/types'
+  } from '#lib/types.js'
 
   // Keep SSE active on detail page so we can detect when this trace changes.
   traceStore.connectSSE()
 
   // Get trace ID from URL
-  const traceId = $derived($page.params.traceId ?? '')
-  const returnToFromUrl = $derived($page.url.searchParams.get('returnTo'))
-  const spanIdFromUrl = $derived($page.url.searchParams.get('spanId'))
-  const logIdFromUrl = $derived($page.url.searchParams.get('logId'))
+  const traceId = $derived(page.params.traceId ?? '')
+
+  const returnToFromUrl = $derived(page.url.searchParams.get('returnTo'))
+  const spanIdFromUrl = $derived(page.url.searchParams.get('spanId'))
+  const logIdFromUrl = $derived(page.url.searchParams.get('logId'))
 
   // Page title with shortened trace ID
   const pageTitle = $derived(
@@ -67,6 +68,7 @@
   let fullscreenAttr = $state<{ key: string; value: string } | null>(null)
   // Mini service map
   let showMiniMap = $state(false)
+
   let miniMapData = $state<ServiceMapData | null>(null)
   let miniMapLoading = $state(false)
   let spanSearchInputEl = $state<HTMLInputElement | null>(null)
@@ -78,7 +80,6 @@
   let refreshSplitContainer = $state<HTMLElement | null>(null)
   let lastAutoRefreshSourceUpdatedAt = $state<number | null>(null)
   let lastAutoSelectedSearchQuery = $state<string>('')
-
   const liveTraceSummary = $derived(
     traceStore.traces.find((item) => item.traceId === traceId) || null,
   )
@@ -122,11 +123,9 @@
   const maxDepth = $derived(
     spanTree.length > 0 ? Math.max(...spanTree.map((n) => n.depth)) + 1 : 0,
   )
-
   const matchingSpanIds = $derived(
     findMatchingSpanIds(spanTree, spanSearchQuery, traceLogs),
   )
-
   const matchingSpans = $derived(
     spanTree.filter((node) => matchingSpanIds.has(node.span.spanId)),
   )
@@ -134,6 +133,7 @@
   const traceLogsBySpanId = $derived(
     (() => {
       const bySpanId = new Map<string, TraceLogListItem[]>()
+
       for (const log of traceLogs) {
         if (!log.spanId) continue
         const forSpan = bySpanId.get(log.spanId)
@@ -143,6 +143,7 @@
           bySpanId.set(log.spanId, [log])
         }
       }
+
       return bySpanId
     })(),
   )
@@ -424,6 +425,7 @@
         }
         // Build tree and flatten for rendering
         spanTreeRoot = buildSpanTree(spansArray)
+
         spanTree = flattenSpanTree(spanTreeRoot)
 
         // Auto-select span from URL query parameter if present, otherwise select root span
@@ -554,7 +556,7 @@
       url.searchParams.delete('logId')
     }
 
-    replaceState(url, {})
+    goto(url, { shallow: true, replace: true })
   }
 
   function handleLogSelect(logId: string, relatedSpanId?: string) {
@@ -569,14 +571,14 @@
 
   async function handleOpenLogDetail(logId: string) {
     handleLogSelect(logId)
+
     if (!traceId) return
     if (loadingLogDetailById[logId] || logDetailsById[logId]) return
 
-    loadingLogDetailById = {
-      ...loadingLogDetailById,
-      [logId]: true,
-    }
+    loadingLogDetailById = { ...loadingLogDetailById, [logId]: true }
+
     const { [logId]: _removedError, ...remainingErrors } = logDetailErrorsById
+
     logDetailErrorsById = remainingErrors
 
     try {
@@ -669,8 +671,8 @@
       typeof window !== 'undefined'
         ? window.location.origin
         : 'http://localhost'
-
     const logDetailTarget = resolveLogDetailReturnTarget()
+
     if (logDetailTarget) {
       return logDetailTarget
     }
@@ -822,9 +824,11 @@
   // Toggle collapse/expand for a span node
   function toggleNodeCollapse(spanId: string) {
     const node = findNode(spanId)
+
     if (!node) return
 
     const wasCollapsed = node.collapsed
+
     node.collapsed = !node.collapsed
 
     // If collapsing and selected span is a descendant, select this node
@@ -847,9 +851,11 @@
   // Set collapse state for a span node
   function setNodeCollapse(spanId: string, collapsed: boolean) {
     const node = findNode(spanId)
+
     if (!node) return
 
     const wasCollapsed = node.collapsed
+
     node.collapsed = collapsed
 
     // If collapsing and selected span is a descendant, select this node
@@ -914,9 +920,11 @@
     const currentIndex = spanTree.findIndex(
       (node) => node.span.spanId === selectedSpanId,
     )
+
     if (currentIndex === -1) return
 
     const currentNode = findNode(selectedSpanId)
+
     if (!currentNode) return
 
     switch (e.key) {
@@ -1012,10 +1020,7 @@
   }
 </script>
 
-<svelte:head>
-  <title>{pageTitle}</title>
-</svelte:head>
-
+<svelte:head><title>{pageTitle}</title></svelte:head>
 <svelte:window onkeydown={handleGlobalKeydown} />
 
 <div class="trace-detail">
@@ -1066,8 +1071,10 @@
               aria-hidden="true"
               class:is-spinning={isLoading}
             >
-              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-              <path d="M21 3v5h-5" />
+              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"
+              ></path>
+
+              <path d="M21 3v5h-5"></path>
             </svg>
             {isLoading ? 'Refreshing…' : 'Refresh'}
           </button>
@@ -1122,26 +1129,26 @@
                 d="M1.3 7s2.1-3.3 5.7-3.3S12.7 7 12.7 7s-2.1 3.3-5.7 3.3S1.3 7 1.3 7Z"
                 stroke="currentColor"
                 stroke-width="1.3"
-              />
+              ></path>
               <circle
                 cx="7"
                 cy="7"
                 r="1.8"
                 stroke="currentColor"
                 stroke-width="1.3"
-              />
+              ></circle>
             {:else}
               <path
                 d="M1.3 7s2.1-3.3 5.7-3.3S12.7 7 12.7 7s-2.1 3.3-5.7 3.3S1.3 7 1.3 7Z"
                 stroke="currentColor"
                 stroke-width="1.3"
-              />
+              ></path>
               <path
                 d="M2 12 12 2"
                 stroke="currentColor"
                 stroke-width="1.3"
                 stroke-linecap="round"
-              />
+              ></path>
             {/if}
           </svg>
           {showTraceDetails ? 'Hide' : 'Show'} Trace Details
@@ -1168,26 +1175,26 @@
                 stroke="currentColor"
                 stroke-width="1.3"
                 stroke-linejoin="round"
-              />
+              ></path>
               <path
                 d="M5 2.2v9.6"
                 stroke="currentColor"
                 stroke-width="1.3"
                 stroke-linecap="round"
-              />
+              ></path>
             {:else}
               <path
                 d="M2.2 2.2h9.6v9.6H2.2z"
                 stroke="currentColor"
                 stroke-width="1.3"
                 stroke-linejoin="round"
-              />
+              ></path>
               <path
                 d="M2 12 12 2"
                 stroke="currentColor"
                 stroke-width="1.3"
                 stroke-linecap="round"
-              />
+              ></path>
             {/if}
           </svg>
           {showSpanDetails ? 'Hide' : 'Show'} Span Details
@@ -1218,7 +1225,7 @@
                 stroke-width="1.6"
                 stroke-linecap="round"
                 stroke-linejoin="round"
-              />
+              ></polyline>
               <!-- bottom-right arrow -->
               <polyline
                 points="9,13 13,13 13,9"
@@ -1226,7 +1233,7 @@
                 stroke-width="1.6"
                 stroke-linecap="round"
                 stroke-linejoin="round"
-              />
+              ></polyline>
               <!-- diagonal line -->
               <line
                 x1="1.5"
@@ -1236,8 +1243,10 @@
                 stroke="currentColor"
                 stroke-width="1.6"
                 stroke-linecap="round"
-              />
-            </svg>Maximize
+              ></line>
+            </svg>
+
+            Maximize
           </button>
         {/if}
       </div>

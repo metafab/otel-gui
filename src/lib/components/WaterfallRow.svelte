@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { StoredSpan, TraceLogListItem } from '$lib/types'
-  import { formatDuration } from '$lib/utils/time'
-  import { getServiceColor } from '$lib/utils/colors'
-  import { themeStore } from '$lib/stores/theme.svelte'
-  import { spanKindLabel } from '$lib/utils/spans'
-  import ServiceBadge from '$lib/components/ServiceBadge.svelte'
+  import type { StoredSpan, TraceLogListItem } from '#lib/types.js'
+  import { formatDuration } from '#lib/utils/time.js'
+  import { getServiceColor } from '#lib/utils/colors.js'
+  import { themeStore } from '#lib/stores/theme.svelte.js'
+  import { spanKindLabel } from '#lib/utils/spans.js'
+  import ServiceBadge from '#lib/components/ServiceBadge.svelte'
 
   interface Props {
     span: StoredSpan

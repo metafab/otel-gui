@@ -9,7 +9,7 @@ import type {
   MetricListItem,
   MetricDetail,
   StoredMetric,
-} from '@otel-gui/core'
+} from '#otel-gui/core'
 
 export type {
   SpanEvent,
@@ -37,7 +37,7 @@ export type {
   MetricSeriesDetail,
   MetricDetail,
   MetricListItem,
-} from '@otel-gui/core'
+} from '#otel-gui/core'
 
 export interface LogListItem {
   id: string

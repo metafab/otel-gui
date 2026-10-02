@@ -4,7 +4,9 @@ import prettier from 'eslint-config-prettier'
 import svelte from 'eslint-plugin-svelte'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
-import svelteConfig from './svelte.config.js'
+import { loadConfig } from '@sveltejs/load-config'
+
+const svelteConfig = (await loadConfig('./', { traverse: false }))?.config
 
 const gitignorePatterns = fs
   .readFileSync(new URL('./.gitignore', import.meta.url), 'utf8')

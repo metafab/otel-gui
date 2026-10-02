@@ -1,11 +1,11 @@
 // Client-side reactive store for traces using Svelte 5 runes
-import { onSSEEvents } from '$lib/stores/sseClient'
+import { onSSEEvents } from '#lib/stores/sseClient.js'
 import type {
   TraceListItem,
   StoredTrace,
   TraceLogListItem,
   TraceLogDetail,
-} from '$lib/types'
+} from '#lib/types.js'
 
 interface PersistenceConfig {
   mode: 'memory' | 'pglite'

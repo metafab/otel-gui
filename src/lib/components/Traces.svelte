@@ -1,14 +1,14 @@
 <script lang="ts">
   import './list-panel.css'
-  import { goto, replaceState } from '$app/navigation'
-  import ServiceBadge from '$lib/components/ServiceBadge.svelte'
-  import TraceFilters from '$lib/components/TraceFilters.svelte'
-  import TraceImportModal from '$lib/components/TraceImportModal.svelte'
-  import VersionInfo from '$lib/components/VersionInfo.svelte'
-  import type { TraceListItem } from '$lib/types'
-  import { traceStore } from '$lib/stores/traces.svelte'
-  import { isInputFocused } from '$lib/utils/keyboard'
-  import { formatDurationFromMs } from '$lib/utils/time'
+  import { goto } from '$app/navigation'
+  import ServiceBadge from '#lib/components/ServiceBadge.svelte'
+  import TraceFilters from '#lib/components/TraceFilters.svelte'
+  import TraceImportModal from '#lib/components/TraceImportModal.svelte'
+  import VersionInfo from '#lib/components/VersionInfo.svelte'
+  import type { TraceListItem } from '#lib/types.js'
+  import { traceStore } from '#lib/stores/traces.svelte.js'
+  import { isInputFocused } from '#lib/utils/keyboard.js'
+  import { formatDurationFromMs } from '#lib/utils/time.js'
 
   // Bindable props so parent can read reactive state for header action buttons
   let {
@@ -39,6 +39,7 @@
     | 'logs'
     | 'time'
     | 'status'
+
   type TraceSortOrder = 'asc' | 'desc'
   type ServiceScope = 'root' | 'any'
 
@@ -142,8 +143,8 @@
     typeof window !== 'undefined'
       ? new URL(window.location.href)
       : new URL('http://localhost/')
-  const initialFilters = readFilterParams(initialFilterUrl)
 
+  const initialFilters = readFilterParams(initialFilterUrl)
   let searchQuery = $state(initialFilters.searchQuery)
   let selectedService = $state<string>(initialFilters.selectedService)
   let serviceScope = $state<ServiceScope>(initialFilters.serviceScope)
@@ -352,10 +353,14 @@
 
   $effect(() => {
     if (typeof window === 'undefined') return
+
     const nextUrl = new URL(window.location.href)
+
     applyFilterParams(nextUrl)
+
     if (nextUrl.search === window.location.search) return
-    replaceState(nextUrl, {})
+
+    goto(nextUrl, { shallow: true, replace: true })
   })
 
   async function handleClearAll() {
@@ -372,9 +377,11 @@
     const confirmed = confirm(
       `Delete ${targetCount} selected trace${targetCount === 1 ? '' : 's'}? This cannot be undone.`,
     )
+
     if (!confirmed) return
 
     const deletedCount = await traceStore.deleteSelectedTraces(selectedTraceIds)
+
     if (deletedCount > 0) {
       selectedTraceIds = []
     }
@@ -420,12 +427,12 @@
           .get('content-disposition')
           ?.match(/filename="?([^";]+)"?/)?.[1] ||
         `traces-${fallbackPrefix}-${localFileTimestamp(new Date())}.json`
-
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: 'application/json',
       })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
+
       link.href = url
       link.download = fileName
       document.body.appendChild(link)

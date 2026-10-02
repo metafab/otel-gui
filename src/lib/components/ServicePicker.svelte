@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import ServiceBadge from '$lib/components/ServiceBadge.svelte'
+  import ServiceBadge from '#lib/components/ServiceBadge.svelte'
 
   interface Props {
     services: string[]

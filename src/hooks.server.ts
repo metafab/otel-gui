@@ -1,6 +1,6 @@
-import { env } from '$env/dynamic/private'
-import type { Handle } from '@sveltejs/kit'
-import { buildCorsHeaders, shouldApplyCorsToPath } from '$lib/server/cors'
+import type { Handle } from '@sveltejs/kit/hooks'
+import { OTEL_GUI_CORS_ALLOWED_ORIGINS } from '$app/env/private'
+import { buildCorsHeaders, shouldApplyCorsToPath } from '#lib/server/cors.js'
 
 // Apply CORS to the OTLP ingest and read API endpoints so browser-based OTLP
 // exporters (and dashboards) can reach the server cross-origin. The allowed
@@ -15,17 +15,15 @@ export const handle: Handle = async ({ event, resolve }) => {
   if (corsEnabled && request.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
-      headers: buildCorsHeaders(request, env.OTEL_GUI_CORS_ALLOWED_ORIGINS),
+      headers: buildCorsHeaders(request, OTEL_GUI_CORS_ALLOWED_ORIGINS),
     })
   }
 
   const response = await resolve(event)
 
   if (corsEnabled) {
-    const corsHeaders = buildCorsHeaders(
-      request,
-      env.OTEL_GUI_CORS_ALLOWED_ORIGINS,
-    )
+    const corsHeaders = buildCorsHeaders(request, OTEL_GUI_CORS_ALLOWED_ORIGINS)
+
     corsHeaders.forEach((value, key) => {
       // Vary is additive — append so we don't clobber any existing value.
       if (key === 'vary') response.headers.append('Vary', value)

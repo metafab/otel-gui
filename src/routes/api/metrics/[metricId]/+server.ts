@@ -1,6 +1,6 @@
-import { json, error } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { traceStore } from '$lib/server/traceStore'
+import { traceStore } from '#lib/server/traceStore.js'
 
 export const GET: RequestHandler = async ({ params }) => {
   const { metricId } = params
@@ -14,5 +14,5 @@ export const GET: RequestHandler = async ({ params }) => {
     throw error(404, 'Metric not found')
   }
 
-  return json(detail)
+  return Response.json(detail)
 }

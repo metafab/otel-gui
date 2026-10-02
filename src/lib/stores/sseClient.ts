@@ -12,7 +12,7 @@
 // thrash we're avoiding). Listeners are added/removed per subscriber so a
 // remounted component never double-processes events.
 
-import type { SSEEventName } from '$lib/utils/sseEvents'
+import type { SSEEventName } from '#lib/utils/sseEvents.js'
 
 type SSEHandler = (event: MessageEvent) => void
 

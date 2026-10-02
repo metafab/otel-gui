@@ -1,19 +1,19 @@
 <script lang="ts">
-  import { pushState } from '$app/navigation'
+  import { goto } from '$app/navigation'
   import { tick } from 'svelte'
-  import { page } from '$app/stores'
-  import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
-  import Logs from '$lib/components/Logs.svelte'
-  import LogsCommands from '$lib/components/LogsCommands.svelte'
-  import Metrics from '$lib/components/Metrics.svelte'
-  import MetricsCommands from '$lib/components/MetricsCommands.svelte'
-  import ServiceMap from '$lib/components/ServiceMap.svelte'
-  import TracesCommands from '$lib/components/TracesCommands.svelte'
-  import Traces from '$lib/components/Traces.svelte'
-  import { metricStore } from '$lib/stores/metrics.svelte'
-  import { traceStore } from '$lib/stores/traces.svelte'
-  import type { ServiceMapData } from '$lib/types'
-  import { isInputFocused, isMac } from '$lib/utils/keyboard'
+  import { page } from '$app/state'
+  import KeyboardShortcutsHelp from '#lib/components/KeyboardShortcutsHelp.svelte'
+  import Logs from '#lib/components/Logs.svelte'
+  import LogsCommands from '#lib/components/LogsCommands.svelte'
+  import Metrics from '#lib/components/Metrics.svelte'
+  import MetricsCommands from '#lib/components/MetricsCommands.svelte'
+  import ServiceMap from '#lib/components/ServiceMap.svelte'
+  import TracesCommands from '#lib/components/TracesCommands.svelte'
+  import Traces from '#lib/components/Traces.svelte'
+  import { metricStore } from '#lib/stores/metrics.svelte.js'
+  import { traceStore } from '#lib/stores/traces.svelte.js'
+  import type { ServiceMapData } from '#lib/types.js'
+  import { isInputFocused, isMac } from '#lib/utils/keyboard.js'
 
   // Connect to SSE stream for real-time trace updates
   traceStore.connectSSE()
@@ -22,10 +22,12 @@
 
   // Reactive state from store (for tab count badge only)
   const traces = $derived(traceStore.traces)
+
   const metricsBadgeTotal = $derived(metricStore.count)
 
   // Tab navigation
-  const initialTab = $page.url.searchParams.get('tab')
+  const initialTab = page.url.searchParams.get('tab')
+
   let activeTab = $state<'traces' | 'logs' | 'metrics' | 'map'>(
     initialTab === 'map' || initialTab === 'logs' || initialTab === 'metrics'
       ? initialTab
@@ -55,11 +57,13 @@
 
     const currentUrl = new URL(window.location.href)
     const currentTab = tabFromUrl(currentUrl)
+
     tabUrlMap[currentTab] = currentUrl.href
 
     const nextUrl = new URL(tabUrlMap[nextTab], window.location.origin)
+
     if (nextUrl.href !== window.location.href) {
-      pushState(nextUrl, {})
+      goto(nextUrl, { shallow: true })
     }
 
     activeTab = nextTab
@@ -68,7 +72,9 @@
   // Seed current tab URL so first switch can restore accurately.
   $effect(() => {
     if (typeof window === 'undefined') return
+
     const currentUrl = new URL(window.location.href)
+
     tabUrlMap[tabFromUrl(currentUrl)] = currentUrl.href
   })
 
@@ -90,6 +96,7 @@
 
   // Service map state
   let serviceMapData = $state<ServiceMapData | null>(null)
+
   let serviceMapLoading = $state(false)
   let serviceMapError = $state<string | null>(null)
 
@@ -126,6 +133,7 @@
 
   // Reactive state exposed from Traces for action button disabled states
   let filteredCount = $state(0)
+
   let selectedCount = $state(0)
   let isExporting = $state(false)
 
@@ -134,6 +142,7 @@
     triggerClearAll: () => void
     triggerDeleteSelected: () => void
   } | null = $state(null)
+
   let logsTotal = $state(0)
   const logsBadgeTotal = $derived(traceStore.logCount)
   let logsSelected = $state(0)
@@ -144,6 +153,7 @@
     triggerClearAll: () => void
     triggerDeleteSelected: () => void
   } | null = $state(null)
+
   let metricsTotal = $state(0)
   let metricsSelected = $state(0)
   let metricsDeleting = $state(false)
@@ -220,10 +230,14 @@
         class="tab-btn"
         class:active={activeTab === 'traces'}
         onclick={() => switchTab('traces')}
-        >Traces {#if traces.length > 0}<span class="tab-count"
-            >{traces.length}</span
-          >{/if}</button
       >
+        Traces
+
+        {#if traces.length > 0}
+          <span class="tab-count">{traces.length}</span>
+        {/if}
+      </button>
+
       <button
         role="tab"
         id="tab-logs"
@@ -232,10 +246,14 @@
         class="tab-btn"
         class:active={activeTab === 'logs'}
         onclick={() => switchTab('logs')}
-        >Logs {#if logsBadgeTotal > 0}<span class="tab-count"
-            >{logsBadgeTotal}</span
-          >{/if}</button
       >
+        Logs
+
+        {#if logsBadgeTotal > 0}
+          <span class="tab-count">{logsBadgeTotal}</span>
+        {/if}
+      </button>
+
       <button
         role="tab"
         id="tab-metrics"
@@ -244,10 +262,14 @@
         class="tab-btn"
         class:active={activeTab === 'metrics'}
         onclick={() => switchTab('metrics')}
-        >Metrics {#if metricsBadgeTotal > 0}<span class="tab-count"
-            >{metricsBadgeTotal}</span
-          >{/if}</button
       >
+        Metrics
+
+        {#if metricsBadgeTotal > 0}
+          <span class="tab-count">{metricsBadgeTotal}</span>
+        {/if}
+      </button>
+
       <button
         role="tab"
         id="tab-map"

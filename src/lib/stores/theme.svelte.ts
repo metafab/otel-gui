@@ -1,7 +1,7 @@
 // Theme store: 'system' | 'light' | 'dark'
 // Persists to localStorage, defaults to 'system' (follows OS preference)
 
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 
 type ThemeValue = 'system' | 'light' | 'dark'
 

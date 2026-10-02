@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { copyToClipboard } from '$lib/utils/clipboard'
+  import { copyToClipboard } from '#lib/utils/clipboard.js'
 
   interface Props {
     /** Text to write to the clipboard. */

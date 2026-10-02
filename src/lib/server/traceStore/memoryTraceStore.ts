@@ -1,4 +1,4 @@
-import type { TraceStore } from '$lib/types'
+import type { TraceStore } from '#lib/types.js'
 import { createInternalTraceStore } from './core'
 
 export function createMemoryTraceStore(config: {

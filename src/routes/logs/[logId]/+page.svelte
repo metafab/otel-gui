@@ -1,21 +1,21 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
-  import { page } from '$app/stores'
-  import AttributeItem from '$lib/components/AttributeItem.svelte'
-  import CopyButton from '$lib/components/CopyButton.svelte'
-  import FullscreenValueModal from '$lib/components/FullscreenValueModal.svelte'
-  import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
-  import ServiceBadge from '$lib/components/ServiceBadge.svelte'
-  import type { TraceLogDetail } from '$lib/types'
-  import { isInputFocused } from '$lib/utils/keyboard'
+  import { page } from '$app/state'
+  import AttributeItem from '#lib/components/AttributeItem.svelte'
+  import CopyButton from '#lib/components/CopyButton.svelte'
+  import FullscreenValueModal from '#lib/components/FullscreenValueModal.svelte'
+  import KeyboardShortcutsHelp from '#lib/components/KeyboardShortcutsHelp.svelte'
+  import ServiceBadge from '#lib/components/ServiceBadge.svelte'
+  import type { TraceLogDetail } from '#lib/types.js'
+  import { isInputFocused } from '#lib/utils/keyboard.js'
   import {
     resolveReturnTarget,
     shouldUseHistoryBackForTarget,
-  } from '$lib/utils/returnNavigation'
-  import { formatTimestamp, formatTimestampLocal } from '$lib/utils/time'
+  } from '#lib/utils/returnNavigation.js'
+  import { formatTimestamp, formatTimestampLocal } from '#lib/utils/time.js'
 
-  const logId = $derived($page.params.logId ?? '')
-  const returnToFromUrl = $derived($page.url.searchParams.get('returnTo'))
+  const logId = $derived(page.params.logId ?? '')
+  const returnToFromUrl = $derived(page.url.searchParams.get('returnTo'))
 
   const pageTitle = $derived(
     logId ? `otel-gui - Log ${logId.slice(0, 8)}` : 'otel-gui - Log',
@@ -26,11 +26,9 @@
   let loadError = $state<string | null>(null)
   let showShortcuts = $state(false)
   let fullscreenAttr = $state<{ key: string; value: string } | null>(null)
-
   let attributeFilter = $state('')
   let resourceFilter = $state('')
   let scopeFilter = $state('')
-
   let attributeFilterEl = $state<HTMLInputElement | null>(null)
   let resourceFilterEl = $state<HTMLInputElement | null>(null)
   let scopeFilterEl = $state<HTMLInputElement | null>(null)
@@ -41,7 +39,9 @@
           .sort(([a], [b]) => a.localeCompare(b))
           .filter(([key, value]) => {
             const q = attributeFilter.trim().toLowerCase()
+
             if (!q) return true
+
             return (
               key.toLowerCase().includes(q) ||
               JSON.stringify(value).toLowerCase().includes(q)
@@ -56,7 +56,9 @@
           .sort(([a], [b]) => a.localeCompare(b))
           .filter(([key, value]) => {
             const q = resourceFilter.trim().toLowerCase()
+
             if (!q) return true
+
             return (
               key.toLowerCase().includes(q) ||
               JSON.stringify(value).toLowerCase().includes(q)
@@ -71,7 +73,9 @@
           .sort(([a], [b]) => a.localeCompare(b))
           .filter(([key, value]) => {
             const q = scopeFilter.trim().toLowerCase()
+
             if (!q) return true
+
             return (
               key.toLowerCase().includes(q) ||
               JSON.stringify(value).toLowerCase().includes(q)
@@ -88,7 +92,6 @@
         Object.keys(logDetail.scopeAttributes).length > 0)
     ),
   )
-
   const serviceName = $derived(
     (logDetail?.resource['service.name'] as string) || 'unknown',
   )
@@ -130,12 +133,12 @@
   }
 
   function buildTraceDetailHref(traceId: string, spanId?: string) {
-    const returnTo = `${$page.url.pathname}${$page.url.search}${$page.url.hash}`
-
+    const returnTo = `${page.url.pathname}${page.url.search}${page.url.hash}`
     const url = new URL(
       `/traces/${encodeURIComponent(traceId)}`,
       'http://localhost',
     )
+
     url.searchParams.set('returnTo', returnTo)
 
     if (spanId) {
@@ -150,7 +153,6 @@
       typeof window !== 'undefined'
         ? window.location.origin
         : 'http://localhost'
-
     const rawReturnTo = returnToFromUrl?.trim() ?? ''
 
     if (rawReturnTo.startsWith('/traces/')) {
@@ -285,10 +287,7 @@
   }
 </script>
 
-<svelte:head>
-  <title>{pageTitle}</title>
-</svelte:head>
-
+<svelte:head><title>{pageTitle}</title></svelte:head>
 <svelte:window onkeydown={handleGlobalKeydown} />
 
 <div class="log-detail-page">

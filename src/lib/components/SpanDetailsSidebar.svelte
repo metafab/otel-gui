@@ -1,16 +1,21 @@
 <script lang="ts">
-  import type { StoredSpan, TraceLogDetail, TraceLogListItem } from '$lib/types'
-  import { page } from '$app/stores'
-  import AttributeItem from '$lib/components/AttributeItem.svelte'
-  import ChevronIcon from '$lib/components/ChevronIcon.svelte'
-  import SeverityPicker from '$lib/components/SeverityPicker.svelte'
+  import type {
+    StoredSpan,
+    TraceLogDetail,
+    TraceLogListItem,
+  } from '#lib/types.js'
+  import { page } from '$app/state'
+  import AttributeItem from '#lib/components/AttributeItem.svelte'
+  import ChevronIcon from '#lib/components/ChevronIcon.svelte'
+  import SeverityPicker from '#lib/components/SeverityPicker.svelte'
   import {
     formatDuration,
     formatTimestamp,
     formatTimestampLocal,
     formatRelativeTime,
-  } from '$lib/utils/time'
-  import { spanKindLabel, statusLabel } from '$lib/utils/spans'
+  } from '#lib/utils/time.js'
+
+  import { spanKindLabel, statusLabel } from '#lib/utils/spans.js'
 
   interface Props {
     span: StoredSpan
@@ -70,6 +75,7 @@
 
     try {
       const serialized = JSON.stringify(value)
+
       return (
         typeof serialized === 'string' &&
         serialized.toLowerCase().includes(normalizedSearchQuery)
@@ -81,6 +87,7 @@
 
   function keyValueMatchesSearch(key: string, value: unknown): boolean {
     if (!normalizedSearchQuery) return false
+
     return (
       key.toLowerCase().includes(normalizedSearchQuery) ||
       valueMatchesSearch(value)
@@ -169,10 +176,12 @@
 
   function logMatchesSearch(log: TraceLogListItem): boolean {
     if (!normalizedSearchQuery) return false
+
     const severity = (log.severityText || '').toLowerCase()
     const body = normalizeLogBody(log.body).toLowerCase()
     const spanId = (log.spanId || '').toLowerCase()
     const logId = (log.id || '').toLowerCase()
+
     return (
       severity.includes(normalizedSearchQuery) ||
       body.includes(normalizedSearchQuery) ||
@@ -209,6 +218,7 @@
 
   // Per-section filter state (local, resets when span changes)
   let attributeFilter = $state('')
+
   let resourceFilter = $state('')
   let scopeFilter = $state('')
   let logTextFilter = $state('')
@@ -262,16 +272,19 @@
         }
 
         const q = logTextFilter.trim().toLowerCase()
+
         if (!q) return true
 
         const severity = (log.severityText || '').toLowerCase()
         const body = normalizeLogBody(log.body).toLowerCase()
         const spanId = (log.spanId || '').toLowerCase()
+
         return severity.includes(q) || body.includes(q) || spanId.includes(q)
       })
       .sort((a, b) => {
         const aTs = BigInt(a.timeUnixNano || a.observedTimeUnixNano || '0')
         const bTs = BigInt(b.timeUnixNano || b.observedTimeUnixNano || '0')
+
         return aTs > bTs ? 1 : aTs < bTs ? -1 : 0
       }),
   )
@@ -289,6 +302,7 @@
     attributeFilter.trim()
       ? allAttributes.filter(([key, value]) => {
           const q = attributeFilter.toLowerCase()
+
           return (
             key.toLowerCase().includes(q) ||
             JSON.stringify(value).toLowerCase().includes(q)
@@ -304,6 +318,7 @@
     resourceFilter.trim()
       ? allResourceEntries.filter(([key, value]) => {
           const q = resourceFilter.toLowerCase()
+
           return (
             key.toLowerCase().includes(q) ||
             JSON.stringify(value).toLowerCase().includes(q)
@@ -319,6 +334,7 @@
     scopeFilter.trim()
       ? allScopeEntries.filter(([key, value]) => {
           const q = scopeFilter.toLowerCase()
+
           return (
             key.toLowerCase().includes(q) ||
             JSON.stringify(value).toLowerCase().includes(q)
@@ -651,7 +667,7 @@
                       stroke="currentColor"
                       stroke-width="1.2"
                       stroke-linecap="round"
-                    />
+                    ></path>
                   </svg>
                   {isLogDetailLoading
                     ? 'Loading…'
@@ -661,7 +677,7 @@
                 </button>
                 <a
                   class="log-action"
-                  href={`/logs/${encodeURIComponent(log.id)}?returnTo=${encodeURIComponent($page.url.pathname + $page.url.search)}`}
+                  href={`/logs/${encodeURIComponent(log.id)}?returnTo=${encodeURIComponent(page.url.pathname + page.url.search)}`}
                   title="Open log details page"
                 >
                   <svg
@@ -678,7 +694,7 @@
                       stroke-width="1.2"
                       stroke-linecap="round"
                       stroke-linejoin="round"
-                    />
+                    ></path>
                   </svg>
                   Open details
                 </a>

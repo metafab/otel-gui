@@ -7,7 +7,7 @@ import {
   metricTimeRange,
   seriesLabel,
 } from './metricChart'
-import type { MetricDetail } from '$lib/types'
+import type { MetricDetail } from '#lib/types.js'
 
 function sumMetric(): Pick<MetricDetail, 'name' | 'type' | 'series'> {
   return {

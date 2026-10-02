@@ -2,7 +2,7 @@
   // Per-series legend with show/hide checkboxes + an attribute filter input (§5).
   // Drives which lines the parent plots. Shows a "showing N of M series" note;
   // capping is done by the parent (top-N) and the cappedOut count surfaced here.
-  import { METRIC_PALETTE, type ChartLine } from '$lib/utils/metricChart'
+  import { METRIC_PALETTE, type ChartLine } from '#lib/utils/metricChart.js'
 
   interface Props {
     // All lines for the metric (pre-filter), in their natural order.

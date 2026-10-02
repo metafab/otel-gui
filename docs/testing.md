@@ -353,7 +353,7 @@ jobs:
           version: 10
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22.17
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run check # Type checking

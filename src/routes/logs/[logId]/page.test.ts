@@ -17,16 +17,7 @@ vi.mock('$app/navigation', () => ({
   goto: mockGoto,
 }))
 
-vi.mock('$app/stores', () => {
-  return {
-    page: {
-      subscribe(run: (value: typeof mockPageState) => void) {
-        run(mockPageState)
-        return () => {}
-      },
-    },
-  }
-})
+vi.mock('$app/state', () => ({ page: mockPageState }))
 
 import LogDetailPage from './+page.svelte'
 

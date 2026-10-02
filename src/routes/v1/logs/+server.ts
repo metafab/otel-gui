@@ -1,9 +1,8 @@
-import { json } from '@sveltejs/kit'
 import { promisify } from 'node:util'
 import { gunzip } from 'node:zlib'
 import type { RequestHandler } from './$types'
-import { traceStore } from '$lib/server/traceStore'
-import { decodeProtobufLogs } from '$lib/server/protobuf'
+import { traceStore } from '#lib/server/traceStore.js'
+import { decodeProtobufLogs } from '#lib/server/protobuf.js'
 
 const gunzipAsync = promisify(gunzip)
 
@@ -19,7 +18,10 @@ export const POST: RequestHandler = async ({ request }) => {
       try {
         buffer = new Uint8Array(await gunzipAsync(buffer))
       } catch {
-        return json({ error: 'Malformed gzip payload' }, { status: 400 })
+        return Response.json(
+          { error: 'Malformed gzip payload' },
+          { status: 400 },
+        )
       }
     }
 
@@ -32,16 +34,22 @@ export const POST: RequestHandler = async ({ request }) => {
       try {
         body = await decodeProtobufLogs(buffer)
       } catch {
-        return json({ error: 'Malformed protobuf payload' }, { status: 400 })
+        return Response.json(
+          { error: 'Malformed protobuf payload' },
+          { status: 400 },
+        )
       }
     } else if (contentType.includes('application/json')) {
       try {
         body = JSON.parse(new TextDecoder().decode(buffer))
       } catch {
-        return json({ error: 'Malformed JSON payload' }, { status: 400 })
+        return Response.json(
+          { error: 'Malformed JSON payload' },
+          { status: 400 },
+        )
       }
     } else {
-      return json(
+      return Response.json(
         {
           error:
             'Unsupported Content-Type. Expected application/json or application/x-protobuf.',
@@ -51,7 +59,7 @@ export const POST: RequestHandler = async ({ request }) => {
     }
 
     if (!body.resourceLogs) {
-      return json(
+      return Response.json(
         { error: 'Invalid OTLP payload: missing resourceLogs' },
         { status: 400 },
       )
@@ -75,10 +83,10 @@ export const POST: RequestHandler = async ({ request }) => {
       })
     }
 
-    return json({}, { status: 200 })
+    return Response.json({}, { status: 200 })
   } catch (error) {
     console.error('Error processing OTLP logs request:', error)
-    return json(
+    return Response.json(
       { error: 'Internal server error processing logs' },
       { status: 500 },
     )

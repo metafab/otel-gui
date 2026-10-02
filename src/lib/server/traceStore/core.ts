@@ -19,18 +19,18 @@ import type {
   StoredTrace,
   TraceListItem,
   TraceStore,
-} from '$lib/types'
-import { buildServiceMap } from '@otel-gui/core'
-import { extractAnyValue, flattenAttributes } from '@otel-gui/core'
-import { formatTimestamp, getDurationMs } from '$lib/utils/time'
-import { SPAN_KIND_NAMES, STATUS_CODE_NAMES } from '$lib/utils/otlpEnums'
+} from '#lib/types.js'
+import { buildServiceMap } from '#otel-gui/core'
+import { extractAnyValue, flattenAttributes } from '#otel-gui/core'
+import { formatTimestamp, getDurationMs } from '#lib/utils/time.js'
+import { SPAN_KIND_NAMES, STATUS_CODE_NAMES } from '#lib/utils/otlpEnums.js'
 import {
   createLogId,
   createMetricKey,
   createSeriesId,
   resolveRootServiceName,
   resolveRootSpanName,
-} from '@otel-gui/core'
+} from '#otel-gui/core'
 
 // Number of trailing series values projected into a MetricListItem sparkline.
 const SPARKLINE_POINTS = 30

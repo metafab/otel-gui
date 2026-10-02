@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { getServiceColor } from '$lib/utils/colors'
-  import { themeStore } from '$lib/stores/theme.svelte'
+  import { getServiceColor } from '#lib/utils/colors.js'
+  import { themeStore } from '#lib/stores/theme.svelte.js'
 
   interface Props {
     serviceName: string

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { layoutGraph } from './graph'
-import type { ServiceMapNode, ServiceMapEdge } from '$lib/types'
+import type { ServiceMapNode, ServiceMapEdge } from '#lib/types.js'
 
 function makeNode(serviceName: string): ServiceMapNode {
   return {

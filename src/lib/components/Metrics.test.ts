@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
 import {
   fireEvent,
   render,
@@ -14,12 +15,16 @@ const sseState = vi.hoisted(() => ({
   handlers: null as Record<string, (event: MessageEvent) => void> | null,
 }))
 
-vi.mock('$app/navigation', () => ({
-  goto: vi.fn(),
-  replaceState: vi.fn(),
+const { mockNavigation } = vi.hoisted(() => ({
+  mockNavigation: vi.fn(),
 }))
 
-vi.mock('$lib/stores/sseClient', () => ({
+vi.mock('$app/navigation', () => ({
+  goto: mockNavigation,
+  replaceState: mockNavigation,
+}))
+
+vi.mock('#lib/stores/sseClient.js', () => ({
   onSSEEvents: (handlers: Record<string, (event: MessageEvent) => void>) => {
     sseState.handlers = handlers
     return () => {
@@ -29,14 +34,14 @@ vi.mock('$lib/stores/sseClient', () => ({
 }))
 
 // Mock the metric store (only maxMetrics is read by the component).
-vi.mock('$lib/stores/metrics.svelte', () => ({
+vi.mock('#lib/stores/metrics.svelte.js', () => ({
   metricStore: {
     maxMetrics: 1000,
   },
 }))
 
 // Mock updateCheck so VersionInfo doesn't consume the fetch mock.
-vi.mock('$lib/utils/updateCheck', () => ({
+vi.mock('#lib/utils/updateCheck.js', () => ({
   checkForUpdate: vi.fn().mockResolvedValue(null),
   dismissUpdate: vi.fn(),
 }))
@@ -91,19 +96,12 @@ describe(Metrics, () => {
     })
 
     fetchMock.mockReturnValueOnce(pendingFetch)
-
     render(Metrics)
-
     expect(screen.getByText('Loading metrics...')).toBeInTheDocument()
     expect(
       screen.queryByText('No metrics received yet.'),
     ).not.toBeInTheDocument()
-
-    resolveFetch({
-      ok: true,
-      json: async () => [],
-    } as Response)
-
+    resolveFetch({ ok: true, json: async () => [] } as Response)
     expect(
       await screen.findByText('No metrics received yet.'),
     ).toBeInTheDocument()
@@ -114,7 +112,6 @@ describe(Metrics, () => {
       ok: true,
       json: async () => sampleMetrics,
     } as Response)
-
     render(Metrics)
 
     await waitFor(() => {
@@ -126,6 +123,7 @@ describe(Metrics, () => {
     // Service names also appear as options in the Service filter dropdown, so
     // scope these assertions to the table body.
     const table = screen.getByRole('table')
+
     expect(within(table).getByText('checkout-service')).toBeInTheDocument()
     expect(within(table).getByText('worker-service')).toBeInTheDocument()
   })
@@ -135,17 +133,15 @@ describe(Metrics, () => {
       ok: true,
       json: async () => sampleMetrics,
     } as Response)
-
     render(Metrics)
-
     await screen.findByText('http.server.duration')
 
     const servicePicker = screen.getByLabelText('Service')
+
     await fireEvent.click(servicePicker)
     await fireEvent.click(
       screen.getByRole('button', { name: 'worker-service' }),
     )
-
     expect(screen.queryByText('http.server.duration')).not.toBeInTheDocument()
     expect(screen.getByText('jobs.processed')).toBeInTheDocument()
   })
@@ -155,15 +151,13 @@ describe(Metrics, () => {
       ok: true,
       json: async () => sampleMetrics,
     } as Response)
-
     render(Metrics)
-
     await screen.findByText('http.server.duration')
 
     const typePicker = screen.getByLabelText('Metric type')
+
     await fireEvent.click(typePicker)
     await fireEvent.click(screen.getByRole('button', { name: 'Sum' }))
-
     expect(screen.queryByText('http.server.duration')).not.toBeInTheDocument()
     expect(screen.getByText('jobs.processed')).toBeInTheDocument()
   })
@@ -184,7 +178,6 @@ describe(Metrics, () => {
       } as Response)
 
     const { component } = render(Metrics)
-
     const checkbox = await screen.findByRole('checkbox', {
       name: 'Select metric http.server.duration',
     })
@@ -223,14 +216,12 @@ describe(Metrics, () => {
       } as Response)
 
     const { component } = render(Metrics)
-
     const checkbox = await screen.findByRole('checkbox', {
       name: 'Select metric http.server.duration',
     })
+
     await fireEvent.click(checkbox)
-
     component.triggerDeleteSelected()
-
     expect(
       await screen.findByText(
         'Failed to delete selected metrics: Internal Server Error',
@@ -243,12 +234,11 @@ describe(Metrics, () => {
       ok: true,
       json: async () => sampleMetrics,
     } as Response)
-
     render(Metrics)
 
     const searchInput = await screen.findByLabelText('Search metrics')
-    await fireEvent.input(searchInput, { target: { value: 'no-match' } })
 
+    await fireEvent.input(searchInput, { target: { value: 'no-match' } })
     expect(
       await screen.findByText('No metrics match the current filters.'),
     ).toBeInTheDocument()
@@ -256,13 +246,14 @@ describe(Metrics, () => {
     const emptyState = screen
       .getByText('No metrics match the current filters.')
       .closest('.empty')
+
     expect(emptyState).not.toBeNull()
 
     const clearButton = within(emptyState as HTMLElement).getByRole('button', {
       name: 'Clear Filters',
     })
-    await fireEvent.click(clearButton)
 
+    await fireEvent.click(clearButton)
     expect(await screen.findByText('http.server.duration')).toBeInTheDocument()
   })
 
@@ -271,20 +262,22 @@ describe(Metrics, () => {
       ok: true,
       json: async () => sampleMetrics,
     } as Response)
-
     render(Metrics)
-
     await screen.findByText('http.server.duration')
+
     const retentionNotice = document.querySelector('.retention-notice')
+
     expect(retentionNotice).not.toBeNull()
     expect(retentionNotice).toHaveTextContent(
       'Keeping last 1000 metric entries',
     )
     expect(retentionNotice).toHaveTextContent('in memory only')
+
     const persistenceLink = within(retentionNotice as HTMLElement).getByRole(
       'link',
       { name: 'Persistence documentation' },
     )
+
     expect(persistenceLink).toHaveAttribute(
       'href',
       'https://github.com/metafab/otel-gui#%EF%B8%8F-configuration',
@@ -299,15 +292,16 @@ describe(Metrics, () => {
     } as Response)
 
     const originalUrl = window.location.href
+
     window.history.replaceState(
       window.history.state,
       '',
       '/?tab=metrics&search=jobs&service=worker-service&type=sum&sort=name&order=asc',
     )
-
     render(Metrics)
 
     const table = await screen.findByRole('table')
+
     expect(await within(table).findByText('jobs.processed')).toBeInTheDocument()
     expect(
       within(table).queryByText('http.server.duration'),
@@ -316,14 +310,16 @@ describe(Metrics, () => {
     const searchInput = screen.getByLabelText(
       'Search metrics',
     ) as HTMLInputElement
+
     expect(searchInput.value).toBe('jobs')
 
     const servicePicker = screen.getByLabelText('Service')
+
     expect(servicePicker).toHaveTextContent('worker-service')
 
     const typePicker = screen.getByLabelText('Metric type')
-    expect(typePicker).toHaveTextContent('Sum')
 
+    expect(typePicker).toHaveTextContent('Sum')
     window.history.replaceState(window.history.state, '', originalUrl)
   })
 
@@ -332,9 +328,7 @@ describe(Metrics, () => {
       ok: true,
       json: async () => sampleMetrics,
     } as Response)
-
     render(Metrics)
-
     await screen.findByRole('table')
 
     const getRowIds = () =>
@@ -346,7 +340,6 @@ describe(Metrics, () => {
     expect(getRowIds()[0]).toBe('worker-service jobs.processed')
 
     await fireEvent.click(screen.getByRole('button', { name: 'Sort by name' }))
-
     expect(getRowIds()[0]).toBe('checkout-service http.server.duration')
     expect(vi.mocked(replaceState)).toHaveBeenCalled()
   })
@@ -356,7 +349,6 @@ describe(Metrics, () => {
       ok: true,
       json: async () => sampleMetrics,
     } as Response)
-
     render(Metrics)
 
     const rows = await screen.findAllByTestId('metric-row')
@@ -377,22 +369,23 @@ describe(Metrics, () => {
       ok: true,
       json: async () => sampleMetrics,
     } as Response)
-
     render(Metrics)
 
     const searchInput = await screen.findByLabelText('Search metrics')
+
     await fireEvent.input(searchInput, { target: { value: 'jobs' } })
 
     const servicePicker = screen.getByLabelText('Service')
+
     await fireEvent.click(servicePicker)
     await fireEvent.click(
       screen.getByRole('button', { name: 'worker-service' }),
     )
 
     const typePicker = screen.getByLabelText('Metric type')
+
     await fireEvent.click(typePicker)
     await fireEvent.click(screen.getByRole('button', { name: 'Sum' }))
-
     expect(await screen.findByText('jobs.processed')).toBeInTheDocument()
     expect(screen.queryByText('http.server.duration')).not.toBeInTheDocument()
   })
@@ -402,7 +395,6 @@ describe(Metrics, () => {
       ok: true,
       json: async () => [],
     } as Response)
-
     render(Metrics)
 
     await waitFor(() => {
@@ -412,7 +404,6 @@ describe(Metrics, () => {
     sseState.handlers?.['metrics-snapshot']?.({
       data: JSON.stringify({ metrics: sampleMetrics }),
     } as MessageEvent)
-
     expect(await screen.findByText('http.server.duration')).toBeInTheDocument()
     expect(await screen.findByText('jobs.processed')).toBeInTheDocument()
   })
@@ -422,9 +413,7 @@ describe(Metrics, () => {
       ok: true,
       json: async () => sampleMetrics,
     } as Response)
-
     render(Metrics)
-
     await screen.findByText('http.server.duration')
 
     sseState.handlers?.['metrics-append']?.({

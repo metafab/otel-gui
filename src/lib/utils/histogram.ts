@@ -1,12 +1,12 @@
 // Pure helpers for histogram + exp_histogram rendering (distribution bars and
 // the time heatmap). No DOM / canvas here so the bucketing logic is unit-tested
 // directly; HistogramHeatmap.svelte does the drawing.
-import { expoBoundsForBucket } from '@otel-gui/core'
+import { expoBoundsForBucket } from '#otel-gui/core'
 import type {
   HistogramPoint,
   ExpHistogramPoint,
   MetricWirePoint,
-} from '$lib/types'
+} from '#lib/types.js'
 
 // One bucket of a distribution: a value range [lower, upper) and its count.
 // `lower`/`upper` may be -Infinity / +Infinity for the implicit overflow edges.

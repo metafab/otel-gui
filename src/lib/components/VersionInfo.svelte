@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { checkForUpdate, dismissUpdate } from '$lib/utils/updateCheck'
+  import { checkForUpdate, dismissUpdate } from '#lib/utils/updateCheck.js'
 
   interface Props {
     currentVersion?: string

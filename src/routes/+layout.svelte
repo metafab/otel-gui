@@ -1,8 +1,8 @@
 <script lang="ts">
   import './app.css'
-  import favicon from '$lib/assets/favicon.svg'
-  import logo from '$lib/assets/logo.svg'
-  import { themeStore } from '$lib/stores/theme.svelte'
+  import favicon from '#lib/assets/favicon.svg'
+  import logo from '#lib/assets/logo.svg'
+  import { themeStore } from '#lib/stores/theme.svelte.js'
 
   let { children } = $props()
 

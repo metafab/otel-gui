@@ -8,8 +8,8 @@
 // traceStore and its event names are already globally distinct, so they
 // collapse cleanly into one connection here.
 
-import { traceStore } from '$lib/server/traceStore'
-import type { SSEEventName } from '$lib/utils/sseEvents'
+import { traceStore } from '#lib/server/traceStore.js'
+import type { SSEEventName } from '#lib/utils/sseEvents.js'
 import type { RequestHandler } from './$types'
 
 export const GET: RequestHandler = async () => {

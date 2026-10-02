@@ -1,6 +1,6 @@
 <script lang="ts">
-  import SeverityPicker from '$lib/components/SeverityPicker.svelte'
-  import ServicePicker from '$lib/components/ServicePicker.svelte'
+  import SeverityPicker from '#lib/components/SeverityPicker.svelte'
+  import ServicePicker from '#lib/components/ServicePicker.svelte'
 
   interface Props {
     services: string[]

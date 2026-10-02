@@ -1,7 +1,6 @@
 // API endpoint to get trace list
-import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { traceStore } from '$lib/server/traceStore'
+import { traceStore } from '#lib/server/traceStore.js'
 
 export const GET: RequestHandler = async ({ url }) => {
   const limitParam = url.searchParams.get('limit')
@@ -18,13 +17,13 @@ export const GET: RequestHandler = async ({ url }) => {
   }
   const traces = traceStore.getTraceList(limit)
 
-  return json(traces)
+  return Response.json(traces)
 }
 
 export const DELETE: RequestHandler = async ({ request }) => {
   if (!request) {
     traceStore.clearTraces()
-    return json({ success: true, deletedCount: null, mode: 'all' })
+    return Response.json({ success: true, deletedCount: null, mode: 'all' })
   }
 
   const contentType = request.headers.get('content-type') || ''
@@ -40,13 +39,13 @@ export const DELETE: RequestHandler = async ({ request }) => {
         )
 
         const deletedCount = traceStore.deleteTraces(validTraceIds)
-        return json({ success: true, deletedCount, mode: 'selected' })
+        return Response.json({ success: true, deletedCount, mode: 'selected' })
       }
     } catch {
-      return json({ error: 'Malformed JSON payload' }, { status: 400 })
+      return Response.json({ error: 'Malformed JSON payload' }, { status: 400 })
     }
   }
 
   traceStore.clearTraces()
-  return json({ success: true, deletedCount: null, mode: 'all' })
+  return Response.json({ success: true, deletedCount: null, mode: 'all' })
 }

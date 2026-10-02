@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { GET } from './+server'
 import { POST as ingestTraces } from '../../v1/traces/+server'
 import { POST as ingestLogs } from '../../v1/logs/+server'
-import { traceStore } from '$lib/server/traceStore'
+import { traceStore } from '#lib/server/traceStore.js'
 import simpleTrace from '../../../../tests/fixtures/simple-trace.json'
 import simpleLog from '../../../../tests/fixtures/simple-log.json'
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import MetricTypePicker from '$lib/components/MetricTypePicker.svelte'
-  import ServicePicker from '$lib/components/ServicePicker.svelte'
+  import MetricTypePicker from '#lib/components/MetricTypePicker.svelte'
+  import ServicePicker from '#lib/components/ServicePicker.svelte'
 
   interface Props {
     /** Available service names for the dropdown. */

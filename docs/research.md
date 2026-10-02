@@ -260,7 +260,7 @@ No Svelte-specific trace/gantt library exists. All serious trace viewers (Jaeger
 ### SvelteKit
 
 8. **`adapter-node` required**: For in-memory state persistence and SSE. Serverless adapters won't work.
-9. **Server-only imports**: Keep trace store in `$lib/server/` to prevent client-side bundling.
+9. **Server-only imports**: Keep trace store in `#lib/server/` to prevent client-side bundling.
 10. **`$state.raw()` for large data**: Avoids deep proxying on large span arrays.
 11. **SvelteKit's own OTel**: Disable `tracing.server` to prevent self-tracing infinite loops.
 

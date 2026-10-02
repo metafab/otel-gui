@@ -4,9 +4,9 @@ import type {
   TraceExportItem,
   TraceExportEnvelope,
   TraceImportPreview,
-} from '$lib/types'
-import { flattenAttributes } from '@otel-gui/core'
-import { SPAN_KIND_NAMES, STATUS_CODE_NAMES } from '$lib/utils/otlpEnums'
+} from '#lib/types.js'
+import { flattenAttributes } from '#otel-gui/core'
+import { SPAN_KIND_NAMES, STATUS_CODE_NAMES } from '#lib/utils/otlpEnums.js'
 
 const EXPORT_FORMAT = 'otel-gui-trace-export'
 const EXPORT_VERSION = 1

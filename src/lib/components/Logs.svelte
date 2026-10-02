@@ -1,13 +1,13 @@
 <script lang="ts">
   import './list-panel.css'
-  import { goto, replaceState } from '$app/navigation'
-  import ServiceBadge from '$lib/components/ServiceBadge.svelte'
-  import LogFilters from '$lib/components/LogFilters.svelte'
-  import VersionInfo from '$lib/components/VersionInfo.svelte'
-  import { onSSEEvents } from '$lib/stores/sseClient'
-  import { traceStore } from '$lib/stores/traces.svelte'
-  import type { LogListItem } from '$lib/types'
-  import { formatTimestampLocal } from '$lib/utils/time'
+  import { goto } from '$app/navigation'
+  import ServiceBadge from '#lib/components/ServiceBadge.svelte'
+  import LogFilters from '#lib/components/LogFilters.svelte'
+  import VersionInfo from '#lib/components/VersionInfo.svelte'
+  import { onSSEEvents } from '#lib/stores/sseClient.js'
+  import { traceStore } from '#lib/stores/traces.svelte.js'
+  import type { LogListItem } from '#lib/types.js'
+  import { formatTimestampLocal } from '#lib/utils/time.js'
 
   // Bindable props so parent can read reactive state for header action buttons
   let {
@@ -20,9 +20,12 @@
   // Only true until the first snapshot (or fallback load) arrives. Background
   // delta updates never toggle this, so the table is never torn down/remounted.
   let isLoading = $state(true)
+
   let loadError = $state<string | null>(null)
+
   type LogSortBy = 'time' | 'service' | 'severity' | 'body' | 'trace' | 'span'
   type LogSortOrder = 'asc' | 'desc'
+
   const DEFAULT_SORT_BY: LogSortBy = 'time'
   const DEFAULT_SORT_ORDER: LogSortOrder = 'desc'
 
@@ -112,7 +115,6 @@
   }
 
   const initialParams = readParamsFromLocation()
-
   let searchQuery = $state(initialParams.searchQuery)
   let selectedService = $state(initialParams.selectedService)
   let severityFilter = $state<
@@ -163,7 +165,7 @@
     applyParams(nextUrl)
     if (nextUrl.search === window.location.search) return
     try {
-      replaceState(nextUrl, {})
+      goto(nextUrl, { shallow: true, replace: true })
     } catch {
       // Component tests can run before SvelteKit router bootstraps.
       window.history.replaceState(window.history.state, '', nextUrl)
@@ -200,6 +202,7 @@
 
   function formatLogTime(log: LogListItem): string {
     const ts = log.timeUnixNano || log.observedTimeUnixNano
+
     if (!ts) return '-'
 
     try {
@@ -211,6 +214,7 @@
 
   function formatLogTimeTitle(log: LogListItem): string {
     const ts = log.timeUnixNano || log.observedTimeUnixNano
+
     if (!ts) return '-'
 
     try {
@@ -223,6 +227,7 @@
 
   const filteredLogs = $derived.by(() => {
     if (!Array.isArray(logs)) return []
+
     const query = searchQuery.trim().toLowerCase()
 
     return logs.filter((log) => {
@@ -300,6 +305,7 @@
 
       const aTs = BigInt(a.timeUnixNano || a.observedTimeUnixNano || '0')
       const bTs = BigInt(b.timeUnixNano || b.observedTimeUnixNano || '0')
+
       return bTs < aTs ? -1 : bTs > aTs ? 1 : 0
     })
 
@@ -362,10 +368,12 @@
     if (incoming.length === 0) return
 
     const byId = new Map<string, LogListItem>()
+
     for (const log of logs) byId.set(log.id, log)
     for (const log of incoming) byId.set(log.id, log)
 
     let merged = Array.from(byId.values())
+
     if (merged.length > maxLogs) {
       merged.sort((a, b) => {
         const at = logTimeNano(a)
@@ -501,7 +509,9 @@
     }
 
     const url = new URL(window.location.href)
+
     applyParams(url)
+
     return `${url.pathname}${url.search}${url.hash}`
   })
 
@@ -510,6 +520,7 @@
       `/traces/${encodeURIComponent(traceId)}`,
       'http://localhost',
     )
+
     url.searchParams.set('returnTo', currentLogsReturnTo)
 
     if (spanId) {
@@ -554,6 +565,7 @@
     // If an SSE snapshot lands while that REST seed is still in flight (e.g. a
     // concurrent clear), the seed must not overwrite it — track that here.
     let sseSnapshotApplied = false
+
     void loadLogs(() => !sseSnapshotApplied)
 
     // No EventSource (SSR/legacy) — the REST load above is all we get.

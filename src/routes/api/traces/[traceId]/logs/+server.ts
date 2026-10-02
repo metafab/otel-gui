@@ -1,6 +1,6 @@
-import { json, error } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { traceStore } from '$lib/server/traceStore'
+import { traceStore } from '#lib/server/traceStore.js'
 
 export const GET: RequestHandler = async ({ params, url }) => {
   const { traceId } = params
@@ -27,9 +27,9 @@ export const GET: RequestHandler = async ({ params, url }) => {
   if (spanIdFilter) {
     const logs = traceStore.getTraceLogs(traceId, MAX_LIMIT)
     const filtered = logs.filter((log) => log.spanId === spanIdFilter)
-    return json(filtered.slice(0, limit))
+    return Response.json(filtered.slice(0, limit))
   }
 
   const logs = traceStore.getTraceLogs(traceId, limit)
-  return json(logs)
+  return Response.json(logs)
 }

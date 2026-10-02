@@ -7,7 +7,7 @@ import {
   UPDATE_CHECK_KEY,
   UPDATE_CHECK_TTL,
   type UpdateCheckStorage,
-} from '$lib/utils/updateCheck'
+} from '#lib/utils/updateCheck.js'
 
 // ---------------------------------------------------------------------------
 // parseVersion

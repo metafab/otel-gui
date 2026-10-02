@@ -1,19 +1,20 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { onMount } from 'svelte'
-  import KeyboardShortcutsHelp from '$lib/components/KeyboardShortcutsHelp.svelte'
-  import ServiceBadge from '$lib/components/ServiceBadge.svelte'
-  import UplotChart from '$lib/components/UplotChart.svelte'
-  import HistogramHeatmap from '$lib/components/HistogramHeatmap.svelte'
-  import MetricSeriesLegend from '$lib/components/MetricSeriesLegend.svelte'
-  import type { MetricDetail } from '$lib/types'
+  import KeyboardShortcutsHelp from '#lib/components/KeyboardShortcutsHelp.svelte'
+  import ServiceBadge from '#lib/components/ServiceBadge.svelte'
+  import UplotChart from '#lib/components/UplotChart.svelte'
+  import HistogramHeatmap from '#lib/components/HistogramHeatmap.svelte'
+  import MetricSeriesLegend from '#lib/components/MetricSeriesLegend.svelte'
+  import type { MetricDetail } from '#lib/types.js'
   import {
     resolveReturnTarget,
     shouldUseHistoryBackForTarget,
-  } from '$lib/utils/returnNavigation'
-  import { isInputFocused } from '$lib/utils/keyboard'
-  import { formatDateTimeLocal } from '$lib/utils/time'
+  } from '#lib/utils/returnNavigation.js'
+  import { isInputFocused } from '#lib/utils/keyboard.js'
+  import { formatDateTimeLocal } from '#lib/utils/time.js'
+
   import {
     buildLines,
     filterLines,
@@ -21,12 +22,12 @@
     defaultValueMode,
     DEFAULT_SERIES_CAP,
     type ValueMode,
-  } from '$lib/utils/metricChart'
+  } from '#lib/utils/metricChart.js'
+
   import type uPlot from 'uplot'
 
-  const metricId = $derived($page.params.metricId ?? '')
-  const returnToFromUrl = $derived($page.url.searchParams.get('returnTo'))
-
+  const metricId = $derived(page.params.metricId ?? '')
+  const returnToFromUrl = $derived(page.url.searchParams.get('returnTo'))
   let metric = $state<MetricDetail | null>(null)
   let isLoading = $state(true)
   let loadError = $state<string | null>(null)
@@ -35,12 +36,13 @@
 
   // §4 raw↔rate toggle (sum only). Defaulted once per metric in the effect below.
   let valueMode = $state<ValueMode>('raw')
+
   let valueModeInitialised = $state(false)
 
   // §5 series filtering state.
   let hiddenSeries = $state<Set<string>>(new Set())
-  let attrFilter = $state('')
 
+  let attrFilter = $state('')
   const isLineType = $derived(
     metric != null &&
       (metric.type === 'gauge' ||
@@ -51,7 +53,6 @@
     metric != null &&
       (metric.type === 'histogram' || metric.type === 'exp_histogram'),
   )
-
   const pageTitle = $derived(
     metric ? `otel-gui - ${metric.name}` : 'otel-gui - Metric',
   )
@@ -68,6 +69,7 @@
   // the chosen valueMode (rate uses each point's server-computed `rate`).
   const allLines = $derived.by(() => {
     if (!metric || !isLineType) return []
+
     return buildLines(metric, valueMode)
   })
 
@@ -234,10 +236,7 @@
   }
 </script>
 
-<svelte:head>
-  <title>{pageTitle}</title>
-</svelte:head>
-
+<svelte:head><title>{pageTitle}</title></svelte:head>
 <svelte:window onkeydown={handleGlobalKeydown} />
 
 <div class="metric-detail-page">

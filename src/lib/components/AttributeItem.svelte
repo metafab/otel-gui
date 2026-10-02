@@ -1,5 +1,5 @@
 <script lang="ts">
-  import CopyButton from '$lib/components/CopyButton.svelte'
+  import CopyButton from '#lib/components/CopyButton.svelte'
   const TRUNCATE_LENGTH = 200
 
   interface Props {

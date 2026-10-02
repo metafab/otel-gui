@@ -1,15 +1,30 @@
-import { env } from '$env/dynamic/private'
+import {
+  OTEL_GUI_MAX_TRACES,
+  OTEL_GUI_MAX_LOGS,
+  OTEL_GUI_MAX_METRICS,
+  OTEL_GUI_MAX_METRIC_POINTS,
+  OTEL_GUI_PERSISTENCE_MODE,
+  OTEL_GUI_PERSISTENCE_PATH,
+  OTEL_GUI_PERSISTENCE_FLUSH_MS,
+  OTEL_GUI_PERSISTENCE_BACKEND_MODULE,
+  OTEL_GUI_LICENSE_KEY,
+  OTEL_GUI_LICENSE_PUBLIC_KEY_PEM,
+  OTEL_GUI_LICENSE_PUBLIC_KEY_PATH,
+  OTEL_GUI_LICENSE_CLOCK_SKEW_SEC,
+} from '$app/env/private'
+
 import {
   getTraceStoreBackend,
   registerTraceStoreBackend,
   type PersistenceStatus,
   type TraceStoreBackendModule,
   type TraceStoreWithPersistenceStatus,
-} from '$lib/server/traceStore/backends'
-import { resolveDynamicImportTarget } from '$lib/server/traceStore/moduleImport'
+} from '#lib/server/traceStore/backends.js'
+
+import { resolveDynamicImportTarget } from '#lib/server/traceStore/moduleImport.js'
 
 function resolveMaxTraces(): number {
-  const raw = env.OTEL_GUI_MAX_TRACES
+  const raw = OTEL_GUI_MAX_TRACES
   if (raw === undefined || raw === '') return 1000
   const parsed = Number.parseInt(raw, 10)
   if (Number.isNaN(parsed) || parsed < 1 || parsed > 10_000) {
@@ -22,7 +37,7 @@ function resolveMaxTraces(): number {
 }
 
 function resolveMaxLogs(): number {
-  const raw = env.OTEL_GUI_MAX_LOGS
+  const raw = OTEL_GUI_MAX_LOGS
   if (raw === undefined || raw === '') return 1000
   const parsed = Number.parseInt(raw, 10)
   if (Number.isNaN(parsed) || parsed < 1 || parsed > 10_000) {
@@ -37,7 +52,7 @@ function resolveMaxLogs(): number {
 // Bounds distinct service.name + metric name entries, not attribute series or
 // points. A single metric entry may contain multiple attribute series.
 function resolveMaxMetrics(): number {
-  const raw = env.OTEL_GUI_MAX_METRICS
+  const raw = OTEL_GUI_MAX_METRICS
   if (raw === undefined || raw === '') return 1000
   const parsed = Number.parseInt(raw, 10)
   if (Number.isNaN(parsed) || parsed < 1 || parsed > 10_000) {
@@ -51,7 +66,7 @@ function resolveMaxMetrics(): number {
 
 // Bounds the number of points retained per series (the per-series ring size).
 function resolveMaxMetricPoints(): number {
-  const raw = env.OTEL_GUI_MAX_METRIC_POINTS
+  const raw = OTEL_GUI_MAX_METRIC_POINTS
   if (raw === undefined || raw === '') return 600
   const parsed = Number.parseInt(raw, 10)
   if (Number.isNaN(parsed) || parsed < 10 || parsed > 10_000) {
@@ -64,23 +79,26 @@ function resolveMaxMetricPoints(): number {
 }
 
 function resolvePersistenceMode(): 'memory' | 'pglite' {
-  const raw = env.OTEL_GUI_PERSISTENCE_MODE
+  const raw = OTEL_GUI_PERSISTENCE_MODE
+
   if (raw === undefined || raw === '') return 'memory'
   if (raw === 'memory' || raw === 'pglite') return raw
+
   console.warn(
     `[otel-gui] Invalid OTEL_GUI_PERSISTENCE_MODE="${raw}". Must be "memory" or "pglite". Falling back to "memory".`,
   )
+
   return 'memory'
 }
 
 function resolvePersistencePath(): string {
-  const raw = env.OTEL_GUI_PERSISTENCE_PATH
+  const raw = OTEL_GUI_PERSISTENCE_PATH
   if (raw === undefined || raw === '') return '.otel-gui/pglite'
   return raw
 }
 
 function resolveFlushMs(): number {
-  const raw = env.OTEL_GUI_PERSISTENCE_FLUSH_MS
+  const raw = OTEL_GUI_PERSISTENCE_FLUSH_MS
   if (raw === undefined || raw === '') return 750
   const parsed = Number.parseInt(raw, 10)
   if (Number.isNaN(parsed) || parsed < 50 || parsed > 60_000) {
@@ -100,7 +118,6 @@ const persistenceMode = resolvePersistenceMode()
 const persistencePath = resolvePersistencePath()
 const flushMs = resolveFlushMs()
 const persistenceBackendModule = resolvePersistenceBackendModule()
-
 let externalBackendLoadError: string | null = null
 let backendInitError: string | null = null
 
@@ -160,6 +177,7 @@ function isExpectedBackendInitFallback(error: unknown): boolean {
 
   if (error instanceof Error) {
     if (error.message.startsWith('license-check-failed:')) return true
+
     if (
       error.name === 'RuntimeError' &&
       /Aborted\(\)\. Build with -sASSERTIONS/i.test(error.message)
@@ -172,7 +190,7 @@ function isExpectedBackendInitFallback(error: unknown): boolean {
 }
 
 function resolvePersistenceBackendModule(): string | null {
-  const raw = env.OTEL_GUI_PERSISTENCE_BACKEND_MODULE
+  const raw = OTEL_GUI_PERSISTENCE_BACKEND_MODULE
   if (raw === undefined || raw === '') return null
   return raw
 }
@@ -180,10 +198,12 @@ function resolvePersistenceBackendModule(): string | null {
 function hydrateProcessEnvForExternalBackends(): void {
   // External modules may read license settings from process.env directly.
   const mappings: Array<[key: string, value: string | undefined]> = [
-    ['OTEL_GUI_LICENSE_KEY', env.OTEL_GUI_LICENSE_KEY],
-    ['OTEL_GUI_LICENSE_PUBLIC_KEY_PEM', env.OTEL_GUI_LICENSE_PUBLIC_KEY_PEM],
-    ['OTEL_GUI_LICENSE_PUBLIC_KEY_PATH', env.OTEL_GUI_LICENSE_PUBLIC_KEY_PATH],
-    ['OTEL_GUI_LICENSE_CLOCK_SKEW_SEC', env.OTEL_GUI_LICENSE_CLOCK_SKEW_SEC],
+    ['OTEL_GUI_LICENSE_KEY', OTEL_GUI_LICENSE_KEY],
+    ['OTEL_GUI_LICENSE_PUBLIC_KEY_PEM', OTEL_GUI_LICENSE_PUBLIC_KEY_PEM],
+
+    ['OTEL_GUI_LICENSE_PUBLIC_KEY_PATH', OTEL_GUI_LICENSE_PUBLIC_KEY_PATH],
+
+    ['OTEL_GUI_LICENSE_CLOCK_SKEW_SEC', OTEL_GUI_LICENSE_CLOCK_SKEW_SEC],
   ]
 
   for (const [key, value] of mappings) {
@@ -199,7 +219,9 @@ function hydrateProcessEnvForExternalBackends(): void {
 
 async function loadExternalBackends(): Promise<void> {
   if (!persistenceBackendModule) return
+
   hydrateProcessEnvForExternalBackends()
+
   const importTarget = resolveDynamicImportTarget(persistenceBackendModule)
 
   try {
@@ -207,6 +229,7 @@ async function loadExternalBackends(): Promise<void> {
       /* @vite-ignore */ importTarget
     )) as Partial<TraceStoreBackendModule>
     const register = loaded.registerTraceStoreBackends
+
     if (typeof register === 'function') {
       await register({ registerTraceStoreBackend })
       externalBackendLoadError = null
@@ -214,12 +237,12 @@ async function loadExternalBackends(): Promise<void> {
     }
 
     externalBackendLoadError = 'backend-module-invalid-export'
-
     console.warn(
       `[otel-gui] Persistence backend module "${persistenceBackendModule}" loaded but did not export registerTraceStoreBackends().`,
     )
   } catch (error) {
     externalBackendLoadError = 'backend-module-load-failed'
+
     if (isMissingBackendModuleError(error)) {
       console.info(
         `[otel-gui] Optional persistence backend module "${persistenceBackendModule}" was not found. Using built-in backends (memory mode in OSS).`,

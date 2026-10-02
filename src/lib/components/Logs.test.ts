@@ -7,6 +7,15 @@ import {
   waitFor,
   within,
 } from '@testing-library/svelte'
+
+const { mockGoto } = vi.hoisted(() => ({
+  mockGoto: vi.fn(),
+}))
+
+vi.mock('$app/navigation', () => ({
+  goto: mockGoto,
+}))
+
 import Logs from './Logs.svelte'
 
 class MockEventSource {
@@ -35,7 +44,7 @@ class MockEventSource {
 }
 
 // Mock the trace store
-vi.mock('$lib/stores/traces.svelte', () => ({
+vi.mock('#lib/stores/traces.svelte.js', () => ({
   traceStore: {
     maxLogs: 1000,
     persistence: {
@@ -52,7 +61,7 @@ vi.mock('$lib/stores/traces.svelte', () => ({
 }))
 
 // Mock updateCheck so VersionInfo doesn't consume the fetch mock
-vi.mock('$lib/utils/updateCheck', () => ({
+vi.mock('#lib/utils/updateCheck.js', () => ({
   checkForUpdate: vi.fn().mockResolvedValue(null),
   dismissUpdate: vi.fn(),
 }))
@@ -87,6 +96,9 @@ describe(Logs, () => {
 
   beforeEach(() => {
     vi.restoreAllMocks()
+    mockGoto.mockImplementation((url: URL | string) => {
+      window.history.replaceState(window.history.state, '', url)
+    })
     fetchMock.mockReset()
     vi.stubGlobal('fetch', fetchMock)
     vi.stubGlobal(

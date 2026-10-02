@@ -1,12 +1,12 @@
 <script lang="ts">
-  import type { ServiceMapData } from '$lib/types'
-  import { getServiceColor } from '$lib/utils/colors'
+  import type { ServiceMapData } from '#lib/types.js'
+  import { getServiceColor } from '#lib/utils/colors.js'
   import {
     layoutGraph,
     type LayoutNode,
     type LayoutEdge,
-  } from '$lib/utils/graph'
-  import { themeStore } from '$lib/stores/theme.svelte'
+  } from '#lib/utils/graph.js'
+  import { themeStore } from '#lib/stores/theme.svelte.js'
 
   interface Props {
     data: ServiceMapData

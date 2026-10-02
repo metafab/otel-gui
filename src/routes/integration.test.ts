@@ -23,7 +23,7 @@ import {
 } from './api/metrics/+server'
 import { GET as getMetric } from './api/metrics/[metricId]/+server'
 import { POST as postOtlpLogs } from './v1/logs/+server'
-import { traceStore } from '$lib/server/traceStore'
+import { traceStore } from '#lib/server/traceStore.js'
 import simpleTrace from '../../tests/fixtures/simple-trace.json'
 import simpleLog from '../../tests/fixtures/simple-log.json'
 import multiServiceTrace from '../../tests/fixtures/multi-service-trace.json'

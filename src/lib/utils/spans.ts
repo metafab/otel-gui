@@ -1,4 +1,4 @@
-import type { StoredSpan, SpanTreeNode } from '$lib/types'
+import type { StoredSpan, SpanTreeNode } from '#lib/types.js'
 
 // Map SpanKind integer to label
 export function spanKindLabel(kind: number): string {

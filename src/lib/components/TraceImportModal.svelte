@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { autoFocus } from '$lib/actions/autoFocus'
-  import type { TraceImportPreview } from '$lib/types'
+  import { autoFocus } from '#lib/actions/autoFocus.js'
+  import type { TraceImportPreview } from '#lib/types.js'
 
   interface ImportResult {
     importedTraceCount: number

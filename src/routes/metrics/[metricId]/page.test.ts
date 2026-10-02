@@ -6,20 +6,17 @@ const { mockGoto } = vi.hoisted(() => ({ mockGoto: vi.fn() }))
 
 vi.mock('$app/navigation', () => ({ goto: mockGoto }))
 
-vi.mock('$app/stores', async () => {
-  const { readable } = await import('svelte/store')
-  return {
-    page: readable({
-      params: { metricId: 'svc metric.name' },
-      url: new URL('http://localhost/metrics/svc%20metric.name'),
-    }),
-  }
-})
+vi.mock('$app/state', () => ({
+  page: {
+    params: { metricId: 'svc metric.name' },
+    url: new URL('http://localhost/metrics/svc%20metric.name'),
+  },
+}))
 
 // Mock UplotChart so jsdom never touches uPlot/canvas. The mock surfaces the
 // series labels + the last-point value of each plotted line as text so tests can
 // assert what was plotted.
-vi.mock('$lib/components/UplotChart.svelte', async () => {
+vi.mock('#lib/components/UplotChart.svelte', async () => {
   const Comp = (await import('./__mocks__/UplotChartMock.svelte')).default
   return { default: Comp }
 })

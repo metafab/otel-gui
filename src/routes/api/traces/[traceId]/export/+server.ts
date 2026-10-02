@@ -1,7 +1,7 @@
-import { error, json } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { traceStore } from '$lib/server/traceStore'
-import { serializeTraceExport } from '$lib/server/traceTransfer'
+import { traceStore } from '#lib/server/traceStore.js'
+import { serializeTraceExport } from '#lib/server/traceTransfer.js'
 
 export const GET: RequestHandler = async ({ params }) => {
   const trace = traceStore.getTrace(params.traceId)
@@ -12,7 +12,7 @@ export const GET: RequestHandler = async ({ params }) => {
 
   const payload = serializeTraceExport(trace)
 
-  return json(payload, {
+  return Response.json(payload, {
     headers: {
       'Content-Disposition': `attachment; filename="trace-${trace.traceId}.json"`,
     },

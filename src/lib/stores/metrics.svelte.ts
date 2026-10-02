@@ -2,8 +2,8 @@
 // Mirrors traces.svelte.ts but for metrics: it mirrors the SSE list stream
 // (metrics-snapshot / metrics-append) in memory, exactly like the Logs view,
 // so the list is flash-free (only the very first snapshot toggles isLoading).
-import { onSSEEvents } from '$lib/stores/sseClient'
-import type { MetricListItem } from '$lib/types'
+import { onSSEEvents } from '#lib/stores/sseClient.js'
+import type { MetricListItem } from '#lib/types.js'
 
 // State management
 let metrics = $state.raw<MetricListItem[]>([])

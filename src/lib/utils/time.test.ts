@@ -8,7 +8,7 @@ import {
   formatUnixTimestampLocal,
   getDurationMs,
   formatRelativeTime,
-} from '$lib/utils/time'
+} from '#lib/utils/time.js'
 
 describe(formatDuration, () => {
   it('correctly subtracts nanosecond strings', () => {

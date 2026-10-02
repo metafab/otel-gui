@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildSpanTree, spanKindLabel, statusLabel } from '$lib/utils/spans'
-import type { StoredSpan } from '$lib/types'
+import { buildSpanTree, spanKindLabel, statusLabel } from '#lib/utils/spans.js'
+import type { StoredSpan } from '#lib/types.js'
 
 // Helper to create a minimal StoredSpan
 function makeSpan(

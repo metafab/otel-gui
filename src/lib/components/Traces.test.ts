@@ -54,17 +54,18 @@ const { traceStoreMock } = vi.hoisted(() => ({
 }))
 
 vi.mock('$app/navigation', () => ({
+  goto: mockReplaceState,
   replaceState: mockReplaceState,
   pushState: vi.fn(),
 }))
 
 // Mock VersionInfo so it doesn't consume any fetch mock
-vi.mock('$lib/utils/updateCheck', () => ({
+vi.mock('#lib/utils/updateCheck.js', () => ({
   checkForUpdate: vi.fn().mockResolvedValue(null),
   dismissUpdate: vi.fn(),
 }))
 
-vi.mock('$lib/stores/traces.svelte', () => ({
+vi.mock('#lib/stores/traces.svelte.js', () => ({
   traceStore: traceStoreMock,
 }))
 

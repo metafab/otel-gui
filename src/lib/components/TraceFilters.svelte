@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ServicePicker from '$lib/components/ServicePicker.svelte'
+  import ServicePicker from '#lib/components/ServicePicker.svelte'
 
   interface Props {
     serviceScope: 'root' | 'any'

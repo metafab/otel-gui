@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { findMatchingSpanIds } from './spanSearch'
-import type { SpanTreeNode, StoredSpan } from '$lib/types'
-import type { TraceLogListItem } from '$lib/types'
+import type { SpanTreeNode, StoredSpan } from '#lib/types.js'
+import type { TraceLogListItem } from '#lib/types.js'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

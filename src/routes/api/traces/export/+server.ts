@@ -1,7 +1,6 @@
-import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { traceStore } from '$lib/server/traceStore'
-import { serializeTracesExport } from '$lib/server/traceTransfer'
+import { traceStore } from '#lib/server/traceStore.js'
+import { serializeTracesExport } from '#lib/server/traceTransfer.js'
 
 function isValidTraceIdList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string')
@@ -27,7 +26,7 @@ export const POST: RequestHandler = async ({ request }) => {
     const traceIds = body.traceIds
 
     if (!isValidTraceIdList(traceIds) || traceIds.length === 0) {
-      return json(
+      return Response.json(
         { error: 'traceIds must be a non-empty string array' },
         { status: 400 },
       )
@@ -39,7 +38,7 @@ export const POST: RequestHandler = async ({ request }) => {
       .filter((trace): trace is NonNullable<typeof trace> => trace != null)
 
     if (traces.length === 0) {
-      return json(
+      return Response.json(
         { error: 'No matching traces found for export' },
         { status: 404 },
       )
@@ -48,12 +47,12 @@ export const POST: RequestHandler = async ({ request }) => {
     const payload = serializeTracesExport(traces)
     const safeTimestamp = localFileTimestamp(new Date())
 
-    return json(payload, {
+    return Response.json(payload, {
       headers: {
         'Content-Disposition': `attachment; filename="traces-filtered-${safeTimestamp}.json"`,
       },
     })
   } catch {
-    return json({ error: 'Malformed JSON payload' }, { status: 400 })
+    return Response.json({ error: 'Malformed JSON payload' }, { status: 400 })
   }
 }

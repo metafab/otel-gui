@@ -72,29 +72,25 @@ const { mockTraceStore } = vi.hoisted(() => ({
 }))
 
 vi.mock('$app/navigation', () => ({
-  pushState: mockPushState,
+  goto: mockPushState,
   replaceState: mockReplaceState,
 }))
 
-vi.mock('$app/stores', async () => {
-  const { readable } = await import('svelte/store')
+vi.mock('$app/state', () => ({
+  page: {
+    params: {},
+    url: new URL(
+      'http://localhost/?search=checkout&service=checkout-service&errors=true&minDuration=10&maxDuration=20',
+    ),
+  },
+}))
 
-  return {
-    page: readable({
-      params: {},
-      url: new URL(
-        'http://localhost/?search=checkout&service=checkout-service&errors=true&minDuration=10&maxDuration=20',
-      ),
-    }),
-  }
-})
-
-vi.mock('$lib/utils/updateCheck', () => ({
+vi.mock('#lib/utils/updateCheck.js', () => ({
   checkForUpdate: mockCheckForUpdate,
   dismissUpdate: mockDismissUpdate,
 }))
 
-vi.mock('$lib/stores/traces.svelte', () => ({
+vi.mock('#lib/stores/traces.svelte.js', () => ({
   traceStore: mockTraceStore,
 }))
 

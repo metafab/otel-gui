@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { expoBoundsForBucket } from '@otel-gui/core'
+import { expoBoundsForBucket } from '#otel-gui/core'
 import {
   explicitBuckets,
   expoBuckets,
   bucketsForPoint,
   latestHistPoint,
 } from './histogram'
-import type { HistogramPoint, ExpHistogramPoint } from '$lib/types'
+import type { HistogramPoint, ExpHistogramPoint } from '#lib/types.js'
 
 describe(explicitBuckets, () => {
   it('maps bucketCounts onto bounds with -inf/+inf overflow edges', () => {

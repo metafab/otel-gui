@@ -1,5 +1,5 @@
-import type { TraceStore } from '$lib/types'
-import { createMemoryTraceStore } from '$lib/server/traceStore/memoryTraceStore'
+import type { TraceStore } from '#lib/types.js'
+import { createMemoryTraceStore } from '#lib/server/traceStore/memoryTraceStore.js'
 
 export type PersistenceMode = 'memory' | 'pglite'
 

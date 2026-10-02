@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte'
 
-import type { StoredSpan } from '$lib/types'
+import type { StoredSpan } from '#lib/types.js'
 
 const { mockFetchTrace, mockGoto, mockReplaceState } = vi.hoisted(() => ({
   mockFetchTrace: vi.fn(),
@@ -26,18 +26,9 @@ vi.mock('$app/navigation', () => ({
   replaceState: mockReplaceState,
 }))
 
-vi.mock('$app/stores', () => {
-  return {
-    page: {
-      subscribe(run: (value: typeof mockPageState) => void) {
-        run(mockPageState)
-        return () => {}
-      },
-    },
-  }
-})
+vi.mock('$app/state', () => ({ page: mockPageState }))
 
-vi.mock('$lib/stores/traces.svelte', () => ({
+vi.mock('#lib/stores/traces.svelte.js', () => ({
   traceStore: {
     connectSSE: vi.fn(),
     traces: [],
@@ -46,7 +37,7 @@ vi.mock('$lib/stores/traces.svelte', () => ({
   },
 }))
 
-import { traceStore } from '$lib/stores/traces.svelte'
+import { traceStore } from '#lib/stores/traces.svelte.js'
 import TracePage from './+page.svelte'
 
 const mutableTraceStore = traceStore as unknown as {

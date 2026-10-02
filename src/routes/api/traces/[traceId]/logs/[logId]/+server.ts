@@ -1,6 +1,6 @@
-import { json, error } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { traceStore } from '$lib/server/traceStore'
+import { traceStore } from '#lib/server/traceStore.js'
 
 export const GET: RequestHandler = async ({ params }) => {
   const { traceId, logId } = params
@@ -15,5 +15,5 @@ export const GET: RequestHandler = async ({ params }) => {
     throw error(404, 'Log not found')
   }
 
-  return json(log)
+  return Response.json(log)
 }

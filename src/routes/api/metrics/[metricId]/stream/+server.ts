@@ -6,7 +6,7 @@
 //
 //   - `metric-snapshot` : the full series+points for this metric
 //   - `metric-removed`  : the metric no longer exists (cleared/deleted/evicted)
-import { traceStore } from '$lib/server/traceStore'
+import { traceStore } from '#lib/server/traceStore.js'
 import type { RequestHandler } from './$types'
 
 export const GET: RequestHandler = async ({ params }) => {

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { autoFocus } from '$lib/actions/autoFocus'
-  import CopyButton from '$lib/components/CopyButton.svelte'
+  import { autoFocus } from '#lib/actions/autoFocus.js'
+  import CopyButton from '#lib/components/CopyButton.svelte'
 
   interface Props {
     /** The attribute key/value to display. Pass `null` to hide the modal. */

@@ -1,10 +1,10 @@
 <script lang="ts">
-  import ChevronIcon from '$lib/components/ChevronIcon.svelte'
-  import CopyButton from '$lib/components/CopyButton.svelte'
-  import ServiceBadge from '$lib/components/ServiceBadge.svelte'
-  import ServiceMap from '$lib/components/ServiceMap.svelte'
-  import { formatTimestamp, formatTimestampLocal } from '$lib/utils/time'
-  import type { StoredTrace, ServiceMapData } from '$lib/types'
+  import ChevronIcon from '#lib/components/ChevronIcon.svelte'
+  import CopyButton from '#lib/components/CopyButton.svelte'
+  import ServiceBadge from '#lib/components/ServiceBadge.svelte'
+  import ServiceMap from '#lib/components/ServiceMap.svelte'
+  import { formatTimestamp, formatTimestampLocal } from '#lib/utils/time.js'
+  import type { StoredTrace, ServiceMapData } from '#lib/types.js'
 
   interface Props {
     trace: StoredTrace

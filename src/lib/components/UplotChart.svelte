@@ -8,9 +8,9 @@
   // existing instance instead.
   import { onMount, onDestroy, tick } from 'svelte'
   import uPlot from 'uplot'
-  import { themeStore } from '$lib/stores/theme.svelte'
-  import { metricTimeRange } from '$lib/utils/metricChart'
-  import { formatUnixTimestampLocal } from '$lib/utils/time'
+  import { themeStore } from '#lib/stores/theme.svelte.js'
+  import { metricTimeRange } from '#lib/utils/metricChart.js'
+  import { formatUnixTimestampLocal } from '#lib/utils/time.js'
   import 'uplot/dist/uPlot.min.css'
 
   interface Props {

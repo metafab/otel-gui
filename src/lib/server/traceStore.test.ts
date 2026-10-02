@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { traceStore } from '$lib/server/traceStore'
-import { createInternalTraceStore } from '$lib/server/traceStore/core'
+import { traceStore } from '#lib/server/traceStore.js'
+import { createInternalTraceStore } from '#lib/server/traceStore/core.js'
 import {
   resolveRootServiceName,
   resolveRootSpanName,
   expoBoundsForBucket,
-} from '@otel-gui/core'
-import type { MetricPoint, StoredTrace } from '$lib/types'
+} from '#otel-gui/core'
+import type { MetricPoint, StoredTrace } from '#lib/types.js'
 import simpleTrace from '../../../tests/fixtures/simple-trace.json'
 import simpleLog from '../../../tests/fixtures/simple-log.json'
 import unlinkedLog from '../../../tests/fixtures/log-unlinked.json'

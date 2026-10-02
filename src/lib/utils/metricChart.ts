@@ -9,7 +9,7 @@ import type {
   MetricDetail,
   MetricScalarWirePoint,
   SummaryPoint,
-} from '$lib/types'
+} from '#lib/types.js'
 
 export type ValueMode = 'raw' | 'rate'
 

@@ -4,7 +4,7 @@
  * Returns positioned nodes and bezier edge paths — no external dependencies.
  */
 
-import type { ServiceMapNode, ServiceMapEdge } from '$lib/types'
+import type { ServiceMapNode, ServiceMapEdge } from '#lib/types.js'
 
 export interface LayoutNode {
   serviceName: string

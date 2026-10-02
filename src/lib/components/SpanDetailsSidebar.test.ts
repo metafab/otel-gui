@@ -2,17 +2,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/svelte'
 import SpanDetailsSidebar from './SpanDetailsSidebar.svelte'
-import type { StoredSpan, TraceLogDetail, TraceLogListItem } from '$lib/types'
+import type {
+  StoredSpan,
+  TraceLogDetail,
+  TraceLogListItem,
+} from '#lib/types.js'
 
-vi.mock('$app/stores', () => ({
+vi.mock('$app/state', () => ({
   page: {
-    subscribe(run: (v: { url: URL; params: Record<string, string> }) => void) {
-      run({
-        url: new URL('http://localhost/traces/trace-abc?spanId=span-001'),
-        params: { traceId: 'trace-abc' },
-      })
-      return () => {}
-    },
+    url: new URL('http://localhost/traces/trace-abc?spanId=span-001'),
+    params: { traceId: 'trace-abc' },
   },
 }))
 

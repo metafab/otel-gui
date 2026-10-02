@@ -501,7 +501,7 @@ Additional persistence backends (including `pglite`) are loaded via `OTEL_GUI_PE
 [![HomeBrew](https://img.shields.io/badge/homebrew-123?logo=homebrew)](https://brew.sh)
 [![Docker](https://img.shields.io/badge/docker-123?logo=docker)](https://www.docker.com)
 
-- [SvelteKit 2](https://kit.svelte.dev) with Svelte 5 runes (`$state`, `$derived`, `$effect`)
+- [SvelteKit 3](https://kit.svelte.dev) with Svelte 5 runes (`$state`, `$derived`, `$effect`)
 - [`@sveltejs/adapter-node`](https://kit.svelte.dev/docs/adapter-node) for persistent in-memory state
 - [`protobufjs`](https://github.com/protobufjs/protobuf.js) for Protobuf decoding
 - No UI framework — custom waterfall and service-map SVG, with uPlot for metric charts

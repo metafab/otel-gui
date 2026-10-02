@@ -13,9 +13,9 @@
     isHistogramPoint,
     isExpHistogramPoint,
     type DistBucket,
-  } from '$lib/utils/histogram'
-  import type { MetricWirePoint } from '$lib/types'
-  import { formatDateTimeLocal } from '$lib/utils/time'
+  } from '#lib/utils/histogram.js'
+  import type { MetricWirePoint } from '#lib/types.js'
+  import { formatDateTimeLocal } from '#lib/utils/time.js'
 
   interface Props {
     // Points of the chosen series (already type-narrowed to histogram-ish).

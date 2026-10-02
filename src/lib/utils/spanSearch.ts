@@ -1,6 +1,6 @@
-import type { SpanTreeNode } from '$lib/types'
-import type { TraceLogListItem } from '$lib/types'
-import { spanKindLabel } from '$lib/utils/spans'
+import type { SpanTreeNode } from '#lib/types.js'
+import type { TraceLogListItem } from '#lib/types.js'
+import { spanKindLabel } from '#lib/utils/spans.js'
 
 /**
  * Returns the set of span IDs in `spanTree` that match `query`.

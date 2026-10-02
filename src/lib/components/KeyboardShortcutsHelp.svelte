@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { autoFocus } from '$lib/actions/autoFocus'
+  import { autoFocus } from '#lib/actions/autoFocus.js'
   export interface Shortcut {
     keys: string[]
     description: string
