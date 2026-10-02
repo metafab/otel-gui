@@ -360,8 +360,9 @@
   <!-- Basic fields -->
   <div class="detail-row">
     <span class="label">Name:</span>
-    <span class="value" class:search-match={textMatchesSearch(span.name)}
-      >{span.name}</span
+    <span
+      class="value span-name"
+      class:search-match={textMatchesSearch(span.name)}>{span.name}</span
     >
   </div>
   <div class="detail-row">
@@ -991,6 +992,10 @@
   .detail-row .value {
     color: var(--text-primary);
     word-break: break-all;
+  }
+
+  .detail-row .value.span-name {
+    font-weight: 600;
   }
 
   .status-error {
