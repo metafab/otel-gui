@@ -129,6 +129,65 @@ describe(Logs, () => {
     expect(within(table).getByText('Unlinked')).toBeInTheDocument()
   })
 
+  it('expands a row to preview attributes without navigating', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => sampleLogs,
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          ...sampleLogs[0],
+          attributes: { 'http.route': '/checkout' },
+        }),
+      } as Response)
+
+    render(Logs)
+    await screen.findByText('checkout failed')
+
+    const [toggle] = screen.getAllByRole('button', {
+      name: 'Show attributes',
+    })
+    await fireEvent.click(toggle)
+
+    expect(await screen.findByText('http.route')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith('/api/logs/log-2')
+    expect(mockGoto).not.toHaveBeenCalled()
+    expect(screen.getAllByTestId('log-row')).toHaveLength(2)
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'Hide attributes' }),
+    )
+    expect(screen.queryByText('http.route')).not.toBeInTheDocument()
+  })
+
+  it('shows an empty state and errors for attribute preview', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => sampleLogs,
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ...sampleLogs[0], attributes: {} }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Not Found',
+      } as Response)
+
+    render(Logs)
+    await screen.findByText('checkout failed')
+
+    const toggles = screen.getAllByRole('button', { name: 'Show attributes' })
+    await fireEvent.click(toggles[0])
+    expect(await screen.findByText('No attributes')).toBeInTheDocument()
+
+    await fireEvent.click(toggles[1])
+    expect(await screen.findByRole('alert')).toHaveTextContent('Not Found')
+  })
+
   it('shows loading before the initial logs fetch resolves', async () => {
     let resolveFetch!: (value: Response) => void
     const pendingFetch = new Promise<Response>((resolve) => {

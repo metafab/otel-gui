@@ -1,6 +1,8 @@
 <script lang="ts">
   import './list-panel.css'
   import { goto } from '$app/navigation'
+  import AttributeItem from '#lib/components/AttributeItem.svelte'
+  import ChevronIcon from '#lib/components/ChevronIcon.svelte'
   import ServiceBadge from '#lib/components/ServiceBadge.svelte'
   import LogFilters from '#lib/components/LogFilters.svelte'
   import VersionInfo from '#lib/components/VersionInfo.svelte'
@@ -124,6 +126,13 @@
   let sortOrder = $state<LogSortOrder>(initialParams.sortOrder)
   let selectedLogIds = $state<string[]>([])
   let isDeleting = $state(false)
+
+  // Attribute preview: rows expand to show attributes, lazily fetched from
+  // /api/logs/:id since list payloads omit them.
+  let expandedIds = $state<string[]>([])
+  let attributesById = $state.raw<Record<string, Record<string, unknown>>>({})
+  let loadingAttributeIds = $state<string[]>([])
+  let attributeErrorsById = $state.raw<Record<string, string>>({})
 
   const services = $derived.by(() => {
     const serviceSet = new Set(logs.map((log) => log.serviceName || 'unknown'))
@@ -540,6 +549,53 @@
     }
   }
 
+  async function loadAttributes(logId: string) {
+    loadingAttributeIds = [...loadingAttributeIds, logId]
+    try {
+      const response = await fetch(`/api/logs/${encodeURIComponent(logId)}`)
+      if (!response.ok) {
+        throw new Error(`Failed to load attributes: ${response.statusText}`)
+      }
+      const data = await response.json()
+      attributesById = { ...attributesById, [logId]: data?.attributes ?? {} }
+      const { [logId]: _cleared, ...rest } = attributeErrorsById
+      attributeErrorsById = rest
+    } catch (error) {
+      attributeErrorsById = {
+        ...attributeErrorsById,
+        [logId]:
+          error instanceof Error ? error.message : 'Failed to load attributes',
+      }
+    } finally {
+      loadingAttributeIds = loadingAttributeIds.filter((id) => id !== logId)
+    }
+  }
+
+  function toggleExpanded(logId: string) {
+    if (expandedIds.includes(logId)) {
+      expandedIds = expandedIds.filter((id) => id !== logId)
+      return
+    }
+
+    expandedIds = [...expandedIds, logId]
+    if (!(logId in attributesById) && !loadingAttributeIds.includes(logId)) {
+      void loadAttributes(logId)
+    }
+  }
+
+  // Forget expansion/cache for logs that no longer exist (delete, clear, eviction).
+  $effect(() => {
+    const present = new Set(logs.map((log) => log.id))
+    if (expandedIds.some((id) => !present.has(id))) {
+      expandedIds = expandedIds.filter((id) => present.has(id))
+    }
+    if (Object.keys(attributesById).some((id) => !present.has(id))) {
+      attributesById = Object.fromEntries(
+        Object.entries(attributesById).filter(([id]) => present.has(id)),
+      )
+    }
+  })
+
   function toggleLogSelection(logId: string) {
     if (selectedLogIdSet.has(logId)) {
       selectedLogIds = selectedLogIds.filter((id) => id !== logId)
@@ -653,6 +709,9 @@
                   title="Invert filtered log selection"
                 />
               </th>
+              <th class="expand-col"
+                ><span class="visually-hidden">Attributes</span></th
+              >
               <th aria-sort={getAriaSort('time')}>
                 <button
                   type="button"
@@ -749,6 +808,25 @@
                     aria-label={`Select log ${log.id}`}
                   />
                 </td>
+                <td
+                  class="expand-col"
+                  onclick={(event) => event.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    class="expand-btn"
+                    aria-expanded={expandedIds.includes(log.id)}
+                    aria-label={expandedIds.includes(log.id)
+                      ? 'Hide attributes'
+                      : 'Show attributes'}
+                    title={expandedIds.includes(log.id)
+                      ? 'Hide attributes'
+                      : 'Show attributes'}
+                    onclick={() => toggleExpanded(log.id)}
+                  >
+                    <ChevronIcon expanded={expandedIds.includes(log.id)} />
+                  </button>
+                </td>
                 <td class="timestamp" title={formatLogTimeTitle(log)}
                   >{formatLogTime(log)}</td
                 >
@@ -792,6 +870,34 @@
                   {/if}
                 </td>
               </tr>
+              {#if expandedIds.includes(log.id)}
+                <tr class="attr-preview-row" data-testid="log-attributes">
+                  <td colspan="8">
+                    {#if loadingAttributeIds.includes(log.id)}
+                      <p class="attr-status" role="status">
+                        Loading attributes…
+                      </p>
+                    {:else if attributeErrorsById[log.id]}
+                      <p class="attr-status attr-error" role="alert">
+                        {attributeErrorsById[log.id]}
+                      </p>
+                    {:else if attributesById[log.id]}
+                      {@const entries = Object.entries(
+                        attributesById[log.id],
+                      ).sort(([a], [b]) => a.localeCompare(b))}
+                      {#if entries.length === 0}
+                        <p class="attr-status">No attributes</p>
+                      {:else}
+                        <div class="attr-list">
+                          {#each entries as [key, value] (key)}
+                            <AttributeItem attrKey={key} {value} />
+                          {/each}
+                        </div>
+                      {/if}
+                    {/if}
+                  </td>
+                </tr>
+              {/if}
             {/each}
           </tbody>
         </table>
@@ -873,6 +979,63 @@
     height: 14px;
     accent-color: var(--accent);
     cursor: pointer;
+  }
+
+  .expand-col {
+    width: 1.5rem;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+    text-align: center;
+  }
+
+  .expand-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .expand-btn:hover {
+    background: var(--bg-muted);
+    color: var(--text-primary);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  tbody tr.attr-preview-row,
+  tbody tr.attr-preview-row:hover {
+    background: var(--bg-muted);
+    cursor: default;
+  }
+
+  .attr-preview-row td {
+    padding: 0.5rem 0.75rem 0.75rem 2.5rem;
+  }
+
+  .attr-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .attr-status {
+    margin: 0;
+    color: var(--text-secondary);
+  }
+
+  .attr-error {
+    color: var(--error-text);
   }
 
   .mono {
