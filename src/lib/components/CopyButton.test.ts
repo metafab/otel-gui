@@ -86,4 +86,26 @@ describe(CopyButton, () => {
     expect(await screen.findByRole('button', { name: /copy value/i }))
     expect(btn.classList).toContain('copied')
   })
+
+  it('restarts the copied window when clicked again', async () => {
+    vi.useFakeTimers()
+    try {
+      const { container } = render(CopyButton, { props: { text: 'hi' } })
+      const btn = container.querySelector('button')!
+
+      await fireEvent.click(btn)
+      await vi.advanceTimersByTimeAsync(1000)
+      await fireEvent.click(btn)
+
+      // First click's timer fires at 1500ms; it must not reset the state.
+      await vi.advanceTimersByTimeAsync(700)
+      expect(btn.classList).toContain('copied')
+
+      // Second click's timer fires at 1000 + 1500ms.
+      await vi.advanceTimersByTimeAsync(800)
+      expect(btn.classList).not.toContain('copied')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

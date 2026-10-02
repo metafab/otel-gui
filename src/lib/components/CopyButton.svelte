@@ -27,8 +27,15 @@
 
   let copied = $state(false)
 
+  // Each click gets a token so a stale reset timer from an earlier click
+  // can't cut the "copied" state short after a later click.
+  let latestClick = 0
+
   async function handleClick() {
-    await copyToClipboard(text, (isCopied) => (copied = isCopied))
+    const click = ++latestClick
+    await copyToClipboard(text, (isCopied) => {
+      if (isCopied || click === latestClick) copied = isCopied
+    })
   }
 </script>
 
