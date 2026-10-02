@@ -12,6 +12,8 @@
     class?: string
     /** When true, renders "Copy" / "Copied" text next to the icon. */
     showLabel?: boolean
+    /** What is being copied, used in the tooltip and accessible label. Defaults to "value". */
+    subject?: string
   }
 
   let {
@@ -20,12 +22,13 @@
     label = '',
     class: extraClass = '',
     showLabel = false,
+    subject = 'value',
   }: Props = $props()
 
   let copied = $state(false)
 
   async function handleClick() {
-    await copyToClipboard(text, (v) => (copied = v))
+    await copyToClipboard(text, (isCopied) => (copied = isCopied))
   }
 </script>
 
@@ -33,8 +36,8 @@
   class="copy-btn {extraClass}"
   class:copied
   onclick={handleClick}
-  title="Copy value"
-  aria-label={label ? `Copy value for ${label}` : 'Copy value'}
+  title="Copy {subject}"
+  aria-label={label ? `Copy ${subject} for ${label}` : `Copy ${subject}`}
 >
   {#if copied}
     <span class="icon-copied">

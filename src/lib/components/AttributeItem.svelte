@@ -102,6 +102,13 @@
           >
         {/each}
       </span>
+      <CopyButton
+        text={attrKey}
+        size={11}
+        label={attrKey}
+        subject="name"
+        class="attr-key-copy-btn"
+      />
       <span class="attr-type attr-type--{typeLabel}">{typeLabel}</span>
     </div>
     <div class="attr-actions">
@@ -265,6 +272,23 @@
     border-color: var(--border);
     border-radius: 3px;
     color: var(--text-secondary);
+  }
+
+  /* Key-name copy button: icon only, revealed on hover/focus like the other actions */
+  .attribute-item :global(.copy-btn.attr-key-copy-btn) {
+    min-width: 18px;
+    min-height: 18px;
+    width: 18px;
+    height: 18px;
+    align-self: center;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+
+  .attribute-item:hover :global(.copy-btn.attr-key-copy-btn),
+  .attribute-item :global(.copy-btn.attr-key-copy-btn:focus-visible),
+  .attribute-item :global(.copy-btn.attr-key-copy-btn.copied) {
+    opacity: 1;
   }
 
   .attr-actions {
