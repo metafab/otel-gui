@@ -41,6 +41,7 @@ function makeLog(overrides: Partial<TraceLogListItem> = {}): TraceLogListItem {
     severityText: 'INFO',
     body: 'default log body',
     serviceName: 'test-service',
+    attributeCount: 0,
     ...overrides,
   }
 }

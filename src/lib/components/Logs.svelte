@@ -812,20 +812,33 @@
                   class="expand-col"
                   onclick={(event) => event.stopPropagation()}
                 >
-                  <button
-                    type="button"
-                    class="expand-btn"
-                    aria-expanded={expandedIds.includes(log.id)}
-                    aria-label={expandedIds.includes(log.id)
-                      ? 'Hide attributes'
-                      : 'Show attributes'}
-                    title={expandedIds.includes(log.id)
-                      ? 'Hide attributes'
-                      : 'Show attributes'}
-                    onclick={() => toggleExpanded(log.id)}
-                  >
-                    <ChevronIcon expanded={expandedIds.includes(log.id)} />
-                  </button>
+                  {#if log.attributeCount === 0}
+                    <span class="expand-btn no-attrs" title="No attributes"
+                      >no attrs</span
+                    >
+                  {:else}
+                    <button
+                      type="button"
+                      class="expand-btn"
+                      class:expanded={expandedIds.includes(log.id)}
+                      aria-expanded={expandedIds.includes(log.id)}
+                      aria-label={expandedIds.includes(log.id)
+                        ? 'Hide attributes'
+                        : 'Show attributes'}
+                      title={expandedIds.includes(log.id)
+                        ? 'Hide attributes'
+                        : 'Show attributes'}
+                      onclick={() => toggleExpanded(log.id)}
+                    >
+                      <ChevronIcon expanded={expandedIds.includes(log.id)} />
+                      {#if log.attributeCount != null}
+                        <span class="attr-count"
+                          >{log.attributeCount}
+                          {log.attributeCount === 1 ? 'attr' : 'attrs'}</span
+                        >
+                      {/if}
+                    </button>
+                  {/if}
                 </td>
                 <td class="timestamp" title={formatLogTimeTitle(log)}
                   >{formatLogTime(log)}</td
@@ -982,26 +995,41 @@
   }
 
   .expand-col {
-    width: 1.5rem;
+    width: 3.5rem;
     padding-left: 0.25rem;
     padding-right: 0.25rem;
     text-align: center;
+    white-space: nowrap;
   }
 
   .expand-btn {
     display: inline-flex;
     align-items: center;
-    padding: 0.125rem;
-    background: none;
-    border: none;
-    border-radius: 4px;
-    color: var(--text-secondary);
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem 0.125rem 0.375rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--accent);
+    font-size: 0.6875rem;
+    font-weight: 600;
     cursor: pointer;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease;
   }
 
-  .expand-btn:hover {
-    background: var(--bg-muted);
-    color: var(--text-primary);
+  .expand-btn:hover,
+  .expand-btn.expanded {
+    background: color-mix(in oklab, var(--accent) 12%, transparent);
+    border-color: var(--accent);
+  }
+
+  .expand-btn.no-attrs {
+    color: var(--text-muted);
+    background: var(--bg-surface);
+    border-color: var(--border);
+    cursor: default;
   }
 
   .visually-hidden {

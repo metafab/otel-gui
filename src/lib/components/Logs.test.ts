@@ -77,6 +77,7 @@ const sampleLogs = [
     severityText: 'ERROR',
     body: 'checkout failed',
     serviceName: 'checkout-service',
+    attributeCount: 1,
   },
   {
     id: 'log-2',
@@ -88,6 +89,7 @@ const sampleLogs = [
     severityText: 'INFO',
     body: { message: 'background job tick' },
     serviceName: 'worker-service',
+    attributeCount: 1,
   },
 ]
 
@@ -186,6 +188,27 @@ describe(Logs, () => {
 
     await fireEvent.click(toggles[1])
     expect(await screen.findByRole('alert')).toHaveTextContent('Not Found')
+  })
+
+  it('shows the attribute count and disables the toggle when there are none', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [
+        { ...sampleLogs[0], attributeCount: 3 },
+        { ...sampleLogs[1], attributeCount: 0 },
+      ],
+    } as Response)
+
+    render(Logs)
+    await screen.findByText('checkout failed')
+
+    expect(
+      screen.getAllByRole('button', { name: 'Show attributes' }),
+    ).toHaveLength(1)
+    expect(
+      screen.getByRole('button', { name: 'Show attributes' }),
+    ).toHaveTextContent('3')
+    expect(screen.getByTitle('No attributes')).toBeInTheDocument()
   })
 
   it('shows loading before the initial logs fetch resolves', async () => {
