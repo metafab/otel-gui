@@ -55,7 +55,7 @@ function makeLog(overrides: Partial<TraceLogListItem> = {}): TraceLogListItem {
     severityText: 'ERROR',
     body: 'database timeout',
     serviceName: 'test-service',
-    attributeCount: 0,
+    attributes: {},
     ...overrides,
   }
 }

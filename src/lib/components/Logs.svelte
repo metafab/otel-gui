@@ -127,12 +127,8 @@
   let selectedLogIds = $state<string[]>([])
   let isDeleting = $state(false)
 
-  // Attribute preview: rows expand to show attributes, lazily fetched from
-  // /api/logs/:id since list payloads omit them.
+  // Attribute preview: ids of rows currently expanded.
   let expandedIds = $state<string[]>([])
-  let attributesById = $state.raw<Record<string, Record<string, unknown>>>({})
-  let loadingAttributeIds = $state<string[]>([])
-  let attributeErrorsById = $state.raw<Record<string, string>>({})
 
   const services = $derived.by(() => {
     const serviceSet = new Set(logs.map((log) => log.serviceName || 'unknown'))
@@ -190,6 +186,10 @@
     if (n >= 9) return 'info'
     if (n >= 5) return 'debug'
     return 'trace'
+  }
+
+  function attributeCount(log: LogListItem): number {
+    return Object.keys(log.attributes ?? {}).length
   }
 
   function normalizeBody(value: unknown): string {
@@ -549,50 +549,17 @@
     }
   }
 
-  async function loadAttributes(logId: string) {
-    loadingAttributeIds = [...loadingAttributeIds, logId]
-    try {
-      const response = await fetch(`/api/logs/${encodeURIComponent(logId)}`)
-      if (!response.ok) {
-        throw new Error(`Failed to load attributes: ${response.statusText}`)
-      }
-      const data = await response.json()
-      attributesById = { ...attributesById, [logId]: data?.attributes ?? {} }
-      const { [logId]: _cleared, ...rest } = attributeErrorsById
-      attributeErrorsById = rest
-    } catch (error) {
-      attributeErrorsById = {
-        ...attributeErrorsById,
-        [logId]:
-          error instanceof Error ? error.message : 'Failed to load attributes',
-      }
-    } finally {
-      loadingAttributeIds = loadingAttributeIds.filter((id) => id !== logId)
-    }
-  }
-
   function toggleExpanded(logId: string) {
-    if (expandedIds.includes(logId)) {
-      expandedIds = expandedIds.filter((id) => id !== logId)
-      return
-    }
-
-    expandedIds = [...expandedIds, logId]
-    if (!(logId in attributesById) && !loadingAttributeIds.includes(logId)) {
-      void loadAttributes(logId)
-    }
+    expandedIds = expandedIds.includes(logId)
+      ? expandedIds.filter((id) => id !== logId)
+      : [...expandedIds, logId]
   }
 
-  // Forget expansion/cache for logs that no longer exist (delete, clear, eviction).
+  // Forget expansion for logs that no longer exist (delete, clear, eviction).
   $effect(() => {
     const present = new Set(logs.map((log) => log.id))
     if (expandedIds.some((id) => !present.has(id))) {
       expandedIds = expandedIds.filter((id) => present.has(id))
-    }
-    if (Object.keys(attributesById).some((id) => !present.has(id))) {
-      attributesById = Object.fromEntries(
-        Object.entries(attributesById).filter(([id]) => present.has(id)),
-      )
     }
   })
 
@@ -812,7 +779,7 @@
                   class="expand-col"
                   onclick={(event) => event.stopPropagation()}
                 >
-                  {#if log.attributeCount === 0}
+                  {#if attributeCount(log) === 0}
                     <span class="expand-btn no-attrs" title="No attributes"
                       >no attrs</span
                     >
@@ -831,12 +798,10 @@
                       onclick={() => toggleExpanded(log.id)}
                     >
                       <ChevronIcon expanded={expandedIds.includes(log.id)} />
-                      {#if log.attributeCount != null}
-                        <span class="attr-count"
-                          >{log.attributeCount}
-                          {log.attributeCount === 1 ? 'attr' : 'attrs'}</span
-                        >
-                      {/if}
+                      <span class="attr-count"
+                        >{attributeCount(log)}
+                        {attributeCount(log) === 1 ? 'attr' : 'attrs'}</span
+                      >
                     </button>
                   {/if}
                 </td>
@@ -886,28 +851,11 @@
               {#if expandedIds.includes(log.id)}
                 <tr class="attr-preview-row" data-testid="log-attributes">
                   <td colspan="8">
-                    {#if loadingAttributeIds.includes(log.id)}
-                      <p class="attr-status" role="status">
-                        Loading attributes…
-                      </p>
-                    {:else if attributeErrorsById[log.id]}
-                      <p class="attr-status attr-error" role="alert">
-                        {attributeErrorsById[log.id]}
-                      </p>
-                    {:else if attributesById[log.id]}
-                      {@const entries = Object.entries(
-                        attributesById[log.id],
-                      ).sort(([a], [b]) => a.localeCompare(b))}
-                      {#if entries.length === 0}
-                        <p class="attr-status">No attributes</p>
-                      {:else}
-                        <div class="attr-list">
-                          {#each entries as [key, value] (key)}
-                            <AttributeItem attrKey={key} {value} />
-                          {/each}
-                        </div>
-                      {/if}
-                    {/if}
+                    <div class="attr-list">
+                      {#each Object.entries(log.attributes).sort( ([a], [b]) => a.localeCompare(b) ) as [key, value] (key)}
+                        <AttributeItem attrKey={key} {value} />
+                      {/each}
+                    </div>
                   </td>
                 </tr>
               {/if}
@@ -1055,15 +1003,6 @@
     display: flex;
     flex-direction: column;
     gap: 0.375rem;
-  }
-
-  .attr-status {
-    margin: 0;
-    color: var(--text-secondary);
-  }
-
-  .attr-error {
-    color: var(--error-text);
   }
 
   .mono {

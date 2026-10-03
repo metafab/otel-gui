@@ -485,7 +485,7 @@ export function createInternalTraceStore(
       severityText: log.severityText,
       body: log.body,
       serviceName: (log.resource['service.name'] as string) || 'unknown',
-      attributeCount: Object.keys(log.attributes ?? {}).length,
+      attributes: log.attributes ?? {},
     }
   }
 

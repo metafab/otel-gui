@@ -77,7 +77,7 @@ const sampleLogs = [
     severityText: 'ERROR',
     body: 'checkout failed',
     serviceName: 'checkout-service',
-    attributeCount: 1,
+    attributes: { 'http.route': '/checkout' },
   },
   {
     id: 'log-2',
@@ -89,7 +89,7 @@ const sampleLogs = [
     severityText: 'INFO',
     body: { message: 'background job tick' },
     serviceName: 'worker-service',
-    attributeCount: 1,
+    attributes: { 'http.route': '/checkout' },
   },
 ]
 
@@ -132,21 +132,15 @@ describe(Logs, () => {
   })
 
   it('expands a row to preview attributes without navigating', async () => {
-    fetchMock
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => sampleLogs,
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          ...sampleLogs[0],
-          attributes: { 'http.route': '/checkout' },
-        }),
-      } as Response)
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => sampleLogs,
+    } as Response)
 
     render(Logs)
     await screen.findByText('checkout failed')
+
+    expect(screen.queryByText('http.route')).not.toBeInTheDocument()
 
     const [toggle] = screen.getAllByRole('button', {
       name: 'Show attributes',
@@ -154,7 +148,7 @@ describe(Logs, () => {
     await fireEvent.click(toggle)
 
     expect(await screen.findByText('http.route')).toBeInTheDocument()
-    expect(fetchMock).toHaveBeenCalledWith('/api/logs/log-2')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(mockGoto).not.toHaveBeenCalled()
     expect(screen.getAllByTestId('log-row')).toHaveLength(2)
 
@@ -164,38 +158,15 @@ describe(Logs, () => {
     expect(screen.queryByText('http.route')).not.toBeInTheDocument()
   })
 
-  it('shows an empty state and errors for attribute preview', async () => {
-    fetchMock
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => sampleLogs,
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ ...sampleLogs[0], attributes: {} }),
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Not Found',
-      } as Response)
-
-    render(Logs)
-    await screen.findByText('checkout failed')
-
-    const toggles = screen.getAllByRole('button', { name: 'Show attributes' })
-    await fireEvent.click(toggles[0])
-    expect(await screen.findByText('No attributes')).toBeInTheDocument()
-
-    await fireEvent.click(toggles[1])
-    expect(await screen.findByRole('alert')).toHaveTextContent('Not Found')
-  })
-
-  it('shows the attribute count and disables the toggle when there are none', async () => {
+  it('shows the attribute count and a grey pill when there are none', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       json: async () => [
-        { ...sampleLogs[0], attributeCount: 3 },
-        { ...sampleLogs[1], attributeCount: 0 },
+        {
+          ...sampleLogs[0],
+          attributes: { a: '1', b: '2', c: '3' },
+        },
+        { ...sampleLogs[1], attributes: {} },
       ],
     } as Response)
 
@@ -207,8 +178,8 @@ describe(Logs, () => {
     ).toHaveLength(1)
     expect(
       screen.getByRole('button', { name: 'Show attributes' }),
-    ).toHaveTextContent('3')
-    expect(screen.getByTitle('No attributes')).toBeInTheDocument()
+    ).toHaveTextContent('3 attrs')
+    expect(screen.getByTitle('No attributes')).toHaveTextContent('no attrs')
   })
 
   it('shows loading before the initial logs fetch resolves', async () => {

@@ -49,7 +49,7 @@ export interface LogListItem {
   severityText: string
   body: unknown
   serviceName: string
-  attributeCount: number
+  attributes: Record<string, any>
 }
 
 // Narrows LogListItem for per-trace context where traceId/spanId are always present
