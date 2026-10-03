@@ -42,6 +42,8 @@ if (argv.includes('-v') || argv.includes('--version')) {
 }
 // Default port to 4318 (OTLP/HTTP standard) if not already set
 process.env.PORT ??= '4318';
+// Open SSE streams never finish on their own; don't wait 30s (adapter-node default) on shutdown
+process.env.SHUTDOWN_TIMEOUT ??= '1';
 // Load the ESM SvelteKit server next to this binary via the ESM loader.
 import(path.join(__dirname, 'build', 'index.js')).catch((err) => {
   process.stderr.write('[otel-gui] Fatal startup error: ' + err.message + '\\n');
