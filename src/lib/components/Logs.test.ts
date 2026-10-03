@@ -101,6 +101,7 @@ describe(Logs, () => {
     mockGoto.mockImplementation((url: URL | string) => {
       window.history.replaceState(window.history.state, '', url)
     })
+    window.history.replaceState(null, '', '/')
     fetchMock.mockReset()
     vi.stubGlobal('fetch', fetchMock)
     vi.stubGlobal(
@@ -212,6 +213,104 @@ describe(Logs, () => {
     expect(
       screen.queryByTestId('log-inline-attributes'),
     ).not.toBeInTheDocument()
+  })
+
+  describe('attribute filters', () => {
+    const attributeLogs = [
+      {
+        ...sampleLogs[0],
+        id: 'a',
+        body: 'log a',
+        attributes: { region: 'eu-west-1', 'http.status_code': 500 },
+      },
+      {
+        ...sampleLogs[0],
+        id: 'b',
+        body: 'log b',
+        attributes: { region: 'us-east-1', 'http.status_code': 200 },
+      },
+      { ...sampleLogs[0], id: 'c', body: 'log c', attributes: {} },
+    ]
+
+    async function renderWithAttributeLogs(firstVisible = 'log a') {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => attributeLogs,
+      } as Response)
+      render(Logs)
+      await screen.findByText(firstVisible)
+    }
+
+    async function addFilter(text: string) {
+      const input = screen.getByLabelText('Filter by attributes')
+      await fireEvent.input(input, { target: { value: text } })
+      await fireEvent.keyDown(input, { key: 'Enter' })
+    }
+
+    function visibleBodies() {
+      return screen
+        .getAllByTestId('log-row')
+        .map((row) => /log [abc]/.exec(row.textContent ?? '')?.[0])
+    }
+
+    it.each([
+      ['region', ['log a', 'log b']],
+      ['!region', ['log c']],
+      ['region=eu-west-1', ['log a']],
+      ['region=EU-WEST-1', null],
+      ['Region', null],
+      ['region!=eu-west-1', ['log b', 'log c']],
+      ['region~WEST', ['log a']],
+      ['region!~west', ['log b', 'log c']],
+      ['http.status_code=500', ['log a']],
+    ])('filters with %s', async (filter, expected) => {
+      await renderWithAttributeLogs()
+      await addFilter(filter)
+
+      if (expected === null) {
+        expect(screen.queryAllByTestId('log-row')).toHaveLength(0)
+      } else {
+        expect(visibleBodies().sort()).toEqual(expected)
+      }
+    })
+
+    it('combines chips with AND and removes them', async () => {
+      await renderWithAttributeLogs()
+      await addFilter('region')
+      await addFilter('http.status_code=200')
+
+      expect(visibleBodies()).toEqual(['log b'])
+      expect(window.location.search).toContain('attr=region')
+      expect(window.location.search).toContain('attr=http.status_code%3D200')
+
+      await fireEvent.click(
+        screen.getByRole('button', {
+          name: 'Remove filter http.status_code=200',
+        }),
+      )
+      expect(visibleBodies().sort()).toEqual(['log a', 'log b'])
+    })
+
+    it('restores chips from the URL and clears them', async () => {
+      const originalUrl = window.location.href
+      window.history.replaceState(
+        window.history.state,
+        '',
+        '/?tab=logs&attr=region%3Dus-east-1',
+      )
+      await renderWithAttributeLogs('log b')
+
+      expect(screen.getAllByTestId('attribute-filter-chip')).toHaveLength(1)
+      expect(visibleBodies()).toEqual(['log b'])
+
+      await fireEvent.click(
+        screen.getByRole('button', { name: 'Clear Filters' }),
+      )
+      expect(screen.queryAllByTestId('attribute-filter-chip')).toHaveLength(0)
+      expect(visibleBodies().sort()).toEqual(['log a', 'log b', 'log c'])
+
+      window.history.replaceState(window.history.state, '', originalUrl)
+    })
   })
 
   it('shows loading before the initial logs fetch resolves', async () => {

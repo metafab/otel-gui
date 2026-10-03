@@ -9,6 +9,11 @@
   import { onSSEEvents } from '#lib/stores/sseClient.js'
   import { traceStore } from '#lib/stores/traces.svelte.js'
   import type { LogListItem } from '#lib/types.js'
+  import {
+    formatAttributeValue,
+    matchesAttributeFilter,
+    parseAttributeFilter,
+  } from '#lib/utils/logAttributeFilters.js'
   import { formatTimestampLocal } from '#lib/utils/time.js'
 
   // Bindable props so parent can read reactive state for header action buttons
@@ -75,6 +80,7 @@
         sortBy: DEFAULT_SORT_BY,
         sortOrder: DEFAULT_SORT_ORDER,
         attributesView: 'expandable',
+        attributeFilters: [] as string[],
       } as const
     }
 
@@ -87,6 +93,7 @@
       sortOrder: parseSortOrder(url.searchParams.get('order')),
       attributesView:
         url.searchParams.get('attrs') === 'inline' ? 'inline' : 'expandable',
+      attributeFilters: url.searchParams.getAll('attr'),
     } as const
   }
 
@@ -107,6 +114,11 @@
       url.searchParams.set('severity', severityFilter)
     } else {
       url.searchParams.delete('severity')
+    }
+
+    url.searchParams.delete('attr')
+    for (const filter of attributeFilters) {
+      url.searchParams.append('attr', filter)
     }
 
     if (attributesView === 'inline') {
@@ -136,6 +148,7 @@
   let attributesView = $state<'expandable' | 'inline'>(
     initialParams.attributesView,
   )
+  let attributeFilters = $state<string[]>(initialParams.attributeFilters)
   let selectedLogIds = $state<string[]>([])
   let isDeleting = $state(false)
 
@@ -210,15 +223,6 @@
     )
   }
 
-  function formatInlineValue(value: unknown): string {
-    if (typeof value === 'string') return value
-    try {
-      return JSON.stringify(value) ?? String(value)
-    } catch {
-      return String(value)
-    }
-  }
-
   function normalizeBody(value: unknown): string {
     if (value == null) return ''
     if (
@@ -261,6 +265,16 @@
     }
   }
 
+  const parsedAttributeFilters = $derived(
+    attributeFilters.flatMap((raw) => parseAttributeFilter(raw) ?? []),
+  )
+
+  const attributeKeys = $derived(
+    Array.from(
+      new Set(logs.flatMap((log) => Object.keys(log.attributes ?? {}))),
+    ).sort(),
+  )
+
   const filteredLogs = $derived.by(() => {
     if (!Array.isArray(logs)) return []
 
@@ -275,6 +289,14 @@
       }
 
       if (severityFilter !== 'all' && severityBucket(log) !== severityFilter) {
+        return false
+      }
+
+      if (
+        !parsedAttributeFilters.every((filter) =>
+          matchesAttributeFilter(log.attributes, filter),
+        )
+      ) {
         return false
       }
 
@@ -603,6 +625,7 @@
     searchQuery = ''
     selectedService = 'all'
     severityFilter = 'all'
+    attributeFilters = []
   }
 
   $effect(() => {
@@ -678,6 +701,8 @@
       bind:selectedService
       bind:severityFilter
       bind:attributesView
+      bind:attributeFilters
+      {attributeKeys}
       filteredCount={sortedLogs.length}
       totalCount={logs.length}
     />
@@ -894,10 +919,10 @@
                         {#each sortedAttributeEntries(log) as [key, value] (key)}
                           <span
                             class="inline-attr"
-                            title={`${key}=${formatInlineValue(value)}`}
+                            title={`${key}=${formatAttributeValue(value)}`}
                             ><span class="inline-attr-key">{key}</span><span
                               class="inline-attr-value"
-                              >{formatInlineValue(value)}</span
+                              >{formatAttributeValue(value)}</span
                             ></span
                           >
                         {/each}

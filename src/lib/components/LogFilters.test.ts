@@ -51,6 +51,38 @@ describe(LogFilters, () => {
     expect(severityPicker).toHaveTextContent('All Severities')
   })
 
+  it('adds, removes and clears attribute filter chips', async () => {
+    render(LogFilters, {
+      props: {
+        services: [],
+        searchQuery: '',
+        selectedService: 'all',
+        severityFilter: 'all',
+        filteredCount: 1,
+        totalCount: 1,
+        attributeFilters: [],
+        attributeKeys: ['region'],
+      },
+    })
+
+    const input = screen.getByLabelText('Filter by attributes')
+    await fireEvent.input(input, { target: { value: 'region=eu' } })
+    await fireEvent.keyDown(input, { key: 'Enter' })
+    await fireEvent.input(input, { target: { value: '=bad' } })
+    await fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(screen.getAllByTestId('attribute-filter-chip')).toHaveLength(1)
+
+    await fireEvent.input(input, { target: { value: '' } })
+    await fireEvent.keyDown(input, { key: 'Backspace' })
+    expect(screen.queryAllByTestId('attribute-filter-chip')).toHaveLength(0)
+
+    await fireEvent.input(input, { target: { value: 'region' } })
+    await fireEvent.keyDown(input, { key: 'Enter' })
+    await fireEvent.click(screen.getByRole('button', { name: 'Clear Filters' }))
+    expect(screen.queryAllByTestId('attribute-filter-chip')).toHaveLength(0)
+  })
+
   it('selects a service from the custom picker', async () => {
     render(LogFilters, {
       props: {

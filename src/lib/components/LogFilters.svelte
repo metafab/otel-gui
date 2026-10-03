@@ -1,6 +1,7 @@
 <script lang="ts">
   import SeverityPicker from '#lib/components/SeverityPicker.svelte'
   import ServicePicker from '#lib/components/ServicePicker.svelte'
+  import AttributeFilterInput from '#lib/components/AttributeFilterInput.svelte'
 
   interface Props {
     services: string[]
@@ -10,6 +11,8 @@
     filteredCount: number
     totalCount: number
     attributesView?: 'expandable' | 'inline'
+    attributeFilters?: string[]
+    attributeKeys?: string[]
   }
 
   let {
@@ -20,18 +23,22 @@
     filteredCount,
     totalCount,
     attributesView = $bindable('expandable'),
+    attributeFilters = $bindable([]),
+    attributeKeys = [],
   }: Props = $props()
 
   const hasActiveFilters = $derived(
     searchQuery.trim() !== '' ||
       selectedService !== 'all' ||
-      severityFilter !== 'all',
+      severityFilter !== 'all' ||
+      attributeFilters.length > 0,
   )
 
   function handleClear() {
     searchQuery = ''
     selectedService = 'all'
     severityFilter = 'all'
+    attributeFilters = []
   }
 </script>
 
@@ -61,6 +68,10 @@
         bind:selectedSeverity={severityFilter}
       />
     </div>
+  </div>
+
+  <div class="filter-row">
+    <AttributeFilterInput bind:attributeFilters {attributeKeys} />
   </div>
 
   <div class="filter-stats">
