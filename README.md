@@ -28,10 +28,11 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Zero config** — listens on port 4318, the standard OTLP/HTTP port. Most exporters work without changing a single setting
 - **OTLP JSON & Protobuf** — accepts both `application/json` and `application/x-protobuf` payloads
 - **Real-time streaming** — traces, logs, and metrics all update live over SSE (Server-Sent Events) using an incremental snapshot + delta protocol, so views refresh in place without flicker or polling
-- **Metrics** — dedicated Metrics tab accepting OTLP metrics (`POST /v1/metrics`): gauges, sums (with server-computed per-second rates and counter-reset detection), histograms, exponential histograms, and summaries; flicker-free time-series charts (uPlot), histogram distribution + heatmap views, and per-series filtering
-- **Waterfall timeline** — Honeycomb-style span waterfall with resizable name column and sidebar
+- **Traces and spans** — trace list; waterfall timeline with full span details, and correlation with logs
+- **Logs** — log list; log details view; correlation with traces
+- **Metrics** — gauges, sums, histograms, exponential histograms, and summaries time-series charts, histogram distribution + heatmap views, and per-series filtering
 - **Service map** — auto-generated graph of cross-service calls with error rates and latency (p50/p99)
-- **Search & filter** — filter lists by text, service, status, and duration range; search spans inside a trace based on attributes, events, and span name or id
+- **Search & filter** — filter traces, logs and metrics by text, id, service, severity, and attributes: search spans inside a trace based on attributes, events, and span name or id
 - **Import/export traces** — export one trace, filtered traces, or selected traces as OTLP JSON envelope; import from OTLP JSON or otel-gui export files with metadata preview before confirmation
 - **Bulk list actions** — trace and log lists support multi-select export and split delete actions (`Clear All` + `Delete Selected (n)`)
 - **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `t`/`l`/`m`/`s` to jump to Traces/Logs/Metrics/Service Map tabs, Enter/Space to activate focused rows in the Traces and Logs grids, escape key to clear search and go back to the list, `?` for shortcuts help
