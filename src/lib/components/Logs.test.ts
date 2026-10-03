@@ -182,6 +182,38 @@ describe(Logs, () => {
     expect(screen.getByTitle('No attributes')).toHaveTextContent('no attrs')
   })
 
+  it('switches to inline attributes without expandable rows', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [sampleLogs[0], { ...sampleLogs[1], attributes: {} }],
+    } as Response)
+
+    render(Logs)
+    await screen.findByText('checkout failed')
+    expect(
+      screen.getAllByRole('button', { name: 'Show attributes' }),
+    ).toHaveLength(1)
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'Inline attributes' }),
+    )
+
+    expect(
+      screen.queryByRole('button', { name: 'Show attributes' }),
+    ).not.toBeInTheDocument()
+    const inline = screen.getAllByTestId('log-inline-attributes')
+    expect(inline).toHaveLength(1)
+    expect(inline[0]).toHaveTextContent('http.route')
+    expect(inline[0]).toHaveTextContent('/checkout')
+    expect(screen.getAllByTestId('log-row')).toHaveLength(2)
+    expect(window.location.search).toContain('attrs=inline')
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Expandable' }))
+    expect(
+      screen.queryByTestId('log-inline-attributes'),
+    ).not.toBeInTheDocument()
+  })
+
   it('shows loading before the initial logs fetch resolves', async () => {
     let resolveFetch!: (value: Response) => void
     const pendingFetch = new Promise<Response>((resolve) => {

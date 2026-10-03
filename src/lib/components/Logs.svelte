@@ -74,6 +74,7 @@
         severityFilter: 'all',
         sortBy: DEFAULT_SORT_BY,
         sortOrder: DEFAULT_SORT_ORDER,
+        attributesView: 'expandable',
       } as const
     }
 
@@ -84,6 +85,8 @@
       severityFilter: parseSeverityFilter(url.searchParams.get('severity')),
       sortBy: parseSortBy(url.searchParams.get('sort')),
       sortOrder: parseSortOrder(url.searchParams.get('order')),
+      attributesView:
+        url.searchParams.get('attrs') === 'inline' ? 'inline' : 'expandable',
     } as const
   }
 
@@ -106,6 +109,12 @@
       url.searchParams.delete('severity')
     }
 
+    if (attributesView === 'inline') {
+      url.searchParams.set('attrs', 'inline')
+    } else {
+      url.searchParams.delete('attrs')
+    }
+
     if (sortBy === DEFAULT_SORT_BY && sortOrder === DEFAULT_SORT_ORDER) {
       url.searchParams.delete('sort')
       url.searchParams.delete('order')
@@ -124,6 +133,9 @@
   >(initialParams.severityFilter)
   let sortBy = $state<LogSortBy>(initialParams.sortBy)
   let sortOrder = $state<LogSortOrder>(initialParams.sortOrder)
+  let attributesView = $state<'expandable' | 'inline'>(
+    initialParams.attributesView,
+  )
   let selectedLogIds = $state<string[]>([])
   let isDeleting = $state(false)
 
@@ -190,6 +202,21 @@
 
   function attributeCount(log: LogListItem): number {
     return Object.keys(log.attributes ?? {}).length
+  }
+
+  function sortedAttributeEntries(log: LogListItem): [string, unknown][] {
+    return Object.entries(log.attributes ?? {}).sort(([a], [b]) =>
+      a.localeCompare(b),
+    )
+  }
+
+  function formatInlineValue(value: unknown): string {
+    if (typeof value === 'string') return value
+    try {
+      return JSON.stringify(value) ?? String(value)
+    } catch {
+      return String(value)
+    }
   }
 
   function normalizeBody(value: unknown): string {
@@ -650,6 +677,7 @@
       bind:searchQuery
       bind:selectedService
       bind:severityFilter
+      bind:attributesView
       filteredCount={sortedLogs.length}
       totalCount={logs.length}
     />
@@ -676,9 +704,11 @@
                   title="Invert filtered log selection"
                 />
               </th>
-              <th class="expand-col"
-                ><span class="visually-hidden">Attributes</span></th
-              >
+              {#if attributesView === 'expandable'}
+                <th class="expand-col"
+                  ><span class="visually-hidden">Attributes</span></th
+                >
+              {/if}
               <th aria-sort={getAriaSort('time')}>
                 <button
                   type="button"
@@ -762,6 +792,8 @@
                 data-testid="log-row"
                 data-log-id={log.id}
                 class:selected={selectedLogIdSet.has(log.id)}
+                class:has-inline-attrs={attributesView === 'inline' &&
+                  attributeCount(log) > 0}
               >
                 <td
                   class="select-col"
@@ -775,36 +807,38 @@
                     aria-label={`Select log ${log.id}`}
                   />
                 </td>
-                <td
-                  class="expand-col"
-                  onclick={(event) => event.stopPropagation()}
-                >
-                  {#if attributeCount(log) === 0}
-                    <span class="expand-btn no-attrs" title="No attributes"
-                      >no attrs</span
-                    >
-                  {:else}
-                    <button
-                      type="button"
-                      class="expand-btn"
-                      class:expanded={expandedIds.includes(log.id)}
-                      aria-expanded={expandedIds.includes(log.id)}
-                      aria-label={expandedIds.includes(log.id)
-                        ? 'Hide attributes'
-                        : 'Show attributes'}
-                      title={expandedIds.includes(log.id)
-                        ? 'Hide attributes'
-                        : 'Show attributes'}
-                      onclick={() => toggleExpanded(log.id)}
-                    >
-                      <ChevronIcon expanded={expandedIds.includes(log.id)} />
-                      <span class="attr-count"
-                        >{attributeCount(log)}
-                        {attributeCount(log) === 1 ? 'attr' : 'attrs'}</span
+                {#if attributesView === 'expandable'}
+                  <td
+                    class="expand-col"
+                    onclick={(event) => event.stopPropagation()}
+                  >
+                    {#if attributeCount(log) === 0}
+                      <span class="expand-btn no-attrs" title="No attributes"
+                        >no attrs</span
                       >
-                    </button>
-                  {/if}
-                </td>
+                    {:else}
+                      <button
+                        type="button"
+                        class="expand-btn"
+                        class:expanded={expandedIds.includes(log.id)}
+                        aria-expanded={expandedIds.includes(log.id)}
+                        aria-label={expandedIds.includes(log.id)
+                          ? 'Hide attributes'
+                          : 'Show attributes'}
+                        title={expandedIds.includes(log.id)
+                          ? 'Hide attributes'
+                          : 'Show attributes'}
+                        onclick={() => toggleExpanded(log.id)}
+                      >
+                        <ChevronIcon expanded={expandedIds.includes(log.id)} />
+                        <span class="attr-count"
+                          >{attributeCount(log)}
+                          {attributeCount(log) === 1 ? 'attr' : 'attrs'}</span
+                        >
+                      </button>
+                    {/if}
+                  </td>
+                {/if}
                 <td class="timestamp" title={formatLogTimeTitle(log)}
                   >{formatLogTime(log)}</td
                 >
@@ -848,7 +882,30 @@
                   {/if}
                 </td>
               </tr>
-              {#if expandedIds.includes(log.id)}
+              {#if attributesView === 'inline'}
+                {#if attributeCount(log) > 0}
+                  <tr
+                    class="inline-attrs-row"
+                    data-testid="log-inline-attributes"
+                  >
+                    <td></td>
+                    <td colspan="6">
+                      <div class="inline-attrs">
+                        {#each sortedAttributeEntries(log) as [key, value] (key)}
+                          <span
+                            class="inline-attr"
+                            title={`${key}=${formatInlineValue(value)}`}
+                            ><span class="inline-attr-key">{key}</span><span
+                              class="inline-attr-value"
+                              >{formatInlineValue(value)}</span
+                            ></span
+                          >
+                        {/each}
+                      </div>
+                    </td>
+                  </tr>
+                {/if}
+              {:else if expandedIds.includes(log.id)}
                 <tr class="attr-preview-row" data-testid="log-attributes">
                   <td colspan="8">
                     <div class="attr-list">
@@ -980,6 +1037,55 @@
     cursor: default;
   }
 
+  tr.has-inline-attrs > td {
+    border-bottom: none;
+  }
+
+  tbody tr.inline-attrs-row,
+  tbody tr.inline-attrs-row:hover {
+    cursor: default;
+    background: transparent;
+  }
+
+  .inline-attrs-row td {
+    padding: 0 0.75rem 0.625rem 0.75rem;
+  }
+
+  .inline-attrs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.375rem;
+  }
+
+  .inline-attr {
+    display: inline-flex;
+    max-width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-muted);
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+      'Courier New', monospace;
+    font-size: 0.6875rem;
+    overflow: hidden;
+  }
+
+  .inline-attr-key {
+    padding: 0.0625rem 0.375rem;
+    color: var(--accent);
+    border-right: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  .inline-attr-value {
+    padding: 0.0625rem 0.375rem;
+    color: var(--text-primary);
+    max-width: 24rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .visually-hidden {
     position: absolute;
     width: 1px;
@@ -1021,6 +1127,7 @@
     max-width: 520px;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-weight: 600;
   }
 
   .muted {

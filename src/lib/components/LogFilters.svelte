@@ -9,6 +9,7 @@
     severityFilter: 'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error'
     filteredCount: number
     totalCount: number
+    attributesView?: 'expandable' | 'inline'
   }
 
   let {
@@ -18,6 +19,7 @@
     severityFilter = $bindable('all'),
     filteredCount,
     totalCount,
+    attributesView = $bindable('expandable'),
   }: Props = $props()
 
   const hasActiveFilters = $derived(
@@ -65,11 +67,29 @@
     <div>
       Showing <strong>{filteredCount}</strong> of <strong>{totalCount}</strong> logs
     </div>
-    {#if hasActiveFilters}
-      <button onclick={handleClear} class="clear-filters-btn"
-        >Clear Filters</button
-      >
-    {/if}
+    <div class="stats-actions">
+      {#if hasActiveFilters}
+        <button onclick={handleClear} class="clear-filters-btn"
+          >Clear Filters</button
+        >
+      {/if}
+      <div class="view-toggle" role="group" aria-label="Attributes display">
+        <button
+          type="button"
+          class:active={attributesView === 'expandable'}
+          aria-pressed={attributesView === 'expandable'}
+          title="Expand rows to see attributes"
+          onclick={() => (attributesView = 'expandable')}>Expandable</button
+        >
+        <button
+          type="button"
+          class:active={attributesView === 'inline'}
+          aria-pressed={attributesView === 'inline'}
+          title="Show attributes under each log"
+          onclick={() => (attributesView = 'inline')}>Inline attributes</button
+        >
+      </div>
+    </div>
   </div>
 </div>
 
@@ -156,6 +176,44 @@
     gap: 0.75rem;
     font-size: 0.875rem;
     color: var(--text-secondary);
+  }
+
+  .stats-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .view-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .view-toggle button {
+    padding: 0.2rem 0.5rem;
+    background: var(--bg-muted);
+    color: var(--text-secondary);
+    border: none;
+    font-size: 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .view-toggle button + button {
+    border-left: 1px solid var(--border);
+  }
+
+  .view-toggle button:hover {
+    background: var(--bg-surface-hover);
+    color: var(--text-primary);
+  }
+
+  .view-toggle button.active {
+    background: color-mix(in oklab, var(--accent) 15%, transparent);
+    color: var(--accent);
+    font-weight: 600;
   }
 
   .filter-stats strong {
