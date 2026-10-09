@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 // Load proto files
-let root: protobuf.Root | null = null
+let loaded: Promise<void> | null = null
 let ExportTraceServiceRequest: protobuf.Type | null = null
 let ExportLogsServiceRequest: protobuf.Type | null = null
 let ExportMetricsServiceRequest: protobuf.Type | null = null
@@ -49,77 +49,49 @@ function resolveProtoRoot(): string {
 }
 
 /**
- * Initialize protobuf types from .proto files
+ * Load every OTLP service proto once, into a single Root.
+ *
+ * The promise is memoized so concurrent first requests (e.g. traces + logs
+ * exported at startup) share one load. Loading into a shared Root from several
+ * callers interleaves protobufjs's file tracking and can call resolveAll()
+ * before imported files are parsed.
  */
-async function initProtobuf() {
-  if (root && ExportTraceServiceRequest) {
-    return
-  }
+function ensureLoaded(): Promise<void> {
+  loaded ??= (async () => {
+    // Root directory for proto files - protobufjs will resolve imports from here
+    const protoRoot = resolveProtoRoot()
 
-  // Root directory for proto files - protobufjs will resolve imports from here
-  const protoRoot = resolveProtoRoot()
-
-  // Load the main proto file (dependencies are automatically loaded)
-  root = new protobuf.Root()
-  root.resolvePath = (origin: string, target: string) => {
-    // Always resolve imports relative to protoRoot, ignoring origin
-    // This is because all OTLP protos use absolute-style imports
-    if (target.startsWith('opentelemetry/')) {
-      return join(protoRoot, target)
-    }
-    return target
-  }
-
-  await root.load(TRACE_SERVICE_PROTO)
-  ExportTraceServiceRequest = root.lookupType(
-    'opentelemetry.proto.collector.trace.v1.ExportTraceServiceRequest',
-  )
-}
-
-async function initProtobufLogs() {
-  if (root && ExportLogsServiceRequest) {
-    return
-  }
-
-  const protoRoot = resolveProtoRoot()
-
-  if (!root) {
-    root = new protobuf.Root()
+    const root = new protobuf.Root()
     root.resolvePath = (origin: string, target: string) => {
+      // Always resolve imports relative to protoRoot, ignoring origin
+      // This is because all OTLP protos use absolute-style imports
       if (target.startsWith('opentelemetry/')) {
         return join(protoRoot, target)
       }
       return target
     }
-  }
 
-  await root.load(LOGS_SERVICE_PROTO)
-  ExportLogsServiceRequest = root.lookupType(
-    'opentelemetry.proto.collector.logs.v1.ExportLogsServiceRequest',
-  )
-}
+    await root.load([
+      TRACE_SERVICE_PROTO,
+      LOGS_SERVICE_PROTO,
+      METRICS_SERVICE_PROTO,
+    ])
 
-async function initProtobufMetrics() {
-  if (root && ExportMetricsServiceRequest) {
-    return
-  }
-
-  const protoRoot = resolveProtoRoot()
-
-  if (!root) {
-    root = new protobuf.Root()
-    root.resolvePath = (origin: string, target: string) => {
-      if (target.startsWith('opentelemetry/')) {
-        return join(protoRoot, target)
-      }
-      return target
-    }
-  }
-
-  await root.load(METRICS_SERVICE_PROTO)
-  ExportMetricsServiceRequest = root.lookupType(
-    'opentelemetry.proto.collector.metrics.v1.ExportMetricsServiceRequest',
-  )
+    ExportTraceServiceRequest = root.lookupType(
+      'opentelemetry.proto.collector.trace.v1.ExportTraceServiceRequest',
+    )
+    ExportLogsServiceRequest = root.lookupType(
+      'opentelemetry.proto.collector.logs.v1.ExportLogsServiceRequest',
+    )
+    ExportMetricsServiceRequest = root.lookupType(
+      'opentelemetry.proto.collector.metrics.v1.ExportMetricsServiceRequest',
+    )
+  })().catch((error) => {
+    // Allow a later request to retry instead of caching the failure forever
+    loaded = null
+    throw error
+  })
+  return loaded
 }
 
 /**
@@ -130,7 +102,7 @@ async function initProtobufMetrics() {
 export async function decodeProtobuf(
   buffer: Uint8Array,
 ): Promise<{ resourceSpans: any[] }> {
-  await initProtobuf()
+  await ensureLoaded()
 
   if (!ExportTraceServiceRequest) {
     throw new Error('Protobuf types not initialized')
@@ -164,7 +136,7 @@ export async function decodeProtobuf(
 export async function decodeProtobufLogs(
   buffer: Uint8Array,
 ): Promise<{ resourceLogs: any[] }> {
-  await initProtobufLogs()
+  await ensureLoaded()
 
   if (!ExportLogsServiceRequest) {
     throw new Error('Protobuf logs types not initialized')
@@ -195,7 +167,7 @@ export async function decodeProtobufLogs(
 export async function decodeProtobufMetrics(
   buffer: Uint8Array,
 ): Promise<{ resourceMetrics: any[] }> {
-  await initProtobufMetrics()
+  await ensureLoaded()
 
   if (!ExportMetricsServiceRequest) {
     throw new Error('Protobuf metrics types not initialized')
