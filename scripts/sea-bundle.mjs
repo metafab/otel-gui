@@ -44,7 +44,7 @@ if (argv.includes('-v') || argv.includes('--version')) {
 if (argv.includes('-h') || argv.includes('--help')) {
   process.stdout.write(
     [
-      'otel-gui ' + APP_VERSION + ' - lightweight OpenTelemetry trace viewer',
+      'otel-gui ' + APP_VERSION + ' - lightweight OpenTelemetry viewer for local development',
       '',
       'Usage: otel-gui [options]',
       '',

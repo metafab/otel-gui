@@ -194,7 +194,7 @@ jobs:
 
           cat > /tmp/otel-gui.rb <<EOF
           class OtelGui < Formula
-            desc "Lightweight OpenTelemetry trace viewer"
+            desc "Lightweight OpenTelemetry viewer for local development"
             homepage "https://github.com/${OWNER_REPO}"
             version "${VERSION}"
             license "MIT"
