@@ -94,6 +94,8 @@ otel-gui
 PORT=55681 otel-gui
 # open the UI in your default browser on startup
 otel-gui --open # or -o
+# show usage
+otel-gui -h # or --help
 ```
 
 Notes:
@@ -432,6 +434,8 @@ Run from that directory:
 PORT=55681 ./otel-gui
 # open the UI in your default browser on startup
 ./otel-gui --open # or -o
+# show usage
+./otel-gui -h # or --help
 # print version + platform/runtime details
 ./otel-gui --version # or -v
 ```

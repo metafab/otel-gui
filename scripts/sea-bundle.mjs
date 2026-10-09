@@ -41,6 +41,26 @@ if (argv.includes('-v') || argv.includes('--version')) {
   process.stdout.write('runtime: node ' + process.version + '\\n');
   process.exit(0);
 }
+if (argv.includes('-h') || argv.includes('--help')) {
+  process.stdout.write(
+    [
+      'otel-gui ' + APP_VERSION + ' - lightweight OpenTelemetry trace viewer',
+      '',
+      'Usage: otel-gui [options]',
+      '',
+      'Options:',
+      '  -o, --open     Open the UI in your default browser on startup',
+      '  -v, --version  Print version, platform and runtime details',
+      '  -h, --help     Show this help',
+      '',
+      'Environment:',
+      '  PORT           HTTP port to listen on (default: 4318)',
+      '  HOST           Interface to bind to (default: 0.0.0.0)',
+      '',
+    ].join('\\n'),
+  );
+  process.exit(0);
+}
 // Default port to 4318 (OTLP/HTTP standard) if not already set
 process.env.PORT ??= '4318';
 // Open SSE streams never finish on their own; don't wait 30s (adapter-node default) on shutdown
