@@ -3,7 +3,7 @@ import { promisify } from 'node:util'
 import { gunzip } from 'node:zlib'
 import type { RequestHandler } from './$types'
 import { traceStore } from '#lib/server/traceStore.js'
-import { decodeProtobuf } from '#lib/server/protobuf.js'
+import { decodeProtobufTraces } from '#lib/server/protobuf.js'
 
 const gunzipAsync = promisify(gunzip)
 
@@ -36,7 +36,7 @@ export const POST: RequestHandler = async ({ request }) => {
       contentType.includes('application/protobuf')
     ) {
       try {
-        body = await decodeProtobuf(buffer)
+        body = await decodeProtobufTraces(buffer)
       } catch {
         return Response.json(
           { error: 'Malformed protobuf payload' },

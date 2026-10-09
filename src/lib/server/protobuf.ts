@@ -99,7 +99,7 @@ function ensureLoaded(): Promise<void> {
  * @param buffer - Binary protobuf data
  * @returns Decoded object with resourceSpans array
  */
-export async function decodeProtobuf(
+export async function decodeProtobufTraces(
   buffer: Uint8Array,
 ): Promise<{ resourceSpans: any[] }> {
   await ensureLoaded()

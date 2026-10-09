@@ -7,7 +7,7 @@ describe('protobuf concurrent first load', () => {
     const m = await freshModule()
 
     const [traces, logs] = await Promise.all([
-      m.decodeProtobuf(empty),
+      m.decodeProtobufTraces(empty),
       m.decodeProtobufLogs(empty),
     ])
 
@@ -19,7 +19,7 @@ describe('protobuf concurrent first load', () => {
     const m = await freshModule()
 
     const [traces, logs, metrics] = await Promise.all([
-      m.decodeProtobuf(empty),
+      m.decodeProtobufTraces(empty),
       m.decodeProtobufLogs(empty),
       m.decodeProtobufMetrics(empty),
     ])
@@ -33,9 +33,9 @@ describe('protobuf concurrent first load', () => {
     const m = await freshModule()
 
     const results = await Promise.all([
-      m.decodeProtobuf(empty),
-      m.decodeProtobuf(empty),
-      m.decodeProtobuf(empty),
+      m.decodeProtobufTraces(empty),
+      m.decodeProtobufTraces(empty),
+      m.decodeProtobufTraces(empty),
     ])
 
     for (const r of results) expect(r.resourceSpans).toEqual([])
