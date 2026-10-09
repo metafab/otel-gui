@@ -57,6 +57,9 @@ if (argv.includes('-h') || argv.includes('--help')) {
       '  PORT           HTTP port to listen on (default: 4318)',
       '  HOST           Interface to bind to (default: 0.0.0.0)',
       '',
+      'All configuration options:',
+      '  https://github.com/metafab/otel-gui#%EF%B8%8F-configuration',
+      '',
     ].join('\\n'),
   );
   process.exit(0);
