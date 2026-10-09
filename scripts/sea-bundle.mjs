@@ -29,6 +29,7 @@ mkdirSync(join(root, 'dist'), { recursive: true })
 const launcher = `\
 'use strict';
 const path = require('node:path');
+const { spawn } = require('node:child_process');
 const APP_VERSION = ${JSON.stringify(version)};
 const argv = process.argv.slice(1);
 
@@ -45,10 +46,35 @@ process.env.PORT ??= '4318';
 // Open SSE streams never finish on their own; don't wait 30s (adapter-node default) on shutdown
 process.env.SHUTDOWN_TIMEOUT ??= '1';
 // Load the ESM SvelteKit server next to this binary via the ESM loader.
-import(path.join(__dirname, 'build', 'index.js')).catch((err) => {
-  process.stderr.write('[otel-gui] Fatal startup error: ' + err.message + '\\n');
-  process.exit(1);
-});
+import(path.join(__dirname, 'build', 'index.js'))
+  .then(() => {
+    if (argv.includes('-o') || argv.includes('--open')) openBrowser();
+  })
+  .catch((err) => {
+    process.stderr.write(
+      '[otel-gui] Fatal startup error: ' + err.message + '\\n',
+    );
+    process.exit(1);
+  });
+
+function openBrowser() {
+  const host = process.env.HOST;
+  const hostname =
+    !host || host === '0.0.0.0' || host === '::' ? 'localhost' : host;
+  const url = 'http://' + hostname + ':' + process.env.PORT;
+  const [cmd, args] =
+    process.platform === 'darwin'
+      ? ['open', [url]]
+      : process.platform === 'win32'
+        ? ['cmd', ['/c', 'start', '', url]]
+        : ['xdg-open', [url]];
+  const child = spawn(cmd, args, { stdio: 'ignore', detached: true });
+  // Opening the browser is best-effort: never take the server down
+  child.on('error', () => {
+    process.stderr.write('[otel-gui] Could not open browser. Open ' + url + '\\n');
+  });
+  child.unref();
+}
 `
 
 writeFileSync(join(root, 'dist', 'sea-launcher.cjs'), launcher)

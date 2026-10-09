@@ -92,6 +92,8 @@ Then run:
 otel-gui
 # or override default port (4318)
 PORT=55681 otel-gui
+# open the UI in your default browser on startup
+otel-gui --open # or -o
 ```
 
 Notes:
@@ -428,8 +430,10 @@ Run from that directory:
 ./otel-gui
 # or override default port (4318)
 PORT=55681 ./otel-gui
+# open the UI in your default browser on startup
+./otel-gui --open # or -o
 # print version + platform/runtime details
-./otel-gui -v
+./otel-gui --version # or -v
 ```
 
 Notes:
