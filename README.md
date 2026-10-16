@@ -33,6 +33,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Metrics** — gauges, sums, histograms, exponential histograms, and summaries time-series charts, histogram distribution + heatmap views, and per-series filtering
 - **Service map** — auto-generated graph of cross-service calls with error rates and latency (p50/p99)
 - **Search & filter** — filter traces, logs and metrics by text, id, service, severity, and attributes: search spans inside a trace based on attributes, events, and span name or id
+- **MCP server** — read-only Model Context Protocol endpoint for AI agents to search traces, logs, and metrics, inspect records, list services, and view the service map
 - **Import/export traces** — export one trace, filtered traces, or selected traces as OTLP JSON envelope; import from OTLP JSON or otel-gui export files with metadata preview before confirmation
 - **Bulk list actions** — trace and log lists support multi-select export and split delete actions (`Clear All` + `Delete Selected (n)`)
 - **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `t`/`l`/`m`/`s` to jump to Traces/Logs/Metrics/Service Map tabs, Enter/Space to activate focused rows in the Traces and Logs grids, escape key to clear search and go back to the list, `?` for shortcuts help
@@ -211,6 +212,41 @@ No other configuration needed. The viewer accepts the standard `POST /v1/traces`
 
 Requests with `Content-Encoding: gzip` are also supported.
 
+### Connect an AI agent with MCP
+
+The Streamable HTTP MCP endpoint is available at `http://localhost:4318/mcp` (assuming the default port `4318`).
+
+For example, add it to Claude Code:
+
+```sh
+claude mcp add --transport http otel-gui http://localhost:4318/mcp
+```
+
+Add this server to a VS Code `.vscode/mcp.json` file:
+
+```json
+{
+  "servers": {
+    "otel-gui": {
+      "type": "http",
+      "url": "http://localhost:4318/mcp"
+    }
+  }
+}
+```
+
+The server exposes read-only tools: `search_traces`, `get_trace`, `search_logs`,
+`get_log`, `search_metrics`, `get_metric`, `list_services`, and
+`get_service_map`. Search results and detail payloads are bounded; oversized
+responses return a tool error rather than being silently truncated.
+
+MCP is enabled by default and restricted to loopback clients. To disable it, set
+`OTEL_GUI_MCP_ENABLED=0`. For Docker or reverse-proxy setups where the client
+does not arrive as loopback, `OTEL_GUI_MCP_ALLOW_REMOTE=1` opts into remote
+access. Only do this when network exposure is appropriately restricted:
+otel-gui does not authenticate MCP clients, and the MCP tools can read retained
+telemetry.
+
 ### Sending Logs
 
 The viewer also accepts OTLP logs at:
@@ -346,6 +382,8 @@ See [SAMPLE_TRACES.md](./samples/SAMPLE_TRACES.md) for a full feature exploratio
 | `OTEL_GUI_MAX_LOGS`                   | `1000`             | Maximum number of log records kept in memory (1–10 000). Oldest records are evicted first when the limit is reached. Requires a restart.                                                                                                                                                                                                                                                                      |
 | `OTEL_GUI_MAX_METRICS`                | `1000`             | Maximum number of metric entries keyed by `service.name` + metric name (1–10 000). Each entry may contain multiple attribute series; this does not cap series cardinality or points per series. Oldest-created entries are evicted first. Requires a restart.                                                                                                                                                 |
 | `OTEL_GUI_MAX_METRIC_POINTS`          | `600`              | Maximum number of data points retained per metric series (10–10 000). Oldest points are evicted first. Requires a restart.                                                                                                                                                                                                                                                                                    |
+| `OTEL_GUI_MCP_ENABLED`                | `true`             | Enables the read-only MCP endpoint at `/mcp`. Set to `0` or `false` to disable it.                                                                                                                                                                                                                                                                                                                            |
+| `OTEL_GUI_MCP_ALLOW_REMOTE`           | `false`            | Allows non-loopback clients to use `/mcp`. Only enable when remote access is protected at the network layer; otel-gui does not authenticate MCP clients.                                                                                                                                                                                                                                                      |
 | `OTEL_GUI_PERSISTENCE_MODE`           | `memory`           | Persistence backend mode. Use `memory` (default, no disk writes) or `pglite` (requires an external backend module, typically enterprise).                                                                                                                                                                                                                                                                     |
 | `OTEL_GUI_PERSISTENCE_PATH`           | `.otel-gui/pglite` | Directory path for local PGlite data when persistence mode is `pglite`.                                                                                                                                                                                                                                                                                                                                       |
 | `OTEL_GUI_PERSISTENCE_FLUSH_MS`       | `750`              | Debounce interval for batched persistence flushes in milliseconds (50–60000).                                                                                                                                                                                                                                                                                                                                 |
@@ -491,6 +529,7 @@ GET  /api/metrics/:id/stream ← SSE stream for metric detail updates
 GET  /api/service-map    ← aggregated service graph
 GET  /api/stream         ← multiplexed SSE stream for traces, logs, and metrics
 GET  /api/config         ← runtime limits and persistence status
+POST /mcp                ← streamable HTTP MCP endpoint
 ```
 
 Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limits default to 1000 traces (`OTEL_GUI_MAX_TRACES`), 1000 log records (`OTEL_GUI_MAX_LOGS`), 1000 metric entries (`OTEL_GUI_MAX_METRICS`), and 600 points per metric series (`OTEL_GUI_MAX_METRIC_POINTS`).
