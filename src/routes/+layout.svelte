@@ -29,6 +29,7 @@
       <span>otel-gui</span>
     </a>
     <div class="header-actions">
+      <a href="/docs" class="docs-link">Documentation</a>
       <a
         href="https://github.com/metafab/otel-gui"
         target="_blank"
@@ -133,6 +134,18 @@
       background 0.15s ease,
       border-color 0.15s ease,
       color 0.15s ease;
+  }
+
+  .docs-link {
+    padding: 0.375rem 0.75rem;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .docs-link:hover {
+    color: var(--accent);
   }
 
   .github-link:hover {

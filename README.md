@@ -13,7 +13,7 @@ A lightweight, zero-config OpenTelemetry viewer for local development — traces
 
 Drop-in replacement for a collector endpoint — point your OTLP exporter at it and see your telemetry immediately. No database required.
 
-![Overview (trace detail)](docs/screenshots/trace-detail.png)
+![Overview (trace detail)](static/docs/screenshots/trace-detail.png)
 
 <div align="center">
 <strong>
@@ -51,31 +51,31 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 
 ### Trace list & filters
 
-![Trace list](docs/screenshots/trace-list.png)
+![Trace list](static/docs/screenshots/trace-list.png)
 
 ### Service map
 
-![Service map](docs/screenshots/service-map.png)
+![Service map](static/docs/screenshots/service-map.png)
 
 ### Trace detail — waterfall & span sidebar
 
-![Trace detail](docs/screenshots/trace-detail.png)
+![Trace detail](static/docs/screenshots/trace-detail.png)
 
 ### Search highlighting
 
-![Search highlighting](docs/screenshots/search-highlighting.png)
+![Search highlighting](static/docs/screenshots/search-highlighting.png)
 
 ### Correlated logs
 
-![Correlated logs](docs/screenshots/correlated-logs.png)
+![Correlated logs](static/docs/screenshots/correlated-logs.png)
 
 ### Global logs
 
-![Global logs](docs/screenshots/global-logs.png)
+![Global logs](static/docs/screenshots/global-logs.png)
 
 ### Metrics
 
-![Global Metrics](docs/screenshots/metrics-list.png)
+![Global Metrics](static/docs/screenshots/metrics-list.png)
 
 ## 🛠️ Quick Start
 

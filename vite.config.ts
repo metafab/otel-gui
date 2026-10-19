@@ -2,6 +2,7 @@ import adapter from '@sveltejs/adapter-node'
 import { sveltekit } from '@sveltejs/kit/vite'
 import { defineConfig } from 'vite'
 import { createRequire } from 'module'
+import { markdownOptions } from './markdown.config.js'
 
 const _require = createRequire(import.meta.url)
 const pkg = _require('./package.json') as { version: string }
@@ -10,6 +11,7 @@ export default defineConfig({
   plugins: [
     sveltekit({
       adapter: adapter(),
+      ...markdownOptions(),
     }),
   ],
   define: {
