@@ -2,7 +2,11 @@
   import Readme from '../../../README.md'
   import HttpApi from '../../../docs/http-api.md'
 
-  let { document } = $props<{ document: 'readme' | 'http-api' }>()
+  interface Props {
+    document: 'readme' | 'http-api'
+  }
+
+  let { document }: Props = $props()
 </script>
 
 <svelte:head>
