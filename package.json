@@ -60,8 +60,10 @@
     "vitest": "^5.0.3"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "protobufjs": "^8.6.4",
-    "uplot": "^1.6.32"
+    "uplot": "^1.6.32",
+    "zod": "^4.6.7"
   },
   "imports": {
     "#otel-gui/core": "./packages/core/src/index.ts",
