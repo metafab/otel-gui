@@ -1,0 +1,16 @@
+# otel-gui
+
+> Local-first OpenTelemetry viewer for traces, logs, and metrics. Its HTTP API
+> can be used by scripts and agents; MCP is also available for compatible agents.
+
+## Documentation
+
+- [HTTP API guide](https://github.com/metafab/otel-gui/blob/main/docs/http-api.md): endpoint behavior, examples, limits, and access considerations.
+- [OpenAPI specification](./openapi.yaml): machine-readable description of the `/api/*` HTTP routes, served with this instance.
+- [README](https://github.com/metafab/otel-gui/blob/main/README.md): setup, OTLP ingestion, MCP configuration, and project overview.
+
+## Notes
+
+- The `/api/*` routes are unversioned application endpoints, not a compatibility-guaranteed public API.
+- The HTTP API has no authentication. Protect deployments at the network boundary.
+- `/v1/traces`, `/v1/logs`, and `/v1/metrics` are OTLP ingestion endpoints, not read APIs.

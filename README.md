@@ -212,41 +212,6 @@ No other configuration needed. The viewer accepts the standard `POST /v1/traces`
 
 Requests with `Content-Encoding: gzip` are also supported.
 
-### Connect an AI agent with MCP
-
-The Streamable HTTP MCP endpoint is available at `http://localhost:4318/mcp` (assuming the default port `4318`).
-
-For example, add it to Claude Code:
-
-```sh
-claude mcp add --transport http otel-gui http://localhost:4318/mcp
-```
-
-Add this server to a VS Code `.vscode/mcp.json` file:
-
-```json
-{
-  "servers": {
-    "otel-gui": {
-      "type": "http",
-      "url": "http://localhost:4318/mcp"
-    }
-  }
-}
-```
-
-The server exposes read-only tools: `search_traces`, `get_trace`, `search_logs`,
-`get_log`, `search_metrics`, `get_metric`, `list_services`, and
-`get_service_map`. Search results and detail payloads are bounded; oversized
-responses return a tool error rather than being silently truncated.
-
-MCP is enabled by default and restricted to loopback clients. To disable it, set
-`OTEL_GUI_MCP_ENABLED=0`. For Docker or reverse-proxy setups where the client
-does not arrive as loopback, `OTEL_GUI_MCP_ALLOW_REMOTE=1` opts into remote
-access. Only do this when network exposure is appropriately restricted:
-otel-gui does not authenticate MCP clients, and the MCP tools can read retained
-telemetry.
-
 ### Sending Logs
 
 The viewer also accepts OTLP logs at:
@@ -371,6 +336,58 @@ curl -X POST http://localhost:4318/v1/metrics \
 ```
 
 See [SAMPLE_TRACES.md](./samples/SAMPLE_TRACES.md) for a full feature exploration guide.
+
+## 🧩 Integration
+
+### Connect an AI agent with MCP
+
+The Streamable HTTP MCP endpoint is available at `http://localhost:4318/mcp` (assuming the default port `4318`).
+
+For example, add it to Claude Code:
+
+```sh
+claude mcp add --transport http otel-gui http://localhost:4318/mcp
+```
+
+Add this server to a VS Code `.vscode/mcp.json` file:
+
+```json
+{
+  "servers": {
+    "otel-gui": {
+      "type": "http",
+      "url": "http://localhost:4318/mcp"
+    }
+  }
+}
+```
+
+The server exposes read-only tools: `search_traces`, `get_trace`, `search_logs`,
+`get_log`, `search_metrics`, `get_metric`, `list_services`, and
+`get_service_map`. Search results and detail payloads are bounded; oversized
+responses return a tool error rather than being silently truncated.
+
+MCP is enabled by default and restricted to loopback clients. To disable it, set
+`OTEL_GUI_MCP_ENABLED=0`. For Docker or reverse-proxy setups where the client
+does not arrive as loopback, `OTEL_GUI_MCP_ALLOW_REMOTE=1` opts into remote
+access. Only do this when network exposure is appropriately restricted:
+otel-gui does not authenticate MCP clients, and the MCP tools can read retained
+telemetry.
+
+### Use the HTTP API from scripts or agents
+
+Agents that can make HTTP requests can read telemetry from the existing
+`/api/*` routes without an MCP client. See the [HTTP API guide](docs/http-api.md)
+for examples, limits, response shapes, and access considerations. A
+machine-readable [OpenAPI specification](static/openapi.yaml) is also served by
+the running instance at `/openapi.yaml`; the root [`llms.txt`](static/llms.txt)
+provides a short discovery index.
+
+These application routes are unversioned and currently have no authentication.
+The OpenAPI document describes existing behavior but does not establish a
+compatibility guarantee. For read-only access, use the `GET` routes; treat
+`DELETE` and import endpoints as destructive. MCP remains an alternative with
+purpose-built search tools.
 
 ## ⚙️ Configuration
 
@@ -531,6 +548,8 @@ GET  /api/stream         ← multiplexed SSE stream for traces, logs, and metric
 GET  /api/config         ← runtime limits and persistence status
 POST /mcp                ← streamable HTTP MCP endpoint
 ```
+
+See the [HTTP API guide](docs/http-api.md) and [OpenAPI specification](static/openapi.yaml) for exact request and response details.
 
 Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limits default to 1000 traces (`OTEL_GUI_MAX_TRACES`), 1000 log records (`OTEL_GUI_MAX_LOGS`), 1000 metric entries (`OTEL_GUI_MAX_METRICS`), and 600 points per metric series (`OTEL_GUI_MAX_METRIC_POINTS`).
 <br />

@@ -1,0 +1,1070 @@
+openapi: 3.1.0
+info:
+  title: otel-gui HTTP API
+  version: unversioned
+  description: |
+    Describes otel-gui's existing, unversioned `/api/*` application routes.
+    This document does not establish a compatibility guarantee. The routes
+    have no authentication and may expose sensitive retained telemetry.
+servers:
+  - url: http://localhost:4318
+    description: Default local development address; the host and port are configurable.
+tags:
+  - name: Traces
+  - name: Logs
+  - name: Metrics
+  - name: Service map
+  - name: Runtime config
+  - name: Streaming
+paths:
+  /api/traces:
+    get:
+      tags: [Traces]
+      operationId: listTraces
+      summary: List retained traces
+      description: Returns the newest retained traces first. This endpoint does not support text search or cursor pagination.
+      parameters:
+        - $ref: '#/components/parameters/TraceListLimit'
+      responses:
+        '200':
+          description: Trace summaries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TraceListItem'
+    delete:
+      tags: [Traces]
+      operationId: deleteTraces
+      summary: Delete traces
+      description: Destructive. Without a JSON traceIds array, this clears all retained traces. An empty traceIds array deletes no traces.
+      requestBody:
+        description: Send traceIds to delete selected traces. Omit this body only to intentionally clear all traces.
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                traceIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Deletion result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteResult'
+        '400':
+          $ref: '#/components/responses/MalformedJson'
+  /api/traces/{traceId}:
+    get:
+      tags: [Traces]
+      operationId: getTrace
+      summary: Get a trace and its spans
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Trace detail. The spans object is keyed by span ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TraceDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/traces/{traceId}/logs:
+    get:
+      tags: [Logs]
+      operationId: listTraceLogs
+      summary: List logs correlated with a trace
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+        - name: limit
+          in: query
+          description: Non-positive or unparseable values use the default. Maximum is 5000.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5000
+            default: 100
+        - name: spanId
+          in: query
+          description: Optionally restrict results to one span ID.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Correlated log records.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TraceLogListItem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/traces/{traceId}/logs/{logId}:
+    get:
+      tags: [Logs]
+      operationId: getTraceLog
+      summary: Get a log belonging to a trace
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+        - $ref: '#/components/parameters/LogId'
+      responses:
+        '200':
+          description: Full retained log record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoredLog'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/traces/{traceId}/export:
+    get:
+      tags: [Traces]
+      operationId: exportTrace
+      summary: Export one trace
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: otel-gui trace export envelope.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: Attachment filename for the exported JSON file.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TraceExportEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/traces/export:
+    post:
+      tags: [Traces]
+      operationId: exportTraces
+      summary: Export selected traces
+      description: Exports the unique matching trace IDs as one otel-gui JSON envelope. This is read-only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [traceIds]
+              properties:
+                traceIds:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: otel-gui trace export envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TraceExportEnvelope'
+        '400':
+          description: Malformed JSON or missing/empty/invalid traceIds.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No requested trace IDs matched retained traces.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/traces/import/preview:
+    post:
+      tags: [Traces]
+      operationId: previewTraceImport
+      summary: Validate a trace import without ingesting it
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TraceImportRequest'
+      responses:
+        '200':
+          description: Import metadata and warnings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TraceImportPreview'
+        '400':
+          description: Invalid or unsupported import content.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/traces/import:
+    post:
+      tags: [Traces]
+      operationId: importTraces
+      summary: Ingest traces from an import payload
+      description: Mutates the retained store. Preview with /api/traces/import/preview first. The UTF-8 content limit is 10 MiB.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TraceImportRequest'
+      responses:
+        '200':
+          description: Import result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [importedTraceCount, importedSpanCount, warnings]
+                properties:
+                  importedTraceCount:
+                    type: integer
+                  importedSpanCount:
+                    type: integer
+                  warnings:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: Invalid or unsupported import content.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/logs:
+    get:
+      tags: [Logs]
+      operationId: listLogs
+      summary: List retained logs
+      description: Includes correlated and uncorrelated logs. This endpoint does not support text search or cursor pagination.
+      parameters:
+        - $ref: '#/components/parameters/LogListLimit'
+      responses:
+        '200':
+          description: Log summaries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LogListItem'
+    delete:
+      tags: [Logs]
+      operationId: deleteLogs
+      summary: Delete logs
+      description: Destructive. Without a JSON logIds array, this clears all retained logs. An empty logIds array deletes no logs.
+      requestBody:
+        description: Send logIds to delete selected logs. Omit this body only to intentionally clear all logs.
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                logIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Deletion result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteResult'
+        '400':
+          $ref: '#/components/responses/MalformedJson'
+  /api/logs/{logId}:
+    get:
+      tags: [Logs]
+      operationId: getLog
+      summary: Get one retained log
+      parameters:
+        - $ref: '#/components/parameters/LogId'
+      responses:
+        '200':
+          description: Full retained log record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoredLog'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/metrics:
+    get:
+      tags: [Metrics]
+      operationId: listMetrics
+      summary: List retained metrics
+      description: This endpoint does not support text search or cursor pagination.
+      parameters:
+        - $ref: '#/components/parameters/MetricListLimit'
+      responses:
+        '200':
+          description: Metric summaries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MetricListItem'
+    delete:
+      tags: [Metrics]
+      operationId: deleteMetrics
+      summary: Delete metrics
+      description: Destructive. Without a JSON ids array, this clears all retained metrics. An empty ids array deletes no metrics.
+      requestBody:
+        description: Send ids to delete selected metrics. Omit this body only to intentionally clear all metrics.
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Deletion result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteResult'
+        '400':
+          $ref: '#/components/responses/MalformedJson'
+  /api/metrics/{metricId}:
+    get:
+      tags: [Metrics]
+      operationId: getMetric
+      summary: Get one metric with series and points
+      parameters:
+        - $ref: '#/components/parameters/MetricId'
+      responses:
+        '200':
+          description: Metric detail. Sum points may include a computed per-second rate.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/metrics/{metricId}/stream:
+    get:
+      tags: [Streaming]
+      operationId: streamMetric
+      summary: Stream updates for one metric
+      description: Sends an initial snapshot and subsequent debounced snapshots. A removed metric is signaled by a metric-removed event.
+      parameters:
+        - $ref: '#/components/parameters/MetricId'
+      responses:
+        '200':
+          description: Server-Sent Events; event payloads are JSON.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+  /api/service-map:
+    get:
+      tags: [Service map]
+      operationId: getServiceMap
+      summary: Get the aggregated service map
+      parameters:
+        - name: traceId
+          in: query
+          required: false
+          description: If provided, scope the map to this trace.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Service map nodes and edges.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceMapData'
+  /api/stream:
+    get:
+      tags: [Streaming]
+      operationId: streamTelemetry
+      summary: Stream traces, logs, and metrics
+      description: Sends initial snapshots, then updates. Event names are traces, logs-count, logs-snapshot, logs-append, metrics-count, metrics-snapshot, and metrics-append. Count event data is a decimal string; other event data is JSON. Heartbeats are SSE comments.
+      responses:
+        '200':
+          description: Multiplexed Server-Sent Events stream.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+  /api/config:
+    get:
+      tags: [Runtime config]
+      operationId: getRuntimeConfig
+      summary: Get runtime retention and persistence status
+      responses:
+        '200':
+          description: Runtime configuration and persistence status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeConfig'
+components:
+  parameters:
+    TraceId:
+      name: traceId
+      in: path
+      required: true
+      description: Trace identifier.
+      schema:
+        type: string
+    LogId:
+      name: logId
+      in: path
+      required: true
+      description: Log identifier.
+      schema:
+        type: string
+    MetricId:
+      name: metricId
+      in: path
+      required: true
+      description: Metric identifier returned by GET /api/metrics.
+      schema:
+        type: string
+    TraceListLimit:
+      name: limit
+      in: query
+      required: false
+      description: Non-positive or unparseable values use the default. The configured trace retention limit is the maximum.
+      schema:
+        type: integer
+        minimum: 1
+        default: 100
+    LogListLimit:
+      name: limit
+      in: query
+      required: false
+      description: Non-positive or unparseable values use the default. The configured log retention limit is the maximum.
+      schema:
+        type: integer
+        minimum: 1
+        default: 500
+    MetricListLimit:
+      name: limit
+      in: query
+      required: false
+      description: Non-positive or unparseable values use the default. The configured metric retention limit is the maximum.
+      schema:
+        type: integer
+        minimum: 1
+        default: 500
+  responses:
+    NotFound:
+      description: The requested retained record does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    MalformedJson:
+      description: Malformed JSON request body.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    DeleteResult:
+      type: object
+      required: [success, deletedCount, mode]
+      properties:
+        success:
+          type: boolean
+        deletedCount:
+          type: [integer, 'null']
+        mode:
+          type: string
+          enum: [all, selected]
+    TraceListItem:
+      type: object
+      required:
+        [
+          traceId,
+          rootSpanName,
+          rootSpanTentative,
+          serviceName,
+          allServices,
+          durationMs,
+          spanCount,
+          hasError,
+          startTime,
+          updatedAt,
+        ]
+      properties:
+        traceId:
+          type: string
+        rootSpanName:
+          type: string
+        rootSpanTentative:
+          type: boolean
+        serviceName:
+          type: string
+        allServices:
+          type: array
+          items:
+            type: string
+        durationMs:
+          type: number
+        spanCount:
+          type: integer
+        logCount:
+          type: integer
+        hasError:
+          type: boolean
+        startTime:
+          type: string
+          format: date-time
+        updatedAt:
+          type: number
+          description: Epoch milliseconds.
+    TraceDetail:
+      type: object
+      required:
+        [
+          traceId,
+          rootSpanName,
+          serviceName,
+          startTimeUnixNano,
+          endTimeUnixNano,
+          updatedAt,
+          spanCount,
+          hasError,
+          spans,
+        ]
+      properties:
+        traceId:
+          type: string
+        rootSpanName:
+          type: string
+        serviceName:
+          type: string
+        startTimeUnixNano:
+          $ref: '#/components/schemas/NanosecondTimestamp'
+        endTimeUnixNano:
+          $ref: '#/components/schemas/NanosecondTimestamp'
+        updatedAt:
+          type: number
+          description: Epoch milliseconds.
+        spanCount:
+          type: integer
+        hasError:
+          type: boolean
+        logCount:
+          type: integer
+        spans:
+          type: object
+          description: Span objects keyed by span ID.
+          additionalProperties:
+            $ref: '#/components/schemas/StoredSpan'
+        logs:
+          type: object
+          description: Present only when supplied by the active store; serialized map values are not part of the normal read contract.
+          additionalProperties: true
+    NanosecondTimestamp:
+      type: string
+      pattern: '^[0-9]+$'
+      description: Decimal Unix timestamp in nanoseconds; do not parse as a JavaScript number.
+    StoredSpan:
+      type: object
+      required:
+        [
+          traceId,
+          spanId,
+          parentSpanId,
+          name,
+          kind,
+          startTimeUnixNano,
+          endTimeUnixNano,
+          attributes,
+          events,
+          links,
+          status,
+          resource,
+          scopeName,
+          scopeVersion,
+          scopeAttributes,
+        ]
+      properties:
+        traceId:
+          type: string
+        spanId:
+          type: string
+        parentSpanId:
+          type: string
+        name:
+          type: string
+        kind:
+          type: integer
+          description: OTLP SpanKind numeric value.
+        startTimeUnixNano:
+          $ref: '#/components/schemas/NanosecondTimestamp'
+        endTimeUnixNano:
+          $ref: '#/components/schemas/NanosecondTimestamp'
+        attributes:
+          $ref: '#/components/schemas/AttributeMap'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpanEvent'
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpanLink'
+        status:
+          $ref: '#/components/schemas/SpanStatus'
+        resource:
+          $ref: '#/components/schemas/AttributeMap'
+        scopeName:
+          type: string
+        scopeVersion:
+          type: string
+        scopeAttributes:
+          $ref: '#/components/schemas/AttributeMap'
+    SpanEvent:
+      type: object
+      required: [timeUnixNano, name, attributes]
+      properties:
+        timeUnixNano:
+          $ref: '#/components/schemas/NanosecondTimestamp'
+        name:
+          type: string
+        attributes:
+          $ref: '#/components/schemas/AttributeMap'
+    SpanLink:
+      type: object
+      required: [traceId, spanId, traceState, attributes]
+      properties:
+        traceId:
+          type: string
+        spanId:
+          type: string
+        traceState:
+          type: string
+        attributes:
+          $ref: '#/components/schemas/AttributeMap'
+    SpanStatus:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: integer
+          enum: [0, 1, 2]
+        message:
+          type: string
+    AttributeMap:
+      type: object
+      additionalProperties: true
+      description: Flattened OTLP attributes; values may be strings, numbers, booleans, arrays, or objects.
+    LogListItem:
+      type: object
+      required:
+        [
+          id,
+          traceId,
+          spanId,
+          timeUnixNano,
+          observedTimeUnixNano,
+          severityNumber,
+          severityText,
+          body,
+          serviceName,
+          attributes,
+        ]
+      properties:
+        id:
+          type: string
+        traceId:
+          type: [string, 'null']
+        spanId:
+          type: [string, 'null']
+        timeUnixNano:
+          $ref: '#/components/schemas/NanosecondTimestamp'
+        observedTimeUnixNano:
+          $ref: '#/components/schemas/NanosecondTimestamp'
+        severityNumber:
+          type: integer
+        severityText:
+          type: string
+        body: {}
+        serviceName:
+          type: string
+        attributes:
+          $ref: '#/components/schemas/AttributeMap'
+    TraceLogListItem:
+      allOf:
+        - $ref: '#/components/schemas/LogListItem'
+        - type: object
+          properties:
+            traceId:
+              type: string
+            spanId:
+              type: string
+    StoredLog:
+      allOf:
+        - $ref: '#/components/schemas/LogListItem'
+        - type: object
+          required: [resource, scopeName, scopeVersion, scopeAttributes]
+          properties:
+            traceId:
+              type: string
+            spanId:
+              type: string
+            resource:
+              $ref: '#/components/schemas/AttributeMap'
+            scopeName:
+              type: string
+            scopeVersion:
+              type: string
+            scopeAttributes:
+              $ref: '#/components/schemas/AttributeMap'
+    MetricType:
+      type: string
+      enum: [gauge, sum, histogram, exp_histogram, summary]
+    MetricListItem:
+      type: object
+      required:
+        [id, name, type, unit, serviceName, seriesCount, lastUpdated, sparkline]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/MetricType'
+        unit:
+          type: string
+        serviceName:
+          type: string
+        seriesCount:
+          type: integer
+        lastUpdated:
+          type: number
+          description: Epoch milliseconds.
+        sparkline:
+          type: array
+          items:
+            type: number
+    MetricDetail:
+      type: object
+      required:
+        [id, name, description, unit, type, serviceName, lastUpdated, series]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        unit:
+          type: string
+        type:
+          $ref: '#/components/schemas/MetricType'
+        temporality:
+          type: string
+          enum: [delta, cumulative]
+        isMonotonic:
+          type: boolean
+        serviceName:
+          type: string
+        lastUpdated:
+          type: number
+          description: Epoch milliseconds.
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetricSeries'
+    MetricSeries:
+      type: object
+      required: [seriesId, attributes, points]
+      properties:
+        seriesId:
+          type: string
+        attributes:
+          type: object
+          additionalProperties: true
+        points:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/MetricScalarPoint'
+              - $ref: '#/components/schemas/HistogramPoint'
+              - $ref: '#/components/schemas/ExpHistogramPoint'
+              - $ref: '#/components/schemas/SummaryPoint'
+    MetricScalarPoint:
+      type: object
+      required: [t, v]
+      properties:
+        t:
+          type: number
+          description: Epoch milliseconds.
+        v:
+          type: number
+        rate:
+          type: number
+          description: Optional server-computed per-second rate on Sum points only.
+    HistogramPoint:
+      type: object
+      required: [t, count, bucketCounts, explicitBounds]
+      properties:
+        t:
+          type: number
+          description: Epoch milliseconds.
+        count:
+          type: number
+        sum:
+          type: number
+        min:
+          type: number
+        max:
+          type: number
+        bucketCounts:
+          type: array
+          items:
+            type: number
+        explicitBounds:
+          type: array
+          items:
+            type: number
+    ExpHistogramPoint:
+      type: object
+      required: [t, count, scale, zeroCount, positive, negative]
+      properties:
+        t:
+          type: number
+          description: Epoch milliseconds.
+        count:
+          type: number
+        sum:
+          type: number
+        min:
+          type: number
+        max:
+          type: number
+        scale:
+          type: integer
+        zeroCount:
+          type: number
+        positive:
+          $ref: '#/components/schemas/ExpHistogramBuckets'
+        negative:
+          $ref: '#/components/schemas/ExpHistogramBuckets'
+    ExpHistogramBuckets:
+      type: object
+      required: [offset, bucketCounts]
+      properties:
+        offset:
+          type: integer
+        bucketCounts:
+          type: array
+          items:
+            type: number
+    SummaryPoint:
+      type: object
+      required: [t, count, sum, quantileValues]
+      properties:
+        t:
+          type: number
+          description: Epoch milliseconds.
+        count:
+          type: number
+        sum:
+          type: number
+        quantileValues:
+          type: array
+          items:
+            type: object
+            required: [quantile, value]
+            properties:
+              quantile:
+                type: number
+              value:
+                type: number
+    ServiceMapData:
+      type: object
+      required: [nodes, edges]
+      properties:
+        nodes:
+          type: array
+          items:
+            type: object
+            required: [serviceName, spanCount, errorCount, nodeType]
+            properties:
+              serviceName:
+                type: string
+              spanCount:
+                type: integer
+              errorCount:
+                type: integer
+              nodeType:
+                type: string
+                enum: [service, database, messaging, rpc]
+              system:
+                type: string
+        edges:
+          type: array
+          items:
+            type: object
+            required:
+              [source, target, callCount, errorCount, durations, p50Ms, p99Ms]
+            properties:
+              source:
+                type: string
+              target:
+                type: string
+              callCount:
+                type: integer
+              errorCount:
+                type: integer
+              durations:
+                type: array
+                items:
+                  type: number
+                description: Sorted duration samples in nanoseconds.
+              p50Ms:
+                type: number
+              p99Ms:
+                type: number
+    RuntimeConfig:
+      type: object
+      required: [maxTraces, maxLogs, maxMetrics, maxMetricPoints, persistence]
+      properties:
+        maxTraces:
+          type: integer
+        maxLogs:
+          type: integer
+        maxMetrics:
+          type: integer
+        maxMetricPoints:
+          type: integer
+        persistence:
+          type: object
+          required:
+            [
+              mode,
+              enabled,
+              backend,
+              path,
+              flushMs,
+              lastRestoreAt,
+              restoredTraceCount,
+              pendingFlushCount,
+            ]
+          properties:
+            mode:
+              type: string
+              enum: [memory, pglite]
+            enabled:
+              type: boolean
+            backend:
+              type: [string, 'null']
+            path:
+              type: [string, 'null']
+            flushMs:
+              type: [integer, 'null']
+            lastRestoreAt:
+              type: [string, 'null']
+              format: date-time
+            restoredTraceCount:
+              type: integer
+            pendingFlushCount:
+              type: integer
+            unavailableReason:
+              type: [string, 'null']
+    TraceImportRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          description: JSON text containing an OTLP JSON trace payload or an otel-gui export envelope. UTF-8 maximum 10 MiB.
+        fileName:
+          type: [string, 'null']
+    TraceImportPreview:
+      type: object
+      required:
+        [
+          format,
+          fileName,
+          exportedAt,
+          sizeBytes,
+          traceCount,
+          spanCount,
+          services,
+          warnings,
+        ]
+      properties:
+        format:
+          type: string
+          enum: [otlp-json, otel-gui-trace-export]
+        fileName:
+          type: [string, 'null']
+        exportedAt:
+          type: [string, 'null']
+          format: date-time
+        sizeBytes:
+          type: integer
+        traceCount:
+          type: integer
+        spanCount:
+          type: integer
+        services:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+    TraceExportEnvelope:
+      type: object
+      required: [format, version, exportedAt, traceCount, spanCount, traces]
+      properties:
+        format:
+          const: otel-gui-trace-export
+        version:
+          const: 1
+        exportedAt:
+          type: string
+          format: date-time
+        traceCount:
+          type: integer
+        spanCount:
+          type: integer
+        traces:
+          type: array
+          items:
+            type: object
+            required: [traceId, resourceSpans]
+            properties:
+              traceId:
+                type: string
+              resourceSpans:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
