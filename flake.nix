@@ -1,5 +1,5 @@
 {
-  description = "Lightweight OpenTelemetry trace viewer";
+  description = "Lightweight OpenTelemetry viewer for local development";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
