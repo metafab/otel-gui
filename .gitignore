@@ -31,3 +31,4 @@ vite.config.ts.timestamp-*
 .playwright-mcp
 
 .otel-gui
+.direnv

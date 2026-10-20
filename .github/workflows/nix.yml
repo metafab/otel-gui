@@ -1,0 +1,45 @@
+name: Nix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nix-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nix:
+    name: Nix package and development shell
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check flake
+        run: nix flake check
+
+      - name: Build package
+        run: nix build .#otel-gui
+
+      - name: Check packaged command
+        run: nix run .#otel-gui -- --version
+
+      - name: Install development dependencies
+        run: nix develop --command pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: nix develop --command pnpm run check
+
+      - name: Unit and integration tests
+        run: nix develop --command pnpm run test

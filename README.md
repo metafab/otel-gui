@@ -110,6 +110,34 @@ brew update
 brew upgrade metafab/tap/otel-gui
 ```
 
+### Nix ❄️
+
+With Nix flakes enabled, run the latest version from this repository:
+
+```sh
+nix run github:metafab/otel-gui
+```
+
+To install it into your user profile:
+
+```sh
+nix profile install github:metafab/otel-gui
+```
+
+The app listens on port `4318` by default. Set `PORT` to use a different port:
+
+```sh
+PORT=55681 nix run github:metafab/otel-gui
+```
+
+For development in a checkout, enter the pinned Node.js and pnpm environment with:
+
+```sh
+nix develop
+pnpm install
+pnpm run dev
+```
+
 ### Docker 🐳
 
 Pull and run the published GHCR image:
@@ -176,7 +204,7 @@ PORT=55681 docker compose up --build
 
 ### Local development
 
-**Requires**: Node.js ≥ 20, [pnpm](https://pnpm.io)
+**Requires**: Node.js ≥ 22.17, [pnpm](https://pnpm.io)
 
 ```sh
 git clone https://github.com/metafab/otel-gui
