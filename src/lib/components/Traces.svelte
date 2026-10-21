@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation'
   import ServiceBadge from '#lib/components/ServiceBadge.svelte'
   import TraceFilters from '#lib/components/TraceFilters.svelte'
-  import TraceImportModal from '#lib/components/TraceImportModal.svelte'
+  import ImportModal from '#lib/components/ImportModal.svelte'
   import VersionInfo from '#lib/components/VersionInfo.svelte'
   import type { TraceListItem } from '#lib/types.js'
   import { traceStore } from '#lib/stores/traces.svelte.js'
@@ -419,7 +419,7 @@
 
       const payload = await response.json()
       if (!response.ok) {
-        throw new Error(payload.error || 'Could not export filtered traces')
+        throw new Error(payload.error || 'Could not export traces')
       }
 
       const fileName =
@@ -441,21 +441,21 @@
       URL.revokeObjectURL(url)
     } catch (err) {
       exportError =
-        err instanceof Error ? err.message : 'Could not export filtered traces'
+        err instanceof Error ? err.message : 'Could not export traces'
     } finally {
       isExporting = false
     }
   }
 
-  async function handleExportFiltered() {
+  async function handleExport() {
+    if (selectedTraceIds.length > 0) {
+      await exportTracesByIds(selectedTraceIds, 'selected')
+      return
+    }
     await exportTracesByIds(
       filteredTraces.map((trace) => trace.traceId),
       'filtered',
     )
-  }
-
-  async function handleExportSelected() {
-    await exportTracesByIds(selectedTraceIds, 'selected')
   }
 
   function toggleTraceSelection(traceId: string) {
@@ -473,10 +473,12 @@
   }
 
   function handleImportCompleted(result: {
-    importedTraceCount: number
-    importedSpanCount: number
+    importedTraceCount?: number
+    importedSpanCount?: number
   }) {
-    importSuccessMessage = `Imported ${result.importedTraceCount} trace${result.importedTraceCount === 1 ? '' : 's'} and ${result.importedSpanCount} span${result.importedSpanCount === 1 ? '' : 's'}.`
+    const traceCount = result.importedTraceCount ?? 0
+    const spanCount = result.importedSpanCount ?? 0
+    importSuccessMessage = `Imported ${traceCount} trace${traceCount === 1 ? '' : 's'} and ${spanCount} span${spanCount === 1 ? '' : 's'}.`
   }
 
   function handleDismissImportSuccess() {
@@ -523,11 +525,8 @@
     importSuccessMessage = null
     showImportModal = true
   }
-  export function triggerExportFiltered() {
-    void handleExportFiltered()
-  }
-  export function triggerExportSelected() {
-    void handleExportSelected()
+  export function triggerExport() {
+    void handleExport()
   }
   export function triggerClearAll() {
     void handleClearAll()
@@ -795,7 +794,7 @@
 </div>
 
 {#if showImportModal}
-  <TraceImportModal
+  <ImportModal
     onclose={() => (showImportModal = false)}
     onimported={handleImportCompleted}
   />

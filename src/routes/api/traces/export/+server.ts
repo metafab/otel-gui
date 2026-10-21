@@ -49,7 +49,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
     return Response.json(payload, {
       headers: {
-        'Content-Disposition': `attachment; filename="traces-filtered-${safeTimestamp}.json"`,
+        'Content-Disposition': `attachment; filename="traces-${safeTimestamp}.json"`,
       },
     })
   } catch {

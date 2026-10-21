@@ -5,8 +5,7 @@
     totalCount,
     isExporting,
     onImport,
-    onExportFiltered,
-    onExportSelected,
+    onExport,
     onClearAll,
     onDeleteSelected,
   }: {
@@ -15,8 +14,7 @@
     totalCount: number
     isExporting: boolean
     onImport: () => void
-    onExportFiltered: () => void
-    onExportSelected: () => void
+    onExport: () => void
     onClearAll: () => void
     onDeleteSelected: () => void
   } = $props()
@@ -55,19 +53,14 @@
 </button>
 <button
   class="action-button secondary-action"
-  onclick={onExportFiltered}
+  onclick={onExport}
   disabled={filteredCount === 0 || isExporting}
->
-  {isExporting ? 'Exporting…' : 'Export Filtered'}
-</button>
-<button
-  class="action-button secondary-action"
-  onclick={onExportSelected}
-  disabled={selectedCount === 0 || isExporting}
 >
   {isExporting
     ? 'Exporting…'
-    : `Export Selected${selectedCount > 0 ? ` (${selectedCount})` : ''}`}
+    : selectedCount > 0
+      ? `Export Selected (${selectedCount})`
+      : 'Export Filtered'}
 </button>
 <div
   class="split-action"

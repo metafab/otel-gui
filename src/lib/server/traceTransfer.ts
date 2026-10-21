@@ -7,6 +7,7 @@ import type {
 } from '#lib/types.js'
 import { flattenAttributes } from '#otel-gui/core'
 import { SPAN_KIND_NAMES, STATUS_CODE_NAMES } from '#lib/utils/otlpEnums.js'
+import { toKeyValues } from '#lib/server/otlpEncode.js'
 
 const EXPORT_FORMAT = 'otel-gui-trace-export'
 const EXPORT_VERSION = 1
@@ -20,63 +21,9 @@ const STATUS_CODE_BY_NUMBER = Object.fromEntries(
   Object.entries(STATUS_CODE_NAMES).map(([k, v]) => [v, k]),
 ) as Record<number, string>
 
-type AnyValue =
-  | { stringValue: string }
-  | { boolValue: boolean }
-  | { intValue: string }
-  | { doubleValue: number }
-  | { arrayValue: { values: AnyValue[] } }
-  | { kvlistValue: { values: Array<{ key: string; value: AnyValue }> } }
-
 interface NormalizedImportPayload {
   resourceSpans: any[]
   preview: TraceImportPreview
-}
-
-function toAnyValue(value: unknown): AnyValue {
-  if (typeof value === 'boolean') {
-    return { boolValue: value }
-  }
-
-  if (typeof value === 'number') {
-    if (Number.isInteger(value)) {
-      return { intValue: String(value) }
-    }
-    return { doubleValue: value }
-  }
-
-  if (Array.isArray(value)) {
-    return {
-      arrayValue: {
-        values: value.map((item) => toAnyValue(item)),
-      },
-    }
-  }
-
-  if (value && typeof value === 'object') {
-    return {
-      kvlistValue: {
-        values: Object.entries(value as Record<string, unknown>).map(
-          ([key, nestedValue]) => ({
-            key,
-            value: toAnyValue(nestedValue),
-          }),
-        ),
-      },
-    }
-  }
-
-  return { stringValue: value == null ? '' : String(value) }
-}
-
-function toKeyValues(record: Record<string, unknown>): Array<{
-  key: string
-  value: AnyValue
-}> {
-  return Object.entries(record).map(([key, value]) => ({
-    key,
-    value: toAnyValue(value),
-  }))
 }
 
 function toOtlpSpan(span: StoredSpan): any {
@@ -192,6 +139,12 @@ export function serializeTracesExport(
 
 export function serializeTraceExport(trace: StoredTrace): TraceExportEnvelope {
   return serializeTracesExport([trace])
+}
+
+function looksLikeLogPayload(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false
+  const record = value as { format?: unknown; resourceLogs?: unknown }
+  return record.format === 'otel-gui-log-export' || 'resourceLogs' in record
 }
 
 function isExportEnvelope(value: unknown): value is TraceExportEnvelope {
@@ -365,6 +318,11 @@ export function parseTraceImportPayload(
       return true
     }).length
   } else {
+    if (looksLikeLogPayload(payload)) {
+      throw new Error(
+        'This file contains logs, not traces. Use Import Logs on the Logs tab instead.',
+      )
+    }
     throw new Error(
       'Unsupported import payload: expected OTLP JSON or otel-gui export',
     )

@@ -34,7 +34,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Service map** — auto-generated graph of cross-service calls with error rates and latency (p50/p99)
 - **Search & filter** — filter traces, logs and metrics by text, id, service, severity, and attributes: search spans inside a trace based on attributes, events, and span name or id
 - **MCP server** — read-only Model Context Protocol endpoint for AI agents to search traces, logs, and metrics, inspect records, list services, and view the service map
-- **Import/export traces** — export one trace, filtered traces, or selected traces as OTLP JSON envelope; import from OTLP JSON or otel-gui export files with metadata preview before confirmation
+- **Import/export traces and logs** — export one trace or log, or the filtered or selected traces/logs, as an OTLP JSON envelope; import from OTLP JSON or otel-gui export files with metadata preview before confirmation
 - **Bulk list actions** — trace and log lists support multi-select export and split delete actions (`Clear All` + `Delete Selected (n)`)
 - **Keyboard navigation** — rich keyboard control: arrow keys for the span tree, `/` to search, `t`/`l`/`m`/`s` to jump to Traces/Logs/Metrics/Service Map tabs, Enter/Space to activate focused rows in the Traces and Logs grids, escape key to clear search and go back to the list, `?` for shortcuts help
 - **Error navigation** — jump between error spans with one key
@@ -565,6 +565,9 @@ POST /api/traces/import  ← import otel-gui envelope or raw OTLP JSON
 GET  /api/logs           ← global log list for the UI
 DELETE /api/logs         ← clear all logs or delete selected logIds
 GET  /api/logs/:id       ← single log detail
+POST /api/logs/export    ← export filtered/selected logIds
+POST /api/logs/import/preview ← validate + preview log import metadata
+POST /api/logs/import    ← import otel-gui log envelope or raw OTLP JSON
 
 GET  /api/metrics        ← metric list for the UI
 DELETE /api/metrics      ← clear all metrics or delete selected ids

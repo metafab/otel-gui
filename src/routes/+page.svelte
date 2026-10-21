@@ -125,8 +125,7 @@
     setSelectedService: (name: string) => void
     setServiceFilter: (name: string, scope: 'root' | 'any') => void
     openImportModal: () => void
-    triggerExportFiltered: () => void
-    triggerExportSelected: () => void
+    triggerExport: () => void
     triggerClearAll: () => void
     triggerDeleteSelected: () => void
   } | null = $state(null)
@@ -141,12 +140,16 @@
   let logsRef: {
     triggerClearAll: () => void
     triggerDeleteSelected: () => void
+    triggerExport: () => void
+    openImportModal: () => void
   } | null = $state(null)
 
   let logsTotal = $state(0)
   const logsBadgeTotal = $derived(traceStore.logCount)
   let logsSelected = $state(0)
   let logsDeleting = $state(false)
+  let logsFiltered = $state(0)
+  let logsExporting = $state(false)
 
   // Metrics ref and reactive state for MetricsCommands
   let metricsRef: {
@@ -294,16 +297,19 @@
           totalCount={traces.length}
           {isExporting}
           onImport={() => tracesRef?.openImportModal()}
-          onExportFiltered={() => tracesRef?.triggerExportFiltered()}
-          onExportSelected={() => tracesRef?.triggerExportSelected()}
+          onExport={() => tracesRef?.triggerExport()}
           onClearAll={() => tracesRef?.triggerClearAll()}
           onDeleteSelected={() => tracesRef?.triggerDeleteSelected()}
         />
       {:else if activeTab === 'logs'}
         <LogsCommands
+          filteredCount={logsFiltered}
           totalCount={logsTotal}
           selectedCount={logsSelected}
           isDeleting={logsDeleting}
+          isExporting={logsExporting}
+          onImport={() => logsRef?.openImportModal()}
+          onExport={() => logsRef?.triggerExport()}
           onClearAll={() => logsRef?.triggerClearAll()}
           onDeleteSelected={() => logsRef?.triggerDeleteSelected()}
         />
@@ -345,6 +351,8 @@
         bind:totalCount={logsTotal}
         bind:selectedCount={logsSelected}
         bind:isDeletingBound={logsDeleting}
+        bind:filteredCount={logsFiltered}
+        bind:isExportingBound={logsExporting}
       />
     </div>
   {:else if activeTab === 'metrics'}

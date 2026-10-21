@@ -30,7 +30,7 @@ pnpm run format:check
 
 ## Architecture
 
-- **Routes**: `/v1/traces` + `/v1/logs` (OTLP receivers), `/api/traces` (list + clear/delete-selected), `/api/traces/:id` (detail), `/api/traces/:id/export` (single export), `/api/traces/export` (bulk export), `/api/traces/import/preview` + `/api/traces/import` (import flow), `/api/traces/:id/logs` (trace-scoped logs), `/api/traces/:id/logs/:logId` (log detail), `/api/logs` (global log list + clear/delete-selected), `/api/service-map` (service graph), `/api/config` (runtime config + persistence status)
+- **Routes**: `/v1/traces` + `/v1/logs` (OTLP receivers), `/api/traces` (list + clear/delete-selected), `/api/traces/:id` (detail), `/api/traces/:id/export` (single export), `/api/traces/export` (bulk export), `/api/traces/import/preview` + `/api/traces/import` (import flow), `/api/traces/:id/logs` (trace-scoped logs), `/api/traces/:id/logs/:logId` (log detail), `/api/logs` (global log list + clear/delete-selected), `/api/logs/export` (bulk log export), `/api/logs/import/preview` + `/api/logs/import` (log import flow), `/api/service-map` (service graph), `/api/config` (runtime config + persistence status)
 - **Server-only code**: `#lib/server/` — never bundled for client
 - **Utilities**: `#lib/utils/` — shared helpers for OTLP data transformation
 - **Types**: `#lib/types.js` — all interfaces (use `import type`)
@@ -186,7 +186,7 @@ Shortcuts implemented:
 5. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1-10 000, default 1000). FIFO eviction. Read via `$app/env/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000. Logs have an independent `OTEL_GUI_MAX_LOGS` env var (same range/defaults), exposed as `traceStore.maxLogs`.
 6. **Persistence is optional** — OSS always has `memory`; `pglite` requires a registered backend (usually via `OTEL_GUI_PERSISTENCE_BACKEND_MODULE`). If unavailable, runtime falls back to memory with `persistence.unavailableReason` in `GET /api/config`.
 7. **Update availability check** — On mount, the page fetches `https://api.github.com/repos/metafab/otel-gui/releases/latest` (GitHub API) and compares `tag_name` to `import.meta.env.PACKAGE_VERSION` (embedded at build time from `package.json` via Vite `define`). If a newer semver is found, a non-intrusive notice is shown in the bottom-left of the trace list, next to the retention notice. The notice links to `https://github.com/metafab/otel-gui/releases` and can be dismissed per-version via `localStorage`. The result is cached in `localStorage` (`update-check-cache`) for 1 hour to avoid hitting the GitHub rate limit (60 unauthenticated req/h). Network failures are silent and do not affect the UI.
-8. **Import/export UX contract** — list page provides Import, Export Filtered, Export Selected, and split delete actions (`Clear All` + dropdown `Delete Selected (n)`); import always previews metadata before confirmation.
+8. **Import/export UX contract** — list page provides Import, a single Export button (exports selected traces if any, otherwise all filtered), and split delete actions (`Clear All` + dropdown `Delete Selected (n)`); import always previews metadata before confirmation. The Logs tab mirrors this: Import Logs + a single Export button (selected if any, otherwise filtered), reusing `ImportModal` with `kind="logs"`; log exports use `otel-gui-log-export` envelopes ([logTransfer.ts](src/lib/server/logTransfer.ts)) and import stamps `log.record.uid` so re-imports don't duplicate.
 
 ## Reference Files
 
