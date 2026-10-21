@@ -9,6 +9,7 @@
   import MetricSeriesLegend from '#lib/components/MetricSeriesLegend.svelte'
   import MetricDataPoints from '#lib/components/MetricDataPoints.svelte'
   import type { MetricDetail } from '#lib/types.js'
+  import { metricTypePresentation } from '#lib/utils/metricPresentation.js'
   import {
     resolveReturnTarget,
     shouldUseHistoryBackForTarget,
@@ -280,7 +281,15 @@
         {/if}
 
         <div class="metric-meta">
-          <span class={`type-badge type-${metric.type}`}>{metric.type}</span>
+          <span
+            class={`type-badge type-${metricTypePresentation(metric).badgeType}`}
+            title={`OTLP data type: ${metric.type}`}
+            >{metricTypePresentation(metric).label}</span
+          >
+          {#if metric.type === 'sum'}
+            <span class="separator">•</span>
+            <span class="meta-item">OTLP Sum</span>
+          {/if}
           <span class="separator">•</span>
           <ServiceBadge serviceName={metric.serviceName || 'unknown'} />
           {#if metric.unit}
@@ -497,6 +506,18 @@
     color: #92400e;
     background: #fff7ed;
     border-color: #fed7aa;
+  }
+
+  .type-counter {
+    color: #92400e;
+    background: #fff7ed;
+    border-color: #fed7aa;
+  }
+
+  .type-updowncounter {
+    color: #155e75;
+    background: #ecfeff;
+    border-color: #a5f3fc;
   }
 
   .type-histogram {

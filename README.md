@@ -30,7 +30,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Real-time streaming** — traces, logs, and metrics all update live over SSE (Server-Sent Events) using an incremental snapshot + delta protocol, so views refresh in place without flicker or polling
 - **Traces and spans** — trace list; waterfall timeline with full span details, and correlation with logs
 - **Logs** — log list; log details view; correlation with traces
-- **Metrics** — gauges, sums, histograms, exponential histograms, and summaries time-series charts, histogram distribution + heatmap views, per-series filtering, and a paginated datapoint table with attributes
+- **Metrics** — gauges, counters, up/down counters, histograms, exponential histograms, and summaries with time-series charts, histogram distribution + heatmap views, per-series filtering, and a paginated datapoint table with attributes
 - **Service map** — auto-generated graph of cross-service calls with error rates and latency (p50/p99)
 - **Search & filter** — filter traces, logs and metrics by text, id, service, severity, and attributes: search spans inside a trace based on attributes, events, and span name or id
 - **MCP server** — read-only Model Context Protocol endpoint for AI agents to search traces, logs, and metrics, inspect records, list services, and view the service map
@@ -258,7 +258,7 @@ The viewer also accepts OTLP metrics at:
 POST /v1/metrics
 ```
 
-Gauges, sums, histograms, exponential histograms, and summaries are all supported and appear in the **Metrics** tab. Sums get a server-computed per-second rate (with counter-reset detection); histograms render as both a distribution and a time/bucket heatmap.
+Gauges, sums, histograms, exponential histograms, and summaries are all supported and appear in the **Metrics** tab. Monotonic sums are presented as **Counters** and non-monotonic sums as **UpDownCounters**; their OTLP data type remains Sum. Sum points get a server-computed per-second rate (with counter-reset detection); histograms render as both a distribution and a time/bucket heatmap.
 
 ### Try the demo
 
@@ -343,7 +343,7 @@ curl -X POST http://localhost:4318/v1/metrics \
   -H "Content-Type: application/json" \
   -d @samples/sample-metrics-gauge.json
 
-# Sum/Counter metrics (request count with cumulative points)
+# Counter metrics (monotonic OTLP Sum with cumulative points)
 curl -X POST http://localhost:4318/v1/metrics \
   -H "Content-Type: application/json" \
   -d @samples/sample-metrics-sum-counter.json

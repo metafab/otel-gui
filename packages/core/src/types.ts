@@ -67,6 +67,8 @@ export interface StoredTrace {
 
 // ─── Metrics ─────────────────────────────────────────────────────────────────
 
+// OTLP data type discriminator. UI may present Sum metrics as Counter or
+// UpDownCounter based on `isMonotonic`, without changing this wire type.
 export type MetricType =
   'gauge' | 'sum' | 'histogram' | 'exp_histogram' | 'summary'
 export type MetricTemporality = 'delta' | 'cumulative'
@@ -187,6 +189,7 @@ export interface MetricListItem {
   id: string // = metric key
   name: string
   type: MetricType
+  isMonotonic?: boolean // sum only; used to identify Counter vs UpDownCounter
   unit: string
   serviceName: string
   seriesCount: number

@@ -77,6 +77,11 @@ Metric point timestamps (`t`) are epoch milliseconds. Metric detail `type`
 determines the point shape (`gauge`, `sum`, `histogram`, `exp_histogram`, or
 `summary`).
 
+The UI presents monotonic Sum metrics as **Counters** and non-monotonic Sum
+metrics as **UpDownCounters**. The API continues to use the OTLP `sum` type;
+`isMonotonic` is included in metric list and detail responses so clients can
+distinguish those instrument semantics.
+
 ### Runtime config
 
 `GET /api/config` returns `maxTraces`, `maxLogs`, `maxMetrics`,

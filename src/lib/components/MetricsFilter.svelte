@@ -1,13 +1,13 @@
 <script lang="ts">
   import MetricTypePicker from '#lib/components/MetricTypePicker.svelte'
   import ServicePicker from '#lib/components/ServicePicker.svelte'
+  import type { MetricTypeFilter } from '#lib/utils/metricPresentation.js'
 
   interface Props {
     /** Available service names for the dropdown. */
     services: string[]
     searchQuery: string
-    typeFilter:
-      'all' | 'gauge' | 'sum' | 'histogram' | 'exp_histogram' | 'summary'
+    typeFilter: MetricTypeFilter
     /** Bound: selected service name, or "all". */
     selectedService: string
     filteredCount: number

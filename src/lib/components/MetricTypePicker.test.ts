@@ -26,6 +26,19 @@ describe(MetricTypePicker, () => {
     )
   })
 
+  it('offers user-facing counter instrument filters', async () => {
+    render(MetricTypePicker, {
+      props: { selectedType: 'all' },
+    })
+
+    await fireEvent.click(screen.getByLabelText('Metric type'))
+    expect(screen.getByRole('button', { name: 'Counter' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'UpDownCounter' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'All Sums' })).toBeInTheDocument()
+  })
+
   it('opens menu on click and selects an option', async () => {
     render(MetricTypePicker, {
       props: {

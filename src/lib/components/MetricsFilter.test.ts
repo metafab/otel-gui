@@ -38,7 +38,7 @@ describe(MetricsFilter, () => {
     const servicePicker = screen.getByLabelText('Service')
 
     expect(searchInput).toHaveValue('http')
-    expect(typePicker).toHaveTextContent('Sum')
+    expect(typePicker).toHaveTextContent('All Sums')
     expect(servicePicker).toHaveTextContent('checkout')
     expect(
       screen.getByRole('button', { name: 'Clear Filters' }),

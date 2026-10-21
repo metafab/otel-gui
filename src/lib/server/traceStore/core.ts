@@ -819,6 +819,7 @@ export function createInternalTraceStore(
       id,
       name: metric.name,
       type: metric.type,
+      isMonotonic: metric.isMonotonic,
       unit: metric.unit,
       serviceName: metric.serviceName,
       seriesCount: metric.series.size,

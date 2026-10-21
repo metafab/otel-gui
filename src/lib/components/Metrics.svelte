@@ -7,6 +7,11 @@
   import { metricStore } from '#lib/stores/metrics.svelte.js'
   import { onSSEEvents } from '#lib/stores/sseClient.js'
   import type { MetricListItem } from '#lib/types.js'
+  import {
+    matchesMetricTypeFilter,
+    metricTypePresentation,
+    type MetricTypeFilter,
+  } from '#lib/utils/metricPresentation.js'
   import { formatDateTimeLocal } from '#lib/utils/time.js'
 
   // Bindable props so parent can read reactive state for header action buttons.
@@ -50,13 +55,12 @@
       : DEFAULT_SORT_ORDER
   }
 
-  type MetricTypeFilter =
-    'all' | 'gauge' | 'sum' | 'histogram' | 'exp_histogram' | 'summary'
-
   function parseTypeFilter(rawValue: string | null): MetricTypeFilter {
     switch (rawValue) {
       case 'gauge':
       case 'sum':
+      case 'counter':
+      case 'updowncounter':
       case 'histogram':
       case 'exp_histogram':
       case 'summary':
@@ -231,7 +235,7 @@
     const query = searchQuery.trim().toLowerCase()
 
     return metrics.filter((m) => {
-      if (typeFilter !== 'all' && m.type !== typeFilter) {
+      if (!matchesMetricTypeFilter(m, typeFilter)) {
         return false
       }
       if (selectedService !== 'all' && m.serviceName !== selectedService) {
@@ -257,7 +261,9 @@
           directionlessResult = (a.name || '').localeCompare(b.name || '')
           break
         case 'type':
-          directionlessResult = (a.type || '').localeCompare(b.type || '')
+          directionlessResult = metricTypePresentation(a).label.localeCompare(
+            metricTypePresentation(b).label,
+          )
           break
         case 'unit':
           directionlessResult = (a.unit || '').localeCompare(b.unit || '')
@@ -703,8 +709,11 @@
                   {metric.name}
                 </td>
                 <td>
-                  <span class={`type-badge type-${metric.type}`}>
-                    {metric.type}
+                  <span
+                    class={`type-badge type-${metricTypePresentation(metric).badgeType}`}
+                    title={`OTLP data type: ${metric.type}`}
+                  >
+                    {metricTypePresentation(metric).label}
                   </span>
                 </td>
                 <td class="unit">{metric.unit || '-'}</td>
@@ -883,6 +892,18 @@
     color: #92400e;
     background: #fff7ed;
     border-color: #fed7aa;
+  }
+
+  .type-counter {
+    color: #92400e;
+    background: #fff7ed;
+    border-color: #fed7aa;
+  }
+
+  .type-updowncounter {
+    color: #155e75;
+    background: #ecfeff;
+    border-color: #a5f3fc;
   }
 
   .type-histogram {

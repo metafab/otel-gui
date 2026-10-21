@@ -1,8 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte'
 
-  export type MetricTypeFilter =
-    'all' | 'gauge' | 'sum' | 'histogram' | 'exp_histogram' | 'summary'
+  import type { MetricTypeFilter } from '#lib/utils/metricPresentation.js'
 
   interface Props {
     selectedType: MetricTypeFilter
@@ -21,7 +20,9 @@
   const typeOptions = $derived([
     { value: 'all' as const, label: allLabel },
     { value: 'gauge' as const, label: 'Gauge' },
-    { value: 'sum' as const, label: 'Sum' },
+    { value: 'counter' as const, label: 'Counter' },
+    { value: 'updowncounter' as const, label: 'UpDownCounter' },
+    { value: 'sum' as const, label: 'All Sums' },
     { value: 'histogram' as const, label: 'Histogram' },
     { value: 'exp_histogram' as const, label: 'Exp. Histogram' },
     { value: 'summary' as const, label: 'Summary' },
@@ -349,6 +350,18 @@
     color: #92400e;
     background: #fff7ed;
     border-color: #fed7aa;
+  }
+
+  .type-counter {
+    color: #92400e;
+    background: #fff7ed;
+    border-color: #fed7aa;
+  }
+
+  .type-updowncounter {
+    color: #155e75;
+    background: #ecfeff;
+    border-color: #a5f3fc;
   }
 
   .type-histogram {

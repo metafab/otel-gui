@@ -1672,7 +1672,7 @@ describe('GET /api/metrics', () => {
 
   it('each metric item has required MetricListItem fields', async () => {
     await postOtlpMetrics({
-      request: makeMetricsPostRequest(gaugeMetricPayload()),
+      request: makeMetricsPostRequest(cumulativeSumPayload()),
     } as any)
 
     const response = await getMetricList({
@@ -1682,7 +1682,8 @@ describe('GET /api/metrics', () => {
 
     expect(typeof metric.id).toBe('string')
     expect(typeof metric.name).toBe('string')
-    expect(typeof metric.type).toBe('string')
+    expect(metric.type).toBe('sum')
+    expect(metric.isMonotonic).toBe(true)
     expect(typeof metric.unit).toBe('string')
     expect(typeof metric.serviceName).toBe('string')
     expect(typeof metric.seriesCount).toBe('number')

@@ -880,6 +880,7 @@ describe('traceStore', () => {
         ]),
       )
       const [item] = store.getMetricList()
+      expect(item.isMonotonic).toBe(true)
       const pts = firstSeriesPoints(store, item.id)
 
       expect(pts[0]).toEqual({ t: pts[0].t, v: 5 })

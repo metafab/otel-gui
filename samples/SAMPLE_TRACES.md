@@ -29,7 +29,8 @@ This sends a realistic multi-service trace in two parts (simulating incremental 
 
 ### Run the Metrics Demo
 
-Use the dedicated metrics demo to ingest Gauge, Sum/Counter, and Histogram samples:
+Use the dedicated metrics demo to ingest Gauge, Counter (monotonic OTLP Sum),
+and Histogram samples:
 
 ```bash
 ./demo-metrics.sh
@@ -259,7 +260,7 @@ curl -X POST http://localhost:4318/v1/metrics \
 
 Cumulative monotonic counter series for HTTP requests.
 
-- Metric type: Sum/Counter
+- Instrument: Counter (OTLP Sum with `isMonotonic: true`)
 - Metric name: `http.server.request.count`
 - Includes two timestamps per route for server-side rate projection
 

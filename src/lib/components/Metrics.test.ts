@@ -61,6 +61,7 @@ const sampleMetrics = [
     id: 'worker-service jobs.processed',
     name: 'jobs.processed',
     type: 'sum',
+    isMonotonic: true,
     unit: '1',
     serviceName: 'worker-service',
     seriesCount: 1,
@@ -126,6 +127,8 @@ describe(Metrics, () => {
 
     expect(within(table).getByText('checkout-service')).toBeInTheDocument()
     expect(within(table).getByText('worker-service')).toBeInTheDocument()
+    const sumBadge = within(table).getByText('Counter')
+    expect(sumBadge).toHaveAttribute('title', 'OTLP data type: sum')
   })
 
   it('filters metrics by service', async () => {
@@ -157,9 +160,34 @@ describe(Metrics, () => {
     const typePicker = screen.getByLabelText('Metric type')
 
     await fireEvent.click(typePicker)
-    await fireEvent.click(screen.getByRole('button', { name: 'Sum' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'Counter' }))
     expect(screen.queryByText('http.server.duration')).not.toBeInTheDocument()
     expect(screen.getByText('jobs.processed')).toBeInTheDocument()
+  })
+
+  it('separates Counter and UpDownCounter sums in filters and labels', async () => {
+    const upDownMetric = {
+      ...sampleMetrics[1],
+      id: 'worker-service queue.depth',
+      name: 'queue.depth',
+      isMonotonic: false,
+    }
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [sampleMetrics[1], upDownMetric],
+    } as Response)
+    render(Metrics)
+    await screen.findByText('queue.depth')
+
+    const table = screen.getByRole('table')
+    expect(within(table).getByText('Counter')).toBeInTheDocument()
+    expect(within(table).getByText('UpDownCounter')).toBeInTheDocument()
+
+    const typePicker = screen.getByLabelText('Metric type')
+    await fireEvent.click(typePicker)
+    await fireEvent.click(screen.getByRole('button', { name: 'UpDownCounter' }))
+    expect(screen.getByText('queue.depth')).toBeInTheDocument()
+    expect(screen.queryByText('jobs.processed')).not.toBeInTheDocument()
   })
 
   it('deletes selected metrics with the ids payload', async () => {
@@ -319,7 +347,7 @@ describe(Metrics, () => {
 
     const typePicker = screen.getByLabelText('Metric type')
 
-    expect(typePicker).toHaveTextContent('Sum')
+    expect(typePicker).toHaveTextContent('All Sums')
     window.history.replaceState(window.history.state, '', originalUrl)
   })
 
@@ -385,7 +413,7 @@ describe(Metrics, () => {
     const typePicker = screen.getByLabelText('Metric type')
 
     await fireEvent.click(typePicker)
-    await fireEvent.click(screen.getByRole('button', { name: 'Sum' }))
+    await fireEvent.click(screen.getByRole('button', { name: 'All Sums' }))
     expect(await screen.findByText('jobs.processed')).toBeInTheDocument()
     expect(screen.queryByText('http.server.duration')).not.toBeInTheDocument()
   })

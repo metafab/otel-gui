@@ -199,6 +199,11 @@ describe(MetricDetailPage, () => {
     render(MetricDetailPage)
 
     await screen.findByText('jobs.processed')
+    expect(screen.getByText('Counter')).toHaveAttribute(
+      'title',
+      'OTLP data type: sum',
+    )
+    expect(screen.getByText('OTLP Sum')).toBeInTheDocument()
 
     const chart = await screen.findByTestId('uplot-mock')
     // Rate mode: series "a" has rates [10, 30] -> last plotted value 30.
