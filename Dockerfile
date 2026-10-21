@@ -15,6 +15,9 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY src ./src
 COPY static ./static
 COPY proto ./proto
+COPY README.md ./
+COPY docs ./docs
+COPY markdown.config.js ./
 COPY tsconfig.json vite.config.ts ./
 
 RUN pnpm run build
