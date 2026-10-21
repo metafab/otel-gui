@@ -419,7 +419,7 @@
 
       const payload = await response.json()
       if (!response.ok) {
-        throw new Error(payload.error || 'Could not export filtered traces')
+        throw new Error(payload.error || 'Could not export traces')
       }
 
       const fileName =
@@ -441,21 +441,21 @@
       URL.revokeObjectURL(url)
     } catch (err) {
       exportError =
-        err instanceof Error ? err.message : 'Could not export filtered traces'
+        err instanceof Error ? err.message : 'Could not export traces'
     } finally {
       isExporting = false
     }
   }
 
-  async function handleExportFiltered() {
+  async function handleExport() {
+    if (selectedTraceIds.length > 0) {
+      await exportTracesByIds(selectedTraceIds, 'selected')
+      return
+    }
     await exportTracesByIds(
       filteredTraces.map((trace) => trace.traceId),
       'filtered',
     )
-  }
-
-  async function handleExportSelected() {
-    await exportTracesByIds(selectedTraceIds, 'selected')
   }
 
   function toggleTraceSelection(traceId: string) {
@@ -523,11 +523,8 @@
     importSuccessMessage = null
     showImportModal = true
   }
-  export function triggerExportFiltered() {
-    void handleExportFiltered()
-  }
-  export function triggerExportSelected() {
-    void handleExportSelected()
+  export function triggerExport() {
+    void handleExport()
   }
   export function triggerClearAll() {
     void handleClearAll()

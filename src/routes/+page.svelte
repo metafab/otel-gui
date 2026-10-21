@@ -125,8 +125,7 @@
     setSelectedService: (name: string) => void
     setServiceFilter: (name: string, scope: 'root' | 'any') => void
     openImportModal: () => void
-    triggerExportFiltered: () => void
-    triggerExportSelected: () => void
+    triggerExport: () => void
     triggerClearAll: () => void
     triggerDeleteSelected: () => void
   } | null = $state(null)
@@ -294,8 +293,7 @@
           totalCount={traces.length}
           {isExporting}
           onImport={() => tracesRef?.openImportModal()}
-          onExportFiltered={() => tracesRef?.triggerExportFiltered()}
-          onExportSelected={() => tracesRef?.triggerExportSelected()}
+          onExport={() => tracesRef?.triggerExport()}
           onClearAll={() => tracesRef?.triggerClearAll()}
           onDeleteSelected={() => tracesRef?.triggerDeleteSelected()}
         />
