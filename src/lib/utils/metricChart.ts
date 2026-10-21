@@ -49,6 +49,7 @@ export function metricTimeRange(
 // series id so the legend checkbox state maps back to a series.
 export interface ChartLine {
   seriesId: string
+  sourceSeriesId: string
   label: string
   // present for summary lines (quantile fraction 0..1); undefined otherwise
   quantile?: number
@@ -134,6 +135,7 @@ export function buildLines(
     }
     lines.push({
       seriesId: s.seriesId,
+      sourceSeriesId: s.seriesId,
       label: seriesLabel(s, metric.name),
       points,
     })
@@ -179,6 +181,7 @@ function buildSummaryLines(
       const qLabel = formatQuantile(q)
       lines.push({
         seriesId: `${s.seriesId}::${q}`,
+        sourceSeriesId: s.seriesId,
         label: multiSeries ? `${qLabel} · ${sLabel}` : qLabel,
         quantile: q,
         points,

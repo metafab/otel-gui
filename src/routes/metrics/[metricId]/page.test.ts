@@ -98,7 +98,7 @@ function histogramDetail() {
     series: [
       {
         seriesId: 'h',
-        attributes: {},
+        attributes: { route: '/api/first' },
         points: [
           {
             t: 1000,
@@ -108,6 +108,71 @@ function histogramDetail() {
             explicitBounds: [5, 10],
           },
         ],
+      },
+      {
+        seriesId: 'h2',
+        attributes: { route: '/api/second' },
+        points: [
+          {
+            t: 2000,
+            count: 3,
+            sum: 12,
+            bucketCounts: [1, 1, 1],
+            explicitBounds: [5, 10],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+function expHistogramDetail() {
+  return {
+    id: 'svc metric.name',
+    name: 'http.duration.exp',
+    description: '',
+    unit: 'ms',
+    type: 'exp_histogram',
+    temporality: 'cumulative',
+    serviceName: 'svc',
+    lastUpdated: 1715803200000,
+    series: [
+      {
+        seriesId: 'eh',
+        attributes: { route: '/api/exp' },
+        points: [
+          {
+            t: 1000,
+            count: 5,
+            sum: 37,
+            scale: 2,
+            zeroCount: 1,
+            positive: { offset: 0, bucketCounts: [1, 2] },
+            negative: { offset: -1, bucketCounts: [1] },
+          },
+        ],
+      },
+    ],
+  }
+}
+
+function gaugeDetailWithPoints(count: number) {
+  return {
+    id: 'svc metric.name',
+    name: 'memory.used',
+    description: '',
+    unit: 'By',
+    type: 'gauge',
+    serviceName: 'svc',
+    lastUpdated: 1715803200000,
+    series: [
+      {
+        seriesId: 'g',
+        attributes: { host: 'node-a' },
+        points: Array.from({ length: count }, (_, index) => ({
+          t: index * 1000,
+          v: index,
+        })),
       },
     ],
   }
@@ -138,12 +203,18 @@ describe(MetricDetailPage, () => {
     const chart = await screen.findByTestId('uplot-mock')
     // Rate mode: series "a" has rates [10, 30] -> last plotted value 30.
     expect(chart).toHaveTextContent('route=/api/a:30')
+    expect(
+      screen.getByRole('region', { name: 'Datapoints' }),
+    ).toHaveTextContent(/Rate\s*30\s*1\/s/)
 
     // Toggle to raw -> series "a" last raw value 50.
     await fireEvent.click(screen.getByRole('button', { name: 'Raw' }))
     expect(await screen.findByTestId('uplot-mock')).toHaveTextContent(
       'route=/api/a:50',
     )
+    expect(
+      screen.getByRole('region', { name: 'Datapoints' }),
+    ).toHaveTextContent(/Value\s*50\s*1/)
   })
 
   it('series filter hides a series and updates the N of M note', async () => {
@@ -163,6 +234,9 @@ describe(MetricDetailPage, () => {
     const chart = screen.getByTestId('uplot-mock')
     expect(chart).toHaveTextContent('route=/api/a')
     expect(chart).not.toHaveTextContent('route=/web/b')
+    const datapoints = screen.getByRole('region', { name: 'Datapoints' })
+    expect(datapoints).toHaveTextContent('route=/api/a')
+    expect(datapoints).not.toHaveTextContent('route=/web/b')
   })
 
   it('renders one line per quantile for a summary', async () => {
@@ -174,6 +248,9 @@ describe(MetricDetailPage, () => {
     expect(chart).toHaveTextContent('p50:10')
     expect(chart).toHaveTextContent('p90:20')
     expect(chart).toHaveTextContent('p99:30')
+    expect(
+      screen.getByRole('region', { name: 'Datapoints' }),
+    ).toHaveTextContent('p99: 30 ms')
   })
 
   it('renders histogram distribution bars from the latest point', async () => {
@@ -185,11 +262,55 @@ describe(MetricDetailPage, () => {
     expect(await screen.findByText('-∞…5')).toBeInTheDocument()
     expect(screen.getByText('5…10')).toBeInTheDocument()
     expect(screen.getByText('10…∞')).toBeInTheDocument()
+    expect(
+      screen.getByRole('region', { name: 'Datapoints' }),
+    ).toHaveTextContent('Count 6')
+    const datapoints = screen.getByRole('region', { name: 'Datapoints' })
+    expect(datapoints).toHaveTextContent('route=/api/first')
+    expect(datapoints).not.toHaveTextContent('route=/api/second')
 
     // Switch to heatmap view (canvas) without crashing.
     await fireEvent.click(screen.getByRole('button', { name: 'Heatmap' }))
     expect(
       screen.getByLabelText('Histogram heatmap over time'),
     ).toBeInTheDocument()
+  })
+
+  it('shows exponential histogram metadata and buckets', async () => {
+    stubFetchOnce(expHistogramDetail())
+    render(MetricDetailPage)
+    await screen.findByText('http.duration.exp')
+
+    const datapoints = screen.getByRole('region', { name: 'Datapoints' })
+    expect(datapoints).toHaveTextContent('route=/api/exp')
+    expect(datapoints).toHaveTextContent('Scale 2')
+    expect(datapoints).toHaveTextContent('Zero count 1')
+    expect(datapoints).toHaveTextContent('Positive buckets 0: 1, 1: 2')
+    expect(datapoints).toHaveTextContent('Negative buckets -1: 1')
+  })
+
+  it('paginates datapoints and shows newest timestamps first', async () => {
+    stubFetchOnce(gaugeDetailWithPoints(27))
+    render(MetricDetailPage)
+    await screen.findByText('memory.used')
+
+    expect(screen.getByTestId('datapoint-count')).toHaveTextContent(
+      'Showing 1–25 of 27',
+    )
+    const rows = screen.getAllByRole('row')
+    expect(rows[1]).toHaveTextContent('1970-01-01T00:00:26.000Z')
+
+    await fireEvent.click(
+      screen.getByRole('button', { name: 'Next datapoints page' }),
+    )
+    expect(screen.getByTestId('datapoint-count')).toHaveTextContent(
+      'Showing 26–27 of 27',
+    )
+    expect(
+      screen.getByRole('button', { name: 'Next datapoints page' }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'Previous datapoints page' }),
+    ).toBeEnabled()
   })
 })

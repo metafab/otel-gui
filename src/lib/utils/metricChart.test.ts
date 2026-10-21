@@ -74,6 +74,7 @@ describe(buildLines, () => {
   it('raw mode plots v for every point', () => {
     const lines = buildLines(sumMetric(), 'raw')
     expect(lines).toHaveLength(1)
+    expect(lines[0].sourceSeriesId).toBe('a')
     expect(lines[0].points.map((p) => p.v)).toEqual([10, 20, 50])
   })
 
@@ -122,6 +123,7 @@ describe(buildLines, () => {
     const lines = buildLines(summary, 'raw')
     expect(lines.map((l) => l.label)).toEqual(['p50', 'p90', 'p99'])
     const p99 = lines.find((l) => l.label === 'p99')!
+    expect(p99.sourceSeriesId).toBe('s')
     expect(p99.points.map((p) => p.v)).toEqual([30, 35])
   })
 })
@@ -130,6 +132,7 @@ describe(filterLines, () => {
   function manyLines(n: number) {
     return Array.from({ length: n }, (_, i) => ({
       seriesId: `s${i}`,
+      sourceSeriesId: `s${i}`,
       label: `route=/api/${i}`,
       points: [{ t: 1000, v: i }],
     }))
@@ -137,8 +140,18 @@ describe(filterLines, () => {
 
   it('filters by attribute substring', () => {
     const lines = [
-      { seriesId: 'a', label: 'route=/api/a', points: [{ t: 1, v: 1 }] },
-      { seriesId: 'b', label: 'route=/web/b', points: [{ t: 1, v: 2 }] },
+      {
+        seriesId: 'a',
+        sourceSeriesId: 'a',
+        label: 'route=/api/a',
+        points: [{ t: 1, v: 1 }],
+      },
+      {
+        seriesId: 'b',
+        sourceSeriesId: 'b',
+        label: 'route=/web/b',
+        points: [{ t: 1, v: 2 }],
+      },
     ]
     const res = filterLines(lines, { attrFilter: '/api' })
     expect(res.matched.map((l) => l.seriesId)).toEqual(['a'])
@@ -147,8 +160,18 @@ describe(filterLines, () => {
 
   it('hides unchecked series', () => {
     const lines = [
-      { seriesId: 'a', label: 'a', points: [{ t: 1, v: 1 }] },
-      { seriesId: 'b', label: 'b', points: [{ t: 1, v: 2 }] },
+      {
+        seriesId: 'a',
+        sourceSeriesId: 'a',
+        label: 'a',
+        points: [{ t: 1, v: 1 }],
+      },
+      {
+        seriesId: 'b',
+        sourceSeriesId: 'b',
+        label: 'b',
+        points: [{ t: 1, v: 2 }],
+      },
     ]
     const res = filterLines(lines, { hidden: new Set(['a']) })
     expect(res.matched.map((l) => l.seriesId)).toEqual(['b'])
@@ -167,8 +190,18 @@ describe(filterLines, () => {
 describe(buildAlignedData, () => {
   it('builds a unified seconds x-axis with nulls for gaps', () => {
     const build = buildAlignedData([
-      { seriesId: 'a', label: 'a', points: [{ t: 1000, v: 1 }] },
-      { seriesId: 'b', label: 'b', points: [{ t: 2000, v: 2 }] },
+      {
+        seriesId: 'a',
+        sourceSeriesId: 'a',
+        label: 'a',
+        points: [{ t: 1000, v: 1 }],
+      },
+      {
+        seriesId: 'b',
+        sourceSeriesId: 'b',
+        label: 'b',
+        points: [{ t: 2000, v: 2 }],
+      },
     ])
     // xs in seconds
     expect(build.data[0]).toEqual([1, 2])

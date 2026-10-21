@@ -7,6 +7,7 @@
   import UplotChart from '#lib/components/UplotChart.svelte'
   import HistogramHeatmap from '#lib/components/HistogramHeatmap.svelte'
   import MetricSeriesLegend from '#lib/components/MetricSeriesLegend.svelte'
+  import MetricDataPoints from '#lib/components/MetricDataPoints.svelte'
   import type { MetricDetail } from '#lib/types.js'
   import {
     resolveReturnTarget,
@@ -81,6 +82,18 @@
       cap: DEFAULT_SERIES_CAP,
     }),
   )
+
+  const datapointSeries = $derived.by(() => {
+    if (!metric) return []
+    if (isHistType) return metric.series.slice(0, 1)
+
+    const visibleSeriesIds = new Set(
+      filtered.plotted.map((line) => line.sourceSeriesId),
+    )
+    return metric.series.filter((series) =>
+      visibleSeriesIds.has(series.seriesId),
+    )
+  })
 
   // uPlot AlignedData for the plotted lines.
   const chart = $derived.by(() => {
@@ -362,6 +375,12 @@
             onAttrFilter={(v) => (attrFilter = v)}
           />
         {/if}
+        <MetricDataPoints
+          type={metric.type}
+          unit={metric.unit}
+          series={datapointSeries}
+          {valueMode}
+        />
       </section>
     </div>
   {/if}

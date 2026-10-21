@@ -30,7 +30,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 - **Real-time streaming** — traces, logs, and metrics all update live over SSE (Server-Sent Events) using an incremental snapshot + delta protocol, so views refresh in place without flicker or polling
 - **Traces and spans** — trace list; waterfall timeline with full span details, and correlation with logs
 - **Logs** — log list; log details view; correlation with traces
-- **Metrics** — gauges, sums, histograms, exponential histograms, and summaries time-series charts, histogram distribution + heatmap views, and per-series filtering
+- **Metrics** — gauges, sums, histograms, exponential histograms, and summaries time-series charts, histogram distribution + heatmap views, per-series filtering, and a paginated datapoint table with attributes
 - **Service map** — auto-generated graph of cross-service calls with error rates and latency (p50/p99)
 - **Search & filter** — filter traces, logs and metrics by text, id, service, severity, and attributes: search spans inside a trace based on attributes, events, and span name or id
 - **MCP server** — read-only Model Context Protocol endpoint for AI agents to search traces, logs, and metrics, inspect records, list services, and view the service map
