@@ -235,8 +235,21 @@ describe(MetricDetailPage, () => {
     expect(chart).toHaveTextContent('route=/api/a')
     expect(chart).not.toHaveTextContent('route=/web/b')
     const datapoints = screen.getByRole('region', { name: 'Datapoints' })
-    expect(datapoints).toHaveTextContent('route=/api/a')
-    expect(datapoints).not.toHaveTextContent('route=/web/b')
+    expect(
+      datapoints.querySelector('[title="route=/api/a"]'),
+    ).toBeInTheDocument()
+    expect(
+      datapoints.querySelector('[title="route=/web/b"]'),
+    ).not.toBeInTheDocument()
+
+    const attributeChip = datapoints.querySelector('[title="route=/api/a"]')!
+    expect(attributeChip).toHaveClass('attribute-chip')
+    expect(attributeChip.querySelector('.attribute-key')).toHaveTextContent(
+      'route',
+    )
+    expect(attributeChip.querySelector('.attribute-value')).toHaveTextContent(
+      '/api/a',
+    )
   })
 
   it('renders one line per quantile for a summary', async () => {
@@ -266,8 +279,12 @@ describe(MetricDetailPage, () => {
       screen.getByRole('region', { name: 'Datapoints' }),
     ).toHaveTextContent('Count 6')
     const datapoints = screen.getByRole('region', { name: 'Datapoints' })
-    expect(datapoints).toHaveTextContent('route=/api/first')
-    expect(datapoints).not.toHaveTextContent('route=/api/second')
+    expect(
+      datapoints.querySelector('[title="route=/api/first"]'),
+    ).toBeInTheDocument()
+    expect(
+      datapoints.querySelector('[title="route=/api/second"]'),
+    ).not.toBeInTheDocument()
 
     // Switch to heatmap view (canvas) without crashing.
     await fireEvent.click(screen.getByRole('button', { name: 'Heatmap' }))
@@ -282,7 +299,9 @@ describe(MetricDetailPage, () => {
     await screen.findByText('http.duration.exp')
 
     const datapoints = screen.getByRole('region', { name: 'Datapoints' })
-    expect(datapoints).toHaveTextContent('route=/api/exp')
+    expect(
+      datapoints.querySelector('[title="route=/api/exp"]'),
+    ).toBeInTheDocument()
     expect(datapoints).toHaveTextContent('Scale 2')
     expect(datapoints).toHaveTextContent('Zero count 1')
     expect(datapoints).toHaveTextContent('Positive buckets 0: 1, 1: 2')

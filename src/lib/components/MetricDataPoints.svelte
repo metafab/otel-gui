@@ -138,8 +138,14 @@
                 {#if Object.keys(row.attributes).length > 0}
                   <div class="attribute-list">
                     {#each Object.entries(row.attributes).sort( ([a], [b]) => a.localeCompare(b) ) as [key, value] (key)}
-                      <span class="attribute">
-                        <code>{key}</code>=<code>{displayValue(value)}</code>
+                      <span
+                        class="attribute-chip"
+                        title={`${key}=${displayValue(value)}`}
+                      >
+                        <span class="attribute-key">{key}</span>
+                        <span class="attribute-value"
+                          >{displayValue(value)}</span
+                        >
                       </span>
                     {/each}
                   </div>
@@ -338,18 +344,41 @@
   .bucket-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem 0.75rem;
+    gap: 0.25rem 0.375rem;
   }
 
-  .attribute,
   .detail,
   .bucket-list span {
     overflow-wrap: anywhere;
   }
 
-  code {
-    font-size: 0.75rem;
+  .attribute-chip {
+    display: inline-flex;
+    max-width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-muted);
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+      'Courier New', monospace;
+    font-size: 0.6875rem;
+    overflow: hidden;
+  }
+
+  .attribute-key {
+    padding: 0.0625rem 0.375rem;
+    color: var(--accent);
+    border-right: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  .attribute-value {
+    padding: 0.0625rem 0.375rem;
     color: var(--text-primary);
+    max-width: 24rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .detail strong {
