@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation'
   import AttributeItem from '#lib/components/AttributeItem.svelte'
   import ChevronIcon from '#lib/components/ChevronIcon.svelte'
+  import InlineAttributeChips from '#lib/components/InlineAttributeChips.svelte'
   import ServiceBadge from '#lib/components/ServiceBadge.svelte'
   import ImportModal from '#lib/components/ImportModal.svelte'
   import LogFilters from '#lib/components/LogFilters.svelte'
@@ -11,7 +12,6 @@
   import { traceStore } from '#lib/stores/traces.svelte.js'
   import type { LogListItem } from '#lib/types.js'
   import {
-    formatAttributeValue,
     matchesAttributeFilter,
     parseAttributeFilter,
   } from '#lib/utils/logAttributeFilters.js'
@@ -232,12 +232,6 @@
 
   function attributeCount(log: LogListItem): number {
     return Object.keys(log.attributes ?? {}).length
-  }
-
-  function sortedAttributeEntries(log: LogListItem): [string, unknown][] {
-    return Object.entries(log.attributes ?? {}).sort(([a], [b]) =>
-      a.localeCompare(b),
-    )
   }
 
   function normalizeBody(value: unknown): string {
@@ -1014,18 +1008,7 @@
                   >
                     <td></td>
                     <td colspan="6">
-                      <div class="inline-attrs">
-                        {#each sortedAttributeEntries(log) as [key, value] (key)}
-                          <span
-                            class="inline-attr"
-                            title={`${key}=${formatAttributeValue(value)}`}
-                            ><span class="inline-attr-key">{key}</span><span
-                              class="inline-attr-value"
-                              >{formatAttributeValue(value)}</span
-                            ></span
-                          >
-                        {/each}
-                      </div>
+                      <InlineAttributeChips attributes={log.attributes} />
                     </td>
                   </tr>
                 {/if}
@@ -1214,41 +1197,6 @@
 
   .inline-attrs-row td {
     padding: 0 0.75rem 0.625rem 0.75rem;
-  }
-
-  .inline-attrs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 0.375rem;
-  }
-
-  .inline-attr {
-    display: inline-flex;
-    max-width: 100%;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--bg-muted);
-    font-family:
-      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-      'Courier New', monospace;
-    font-size: 0.6875rem;
-    overflow: hidden;
-  }
-
-  .inline-attr-key {
-    padding: 0.0625rem 0.375rem;
-    color: var(--accent);
-    border-right: 1px solid var(--border);
-    white-space: nowrap;
-  }
-
-  .inline-attr-value {
-    padding: 0.0625rem 0.375rem;
-    color: var(--text-primary);
-    max-width: 24rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .visually-hidden {

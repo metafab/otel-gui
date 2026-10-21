@@ -8,6 +8,7 @@
     MetricType,
     MetricWirePoint,
   } from '#lib/types.js'
+  import InlineAttributeChips from '#lib/components/InlineAttributeChips.svelte'
   import type { ValueMode } from '#lib/utils/metricChart.js'
 
   const PAGE_SIZE = 25
@@ -74,13 +75,6 @@
     return 'quantileValues' in point && Array.isArray(point.quantileValues)
   }
 
-  function displayValue(value: unknown): string {
-    if (typeof value === 'string') return value
-    if (value === undefined) return 'undefined'
-    if (value === null || typeof value !== 'object') return String(value)
-    return JSON.stringify(value) ?? String(value)
-  }
-
   function formatQuantile(quantile: number): string {
     const percentage = quantile * 100
     return `p${Number.isInteger(percentage) ? percentage : Number(percentage.toFixed(3))}`
@@ -136,19 +130,7 @@
               </td>
               <td class="attributes">
                 {#if Object.keys(row.attributes).length > 0}
-                  <div class="attribute-list">
-                    {#each Object.entries(row.attributes).sort( ([a], [b]) => a.localeCompare(b) ) as [key, value] (key)}
-                      <span
-                        class="attribute-chip"
-                        title={`${key}=${displayValue(value)}`}
-                      >
-                        <span class="attribute-key">{key}</span>
-                        <span class="attribute-value"
-                          >{displayValue(value)}</span
-                        >
-                      </span>
-                    {/each}
-                  </div>
+                  <InlineAttributeChips attributes={row.attributes} />
                 {:else}
                   <span class="muted">—</span>
                 {/if}
@@ -339,7 +321,6 @@
     min-width: 180px;
   }
 
-  .attribute-list,
   .point-details,
   .bucket-list {
     display: flex;
@@ -350,35 +331,6 @@
   .detail,
   .bucket-list span {
     overflow-wrap: anywhere;
-  }
-
-  .attribute-chip {
-    display: inline-flex;
-    max-width: 100%;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--bg-muted);
-    font-family:
-      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-      'Courier New', monospace;
-    font-size: 0.6875rem;
-    overflow: hidden;
-  }
-
-  .attribute-key {
-    padding: 0.0625rem 0.375rem;
-    color: var(--accent);
-    border-right: 1px solid var(--border);
-    white-space: nowrap;
-  }
-
-  .attribute-value {
-    padding: 0.0625rem 0.375rem;
-    color: var(--text-primary);
-    max-width: 24rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .detail strong {

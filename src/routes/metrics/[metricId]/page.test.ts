@@ -243,11 +243,11 @@ describe(MetricDetailPage, () => {
     ).not.toBeInTheDocument()
 
     const attributeChip = datapoints.querySelector('[title="route=/api/a"]')!
-    expect(attributeChip).toHaveClass('attribute-chip')
-    expect(attributeChip.querySelector('.attribute-key')).toHaveTextContent(
+    expect(attributeChip).toHaveClass('inline-attr')
+    expect(attributeChip.querySelector('.inline-attr-key')).toHaveTextContent(
       'route',
     )
-    expect(attributeChip.querySelector('.attribute-value')).toHaveTextContent(
+    expect(attributeChip.querySelector('.inline-attr-value')).toHaveTextContent(
       '/api/a',
     )
   })
