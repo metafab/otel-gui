@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation'
   import ServiceBadge from '#lib/components/ServiceBadge.svelte'
   import TraceFilters from '#lib/components/TraceFilters.svelte'
-  import TraceImportModal from '#lib/components/TraceImportModal.svelte'
+  import ImportModal from '#lib/components/ImportModal.svelte'
   import VersionInfo from '#lib/components/VersionInfo.svelte'
   import type { TraceListItem } from '#lib/types.js'
   import { traceStore } from '#lib/stores/traces.svelte.js'
@@ -473,10 +473,12 @@
   }
 
   function handleImportCompleted(result: {
-    importedTraceCount: number
-    importedSpanCount: number
+    importedTraceCount?: number
+    importedSpanCount?: number
   }) {
-    importSuccessMessage = `Imported ${result.importedTraceCount} trace${result.importedTraceCount === 1 ? '' : 's'} and ${result.importedSpanCount} span${result.importedSpanCount === 1 ? '' : 's'}.`
+    const traceCount = result.importedTraceCount ?? 0
+    const spanCount = result.importedSpanCount ?? 0
+    importSuccessMessage = `Imported ${traceCount} trace${traceCount === 1 ? '' : 's'} and ${spanCount} span${spanCount === 1 ? '' : 's'}.`
   }
 
   function handleDismissImportSuccess() {
@@ -792,7 +794,7 @@
 </div>
 
 {#if showImportModal}
-  <TraceImportModal
+  <ImportModal
     onclose={() => (showImportModal = false)}
     onimported={handleImportCompleted}
   />

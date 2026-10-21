@@ -1,22 +1,27 @@
 <script lang="ts">
   import { autoFocus } from '#lib/actions/autoFocus.js'
-  import type { TraceImportPreview } from '#lib/types.js'
+  import type { LogImportPreview, TraceImportPreview } from '#lib/types.js'
 
   interface ImportResult {
-    importedTraceCount: number
-    importedSpanCount: number
+    importedTraceCount?: number
+    importedSpanCount?: number
+    importedLogCount?: number
   }
 
   interface Props {
+    kind?: 'traces' | 'logs'
     onclose: () => void
     onimported: (result: ImportResult) => void
   }
 
-  let { onclose, onimported }: Props = $props()
+  let { kind = 'traces', onclose, onimported }: Props = $props()
+
+  const importUrl = $derived(`/api/${kind}/import`)
+  const noun = $derived(kind === 'logs' ? 'logs' : 'traces')
 
   let selectedFile = $state<File | null>(null)
   let fileContent = $state<string | null>(null)
-  let preview = $state<TraceImportPreview | null>(null)
+  let preview = $state<TraceImportPreview | LogImportPreview | null>(null)
   let error = $state<string | null>(null)
   let isPreviewLoading = $state(false)
   let isImporting = $state(false)
@@ -66,7 +71,7 @@
     error = null
 
     try {
-      const response = await fetch('/api/traces/import/preview', {
+      const response = await fetch(`${importUrl}/preview`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,7 +105,7 @@
     error = null
 
     try {
-      const response = await fetch('/api/traces/import', {
+      const response = await fetch(importUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -114,16 +119,17 @@
       const payload = await response.json()
 
       if (!response.ok) {
-        throw new Error(payload.error || 'Could not import traces')
+        throw new Error(payload.error || `Could not import ${noun}`)
       }
 
       onimported({
         importedTraceCount: payload.importedTraceCount,
         importedSpanCount: payload.importedSpanCount,
+        importedLogCount: payload.importedLogCount,
       })
       onclose()
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Could not import traces'
+      error = err instanceof Error ? err.message : `Could not import ${noun}`
     } finally {
       isImporting = false
     }
@@ -138,13 +144,20 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div class="overlay" role="dialog" aria-modal="true" aria-label="Import traces">
+<div
+  class="overlay"
+  role="dialog"
+  aria-modal="true"
+  aria-label={`Import ${noun}`}
+>
   <button class="backdrop" onclick={onclose} aria-label="Close" tabindex="-1"
   ></button>
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="modal" tabindex="-1" onkeydown={handleKeydown} use:autoFocus>
     <div class="modal-header">
-      <span class="modal-title">Import Traces</span>
+      <span class="modal-title"
+        >{kind === 'logs' ? 'Import Logs' : 'Import Traces'}</span
+      >
       <button class="close-btn" onclick={onclose} title="Close (Esc)">✕</button>
     </div>
 
@@ -190,14 +203,21 @@
               </dd>
             </div>
             <div class="full-row split-metrics">
-              <div>
-                <dt>Traces</dt>
-                <dd>{preview.traceCount}</dd>
-              </div>
-              <div>
-                <dt>Spans</dt>
-                <dd>{preview.spanCount}</dd>
-              </div>
+              {#if 'logCount' in preview}
+                <div>
+                  <dt>Logs</dt>
+                  <dd>{preview.logCount}</dd>
+                </div>
+              {:else}
+                <div>
+                  <dt>Traces</dt>
+                  <dd>{preview.traceCount}</dd>
+                </div>
+                <div>
+                  <dt>Spans</dt>
+                  <dd>{preview.spanCount}</dd>
+                </div>
+              {/if}
             </div>
             <div class="full-row services-row">
               <dt>Services</dt>

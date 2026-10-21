@@ -101,6 +101,29 @@ export interface TraceImportPreview {
   warnings: string[]
 }
 
+export interface LogExportItem {
+  logId: string
+  resourceLogs: any[]
+}
+
+export interface LogExportEnvelope {
+  format: 'otel-gui-log-export'
+  version: 1
+  exportedAt: string
+  logCount: number
+  logs: LogExportItem[]
+}
+
+export interface LogImportPreview {
+  format: 'otlp-json' | 'otel-gui-log-export'
+  fileName: string | null
+  exportedAt: string | null
+  sizeBytes: number
+  logCount: number
+  services: string[]
+  warnings: string[]
+}
+
 // Swappable storage interface
 export interface TraceStore {
   // Ingestion

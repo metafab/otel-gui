@@ -143,6 +143,9 @@ the side effect.
 | `POST /api/traces/export`         | Exports the non-empty set of trace IDs in JSON `{ "traceIds": ["..."] }`.                     |
 | `POST /api/traces/import/preview` | Validates import content and returns metadata without ingesting it.                           |
 | `POST /api/traces/import`         | Imports trace data into the retained store.                                                   |
+| `POST /api/logs/export`           | Exports the non-empty set of log IDs in JSON `{ "logIds": ["..."] }`.                         |
+| `POST /api/logs/import/preview`   | Validates log import content and returns metadata without ingesting it.                       |
+| `POST /api/logs/import`           | Imports log data into the retained store.                                                     |
 
 **Important:** For the three `DELETE` endpoints, omitting the JSON array property
 (or sending a non-JSON body) clears the entire signal. An empty array performs a
@@ -155,6 +158,13 @@ Import requests have JSON shape
 contain an OTLP JSON trace payload or an otel-gui trace export envelope. The
 UTF-8 content limit is 10 MiB. Preview first; a successful import can merge with
 existing traces and may evict older traces when retention is full.
+
+Log import uses the same request shape. `content` may contain an OTLP JSON
+`resourceLogs` payload or an otel-gui log export envelope
+(`format: "otel-gui-log-export"`). Envelope records are stamped with a
+`log.record.uid` attribute (the exported log ID) when they have none, so
+re-importing an export overwrites the original logs instead of duplicating them.
+Imports may evict older logs when log retention is full.
 
 ## Errors and limits
 

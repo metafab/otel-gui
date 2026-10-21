@@ -4,6 +4,7 @@
   import AttributeItem from '#lib/components/AttributeItem.svelte'
   import ChevronIcon from '#lib/components/ChevronIcon.svelte'
   import ServiceBadge from '#lib/components/ServiceBadge.svelte'
+  import ImportModal from '#lib/components/ImportModal.svelte'
   import LogFilters from '#lib/components/LogFilters.svelte'
   import VersionInfo from '#lib/components/VersionInfo.svelte'
   import { onSSEEvents } from '#lib/stores/sseClient.js'
@@ -21,6 +22,8 @@
     totalCount = $bindable(0),
     selectedCount = $bindable(0),
     isDeletingBound = $bindable(false),
+    filteredCount = $bindable(0),
+    isExportingBound = $bindable(false),
   } = $props()
 
   let logs = $state.raw<LogListItem[]>([])
@@ -151,6 +154,10 @@
   let attributeFilters = $state<string[]>(initialParams.attributeFilters)
   let selectedLogIds = $state<string[]>([])
   let isDeleting = $state(false)
+  let isExporting = $state(false)
+  let exportError = $state<string | null>(null)
+  let showImportModal = $state(false)
+  let importSuccessMessage = $state<string | null>(null)
 
   // Attribute preview: ids of rows currently expanded.
   let expandedIds = $state<string[]>([])
@@ -186,6 +193,16 @@
   $effect(() => {
     if (isDeletingBound !== isDeleting) {
       isDeletingBound = isDeleting
+    }
+  })
+  $effect(() => {
+    if (filteredCount !== sortedLogs.length) {
+      filteredCount = sortedLogs.length
+    }
+  })
+  $effect(() => {
+    if (isExportingBound !== isExporting) {
+      isExportingBound = isExporting
     }
   })
 
@@ -520,6 +537,62 @@
     }
   }
 
+  function localFileTimestamp(date: Date): string {
+    const pad2 = (value: number) => String(value).padStart(2, '0')
+    return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}_${pad2(date.getHours())}-${pad2(date.getMinutes())}-${pad2(date.getSeconds())}`
+  }
+
+  async function handleExport() {
+    const logIds =
+      selectedLogIds.length > 0
+        ? selectedLogIds
+        : sortedLogs.map((log) => log.id)
+    if (logIds.length === 0) return
+
+    isExporting = true
+    exportError = null
+
+    try {
+      const response = await fetch('/api/logs/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logIds }),
+      })
+
+      const payload = await response.json()
+      if (!response.ok) {
+        throw new Error(payload.error || 'Could not export logs')
+      }
+
+      const fileName =
+        response.headers
+          .get('content-disposition')
+          ?.match(/filename="?([^";]+)"?/)?.[1] ||
+        `logs-${localFileTimestamp(new Date())}.json`
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: 'application/json',
+      })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      exportError = err instanceof Error ? err.message : 'Could not export logs'
+    } finally {
+      isExporting = false
+    }
+  }
+
+  function handleImportCompleted(result: { importedLogCount?: number }) {
+    const count = result.importedLogCount ?? 0
+    importSuccessMessage = `Imported ${count} log${count === 1 ? '' : 's'}.`
+  }
+
   function toggleSelectAllFiltered() {
     selectedLogIds = sortedLogs
       .filter((log) => !selectedLogIdSet.has(log.id))
@@ -678,11 +751,37 @@
   export function triggerDeleteSelected() {
     void deleteSelectedLogs()
   }
+  export function triggerExport() {
+    void handleExport()
+  }
+  export function openImportModal() {
+    exportError = null
+    importSuccessMessage = null
+    showImportModal = true
+  }
 </script>
 
 <div class="logs-panel">
   {#if loadError}
     <div class="error" role="alert">{loadError}</div>
+  {/if}
+
+  {#if exportError}
+    <div class="error" role="alert">{exportError}</div>
+  {/if}
+
+  {#if importSuccessMessage}
+    <div class="success" role="status" aria-live="polite">
+      <span>{importSuccessMessage}</span>
+      <button
+        class="success-dismiss"
+        onclick={() => (importSuccessMessage = null)}
+        aria-label="Dismiss import success message"
+        title="Dismiss"
+      >
+        ×
+      </button>
+    </div>
   {/if}
 
   {#if isLoading}
@@ -982,7 +1081,48 @@
   </div>
 </div>
 
+{#if showImportModal}
+  <ImportModal
+    kind="logs"
+    onclose={() => (showImportModal = false)}
+    onimported={handleImportCompleted}
+  />
+{/if}
+
 <style>
+  .success {
+    padding: 0.8rem 1rem;
+    background: var(--ok-bg);
+    border: 1px solid var(--ok-border);
+    border-radius: 4px;
+    color: var(--ok-text);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .success-dismiss {
+    border: 1px solid var(--ok-border);
+    background: transparent;
+    color: var(--ok-text);
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    line-height: 1;
+    cursor: pointer;
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .success-dismiss:hover {
+    background: color-mix(in srgb, var(--ok-border) 20%, transparent);
+  }
+
   table {
     width: 100%;
     border-collapse: collapse;

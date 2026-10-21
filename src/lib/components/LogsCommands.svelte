@@ -1,14 +1,22 @@
 <script lang="ts">
   let {
+    filteredCount,
     totalCount,
     selectedCount,
     isDeleting,
+    isExporting,
+    onImport,
+    onExport,
     onClearAll,
     onDeleteSelected,
   }: {
+    filteredCount: number
     totalCount: number
     selectedCount: number
     isDeleting: boolean
+    isExporting: boolean
+    onImport: () => void
+    onExport: () => void
     onClearAll: () => void
     onDeleteSelected: () => void
   } = $props()
@@ -42,6 +50,20 @@
   })
 </script>
 
+<button class="action-button secondary-action" onclick={onImport}>
+  Import Logs
+</button>
+<button
+  class="action-button secondary-action"
+  onclick={onExport}
+  disabled={filteredCount === 0 || isExporting || isDeleting}
+>
+  {isExporting
+    ? 'Exporting…'
+    : selectedCount > 0
+      ? `Export Selected (${selectedCount})`
+      : 'Export Filtered'}
+</button>
 <div
   class="split-action"
   role="group"
