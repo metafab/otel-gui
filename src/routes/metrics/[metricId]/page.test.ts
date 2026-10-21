@@ -317,7 +317,12 @@ describe(MetricDetailPage, () => {
       'Showing 1–25 of 27',
     )
     const rows = screen.getAllByRole('row')
-    expect(rows[1]).toHaveTextContent('1970-01-01T00:00:26.000Z')
+    const timestampCell = rows[1].querySelector('.timestamp')
+    expect(timestampCell).toHaveAttribute(
+      'title',
+      new Date(26_000).toISOString(),
+    )
+    expect(timestampCell).toHaveTextContent(new Date(26_000).toLocaleString())
 
     await fireEvent.click(
       screen.getByRole('button', { name: 'Next datapoints page' }),

@@ -10,6 +10,7 @@
   } from '#lib/types.js'
   import InlineAttributeChips from '#lib/components/InlineAttributeChips.svelte'
   import type { ValueMode } from '#lib/utils/metricChart.js'
+  import { formatDateTimeLocal } from '#lib/utils/time.js'
 
   const PAGE_SIZE = 25
 
@@ -123,9 +124,9 @@
         <tbody>
           {#each pageRows as row (row.key)}
             <tr>
-              <td class="timestamp">
+              <td class="timestamp" title={new Date(row.point.t).toISOString()}>
                 <time datetime={new Date(row.point.t).toISOString()}>
-                  {new Date(row.point.t).toISOString()}
+                  {formatDateTimeLocal(row.point.t)}
                 </time>
               </td>
               <td class="attributes">
