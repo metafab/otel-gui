@@ -1,6 +1,6 @@
 # otel-gui Agent Instructions
 
-A lightweight OpenTelemetry viewer built with SvelteKit 5. Port 4318 (OTLP/HTTP standard).
+A lightweight OpenTelemetry viewer built with SvelteKit 5. Port 4318 (OTLP/HTTP standard) and port 4317 (OTLP/gRPC standard).
 
 ## Build & Dev
 
@@ -129,6 +129,7 @@ $effect(() => {
 | [spanSearch.test.ts](src/lib/utils/spanSearch.test.ts)                            | Span search tokenization/matching, rank/ordering behaviors                                                                           |
 | [updateCheck.test.ts](src/lib/utils/updateCheck.test.ts)                          | Release check caching/dismiss semantics                                                                                              |
 | [moduleImport.test.ts](src/lib/server/traceStore/moduleImport.test.ts)            | Dynamic backend module resolution and import behavior                                                                                |
+| [grpc.test.ts](src/lib/server/grpc.test.ts)                                       | OTLP/gRPC receiver over real HTTP/2: traces/logs/metrics export, gzip, error statuses, env parsing                                   |
 | [server.test.ts](src/routes/api/config/server.test.ts)                            | Config endpoint metadata (maxTraces + persistence fields)                                                                            |
 | [page.test.ts](src/routes/traces/[traceId]/page.test.ts)                          | Trace detail page matching behavior with collapsed descendants                                                                       |
 
@@ -181,12 +182,13 @@ Shortcuts implemented:
 
 1. **Port 4318 non-negotiable** — OTLP/HTTP standard (zero config for exporters)
 2. **adapter-node required** — In-memory `Map` must persist across requests
-3. **Protobuf and JSON supported** — Both `application/json` and `application/x-protobuf` content types accepted
-4. **Gzip request bodies supported** — OTLP receivers accept gzip-compressed payloads
-5. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1-10 000, default 1000). FIFO eviction. Read via `$app/env/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000. Logs have an independent `OTEL_GUI_MAX_LOGS` env var (same range/defaults), exposed as `traceStore.maxLogs`.
-6. **Persistence is optional** — OSS always has `memory`; `pglite` requires a registered backend (usually via `OTEL_GUI_PERSISTENCE_BACKEND_MODULE`). If unavailable, runtime falls back to memory with `persistence.unavailableReason` in `GET /api/config`.
-7. **Update availability check** — On mount, the page fetches `https://api.github.com/repos/metafab/otel-gui/releases/latest` (GitHub API) and compares `tag_name` to `import.meta.env.PACKAGE_VERSION` (embedded at build time from `package.json` via Vite `define`). If a newer semver is found, a non-intrusive notice is shown in the bottom-left of the trace list, next to the retention notice. The notice links to `https://github.com/metafab/otel-gui/releases` and can be dismissed per-version via `localStorage`. The result is cached in `localStorage` (`update-check-cache`) for 1 hour to avoid hitting the GitHub rate limit (60 unauthenticated req/h). Network failures are silent and do not affect the UI.
-8. **Import/export UX contract** — list page provides Import, a single Export button (exports selected traces if any, otherwise all filtered), and split delete actions (`Clear All` + dropdown `Delete Selected (n)`); import always previews metadata before confirmation. The Logs tab mirrors this: Import Logs + a single Export button (selected if any, otherwise filtered), reusing `ImportModal` with `kind="logs"`; log exports use `otel-gui-log-export` envelopes ([logTransfer.ts](src/lib/server/logTransfer.ts)) and import stamps `log.record.uid` so re-imports don't duplicate.
+3. **OTLP/gRPC receiver** — [grpc.ts](src/lib/server/grpc.ts) serves the OTLP `TraceService`/`LogsService`/`MetricsService` `Export` methods over cleartext HTTP/2 on `OTEL_GUI_GRPC_PORT` (default 4317), built on `node:http2` (no gRPC library) and reusing the protobuf decoders. Started from the `init` hook in `hooks.server.ts` (a Vite dev plugin warms it up on `pnpm dev`). Disable with `OTEL_GUI_GRPC_ENABLED=false`; a port conflict only logs a warning.
+4. **Protobuf and JSON supported** — Both `application/json` and `application/x-protobuf` content types accepted
+5. **Gzip request bodies supported** — OTLP receivers accept gzip-compressed payloads
+6. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1-10 000, default 1000). FIFO eviction. Read via `$app/env/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000. Logs have an independent `OTEL_GUI_MAX_LOGS` env var (same range/defaults), exposed as `traceStore.maxLogs`.
+7. **Persistence is optional** — OSS always has `memory`; `pglite` requires a registered backend (usually via `OTEL_GUI_PERSISTENCE_BACKEND_MODULE`). If unavailable, runtime falls back to memory with `persistence.unavailableReason` in `GET /api/config`.
+8. **Update availability check** — On mount, the page fetches `https://api.github.com/repos/metafab/otel-gui/releases/latest` (GitHub API) and compares `tag_name` to `import.meta.env.PACKAGE_VERSION` (embedded at build time from `package.json` via Vite `define`). If a newer semver is found, a non-intrusive notice is shown in the bottom-left of the trace list, next to the retention notice. The notice links to `https://github.com/metafab/otel-gui/releases` and can be dismissed per-version via `localStorage`. The result is cached in `localStorage` (`update-check-cache`) for 1 hour to avoid hitting the GitHub rate limit (60 unauthenticated req/h). Network failures are silent and do not affect the UI.
+9. **Import/export UX contract** — list page provides Import, a single Export button (exports selected traces if any, otherwise all filtered), and split delete actions (`Clear All` + dropdown `Delete Selected (n)`); import always previews metadata before confirmation. The Logs tab mirrors this: Import Logs + a single Export button (selected if any, otherwise filtered), reusing `ImportModal` with `kind="logs"`; log exports use `otel-gui-log-export` envelopes ([logTransfer.ts](src/lib/server/logTransfer.ts)) and import stamps `log.record.uid` so re-imports don't duplicate.
 
 ## Reference Files
 

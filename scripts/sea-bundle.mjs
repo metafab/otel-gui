@@ -56,6 +56,7 @@ if (argv.includes('-h') || argv.includes('--help')) {
       'Environment:',
       '  PORT           HTTP port to listen on (default: 4318)',
       '  HOST           Interface to bind to (default: 0.0.0.0)',
+      '  OTEL_GUI_GRPC_PORT  OTLP/gRPC port to listen on (default: 4317)',
       '',
       'All configuration options:',
       '  https://github.com/metafab/otel-gui#%EF%B8%8F-configuration',

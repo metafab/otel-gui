@@ -4,5 +4,7 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: ${PORT:-4318}
+      OTEL_GUI_GRPC_PORT: ${OTEL_GUI_GRPC_PORT:-4317}
     ports:
       - '${PORT:-4318}:${PORT:-4318}'
+      - '${OTEL_GUI_GRPC_PORT:-4317}:${OTEL_GUI_GRPC_PORT:-4317}'

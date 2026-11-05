@@ -1,6 +1,23 @@
-import type { Handle } from '@sveltejs/kit/hooks'
-import { OTEL_GUI_CORS_ALLOWED_ORIGINS } from '$app/env/private'
+import type { Handle, ServerInit } from '@sveltejs/kit/hooks'
+import {
+  OTEL_GUI_CORS_ALLOWED_ORIGINS,
+  OTEL_GUI_GRPC_ENABLED,
+  OTEL_GUI_GRPC_HOST,
+  OTEL_GUI_GRPC_PORT,
+} from '$app/env/private'
 import { buildCorsHeaders, shouldApplyCorsToPath } from '#lib/server/cors.js'
+import { startGrpcReceiver } from '#lib/server/grpc.js'
+import { traceStore } from '#lib/server/traceStore.js'
+
+// Start the OTLP/gRPC receiver (port 4317 by default) alongside the HTTP server.
+export const init: ServerInit = () => {
+  startGrpcReceiver({
+    enabled: OTEL_GUI_GRPC_ENABLED,
+    port: OTEL_GUI_GRPC_PORT,
+    host: OTEL_GUI_GRPC_HOST,
+    getIngest: () => traceStore,
+  })
+}
 
 // Apply CORS to the OTLP ingest and read API endpoints so browser-based OTLP
 // exporters (and dashboards) can reach the server cross-origin. The allowed

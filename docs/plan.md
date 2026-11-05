@@ -6,17 +6,17 @@ It optimizes the shortest path from "app emits telemetry" to "developer understa
 
 ## Tech Stack
 
-| Layer          | Choice                             | Rationale                                                                 |
-| -------------- | ---------------------------------- | ------------------------------------------------------------------------- |
-| Framework      | SvelteKit 5 (Svelte 5 runes)       | User preference. Full-stack TypeScript. Fast, lightweight.                |
-| Adapter        | `@sveltejs/adapter-node`           | Required for persistent in-memory state and SSE support.                  |
-| Language       | TypeScript                         | Full-stack type safety.                                                   |
-| Storage        | In-memory (`Map`) behind interface | Simplest for v1. Swappable to SQLite via same interface.                  |
-| OTLP format    | JSON and Protobuf                  | Both `application/json` and `application/x-protobuf` supported.           |
-| OTLP transport | HTTP first (`:4318`)               | Lowest-friction local setup; gRPC can be added later if demand is proven. |
-| Real-time      | SSE (`EventSource`)                | Single persistent connection, instant push on ingest.                     |
-| Port           | 4318                               | Standard OTLP/HTTP port — zero config on exporter side.                   |
-| Visualization  | Custom HTML/CSS waterfall          | Industry standard approach (Honeycomb, Jaeger all do this).               |
+| Layer          | Choice                             | Rationale                                                                                     |
+| -------------- | ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| Framework      | SvelteKit 5 (Svelte 5 runes)       | User preference. Full-stack TypeScript. Fast, lightweight.                                    |
+| Adapter        | `@sveltejs/adapter-node`           | Required for persistent in-memory state and SSE support.                                      |
+| Language       | TypeScript                         | Full-stack type safety.                                                                       |
+| Storage        | In-memory (`Map`) behind interface | Simplest for v1. Swappable to SQLite via same interface.                                      |
+| OTLP format    | JSON and Protobuf                  | Both `application/json` and `application/x-protobuf` supported.                               |
+| OTLP transport | HTTP (`:4318`) + gRPC (`:4317`)    | HTTP remains the primary path; a dependency-free gRPC receiver covers gRPC-default exporters. |
+| Real-time      | SSE (`EventSource`)                | Single persistent connection, instant push on ingest.                                         |
+| Port           | 4318                               | Standard OTLP/HTTP port — zero config on exporter side.                                       |
+| Visualization  | Custom HTML/CSS waterfall          | Industry standard approach (Honeycomb, Jaeger all do this).                                   |
 
 ## Executable Packaging Strategy
 
@@ -200,63 +200,18 @@ Pursue these only when there is a concrete requirement.
 
 ## OTLP/gRPC Positioning
 
-### Current Decision (v2)
+### Current Decision
 
-- Keep OTLP/HTTP (`/v1/traces` on `:4318`) as the default and primary ingestion path.
-- Do not include OTLP/gRPC (`:4317`) in baseline v2 scope.
-- Optimize for local debugging speed, minimal configuration, and low runtime complexity.
+- Keep OTLP/HTTP (`/v1/*` on `:4318`) as the primary ingestion path and the UI/API port.
+- Serve OTLP/gRPC (`:4317`) as an additive receiver so exporters that default to gRPC work without reconfiguration.
+- Keep the gRPC transport isolated in `src/lib/server/grpc.ts`: a cleartext HTTP/2 server built on `node:http2` (no gRPC library), reusing the protobuf decoders and `traceStore` ingestion. Store, API, and UI are unchanged.
+- Enabled by default; `OTEL_GUI_GRPC_ENABLED=false` disables it and `OTEL_GUI_GRPC_PORT` moves it. A port conflict logs a warning and never prevents the HTTP server from starting.
 
-### Why HTTP-first remains the default
+### Scope and limits
 
-- **Developer experience**: `:4318` aligns with standard OTLP/HTTP and preserves the zero-config local path.
-- **Operational simplicity**: avoids HTTP/2 server lifecycle and additional transport-specific failure modes.
-- **Maintenance cost**: keeps implementation, testing, and support surface focused on core trace-debugging UX.
-- **Product fit**: current contract is local-first debugging, not broad collector/backend replacement.
-
-### When gRPC becomes justified
-
-Add OTLP/gRPC support once there is repeated, validated demand from users who cannot reasonably switch exporters to HTTP, for example:
-
-- frequent setup failures caused by gRPC-only defaults in target environments,
-- enterprise constraints that mandate gRPC transport,
-- measurable onboarding friction attributable to missing `:4317` support.
-
-### Proposed rollout approach
-
-1. **Phase 1 (default)**: HTTP-only remains canonical.
-2. **Phase 2 (optional)**: Add gRPC receiver behind a feature flag / optional module.
-3. **Phase 3 (stabilize)**: Expand interoperability and reliability tests before considering broader default usage.
-
-## Maybe Later
-
-### OTLP/gRPC Receiver (`:4317`)
-
-If implemented, keep this explicitly optional and additive:
-
-- Preserve OTLP/HTTP (`:4318`) as the default path.
-- Add gRPC only when demand thresholds in **When gRPC becomes justified** are met.
-- Isolate implementation behind a transport boundary so store/API/UI remain unchanged.
-- Gate with a runtime flag or optional module to avoid increasing baseline complexity.
-
-### Docker Hub Mirroring
-
-Optional Docker Hub mirroring is available via GitHub Actions and is disabled by default. To enable it, set these repository secrets:
-
-- `DOCKERHUB_USERNAME`
-- `DOCKERHUB_TOKEN`
-- `DOCKERHUB_REPOSITORY` (for example, `metafab/otel-gui`)
-
-### Trace Summary (`TraceSummary.svelte`)
-
-- Collapsible via caret toggle
-- Condensed horizontal bar chart: up to 6 rows (one per tree depth level)
-- Each row: bars sized proportionally to span duration relative to total trace duration
-- Bars color-coded by `service.name`
-- Hover: tooltip with span name
-- Click bar: scroll to and highlight that span in the waterfall below
-- Error highlighting toggle: error spans tinted red
-
----
+- Unary `Export` for `TraceService`, `LogsService`, and `MetricsService`; `identity` and `gzip` message encodings.
+- Plaintext only (no TLS), matching the local-first OTLP/HTTP setup.
+- Partial-success responses are not emitted: a request is either fully ingested or rejected with a gRPC status.
 
 ## Key Design Decisions
 
@@ -278,4 +233,4 @@ Optional Docker Hub mirroring is available via GitHub Actions and is disabled by
 
 9. **Keyboard shortcuts follow web conventions**: `/` to focus search (GitHub/YouTube pattern), `n`/`Shift+N` for next/previous match (browser devtools pattern), `e`/`Shift+E` for error navigation, `Esc` for contextual dismiss/back, `Alt/⌥+Delete` for destructive clear (no browser conflicts, hard to hit accidentally), `?` for help overlay. All shortcuts guard against firing when focus is inside an input. The `?` overlay uses the same modal pattern as the attribute fullscreen viewer.
 
-10. **gRPC is demand-driven, not baseline**: OTLP/gRPC (`:4317`) is intentionally deferred from baseline v2 to protect local-first simplicity and maintain velocity. It remains a candidate as an optional transport when user demand justifies the extra complexity.
+10. **gRPC is additive, not a replacement**: OTLP/gRPC (`:4317`) is served by a small `node:http2` receiver alongside OTLP/HTTP, so gRPC-default exporters work with zero config while HTTP stays the canonical path and the store/API/UI stay transport-agnostic.
