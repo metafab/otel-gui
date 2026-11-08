@@ -80,6 +80,7 @@ interface CallResult {
   status: number
   grpcStatus: number | null
   grpcMessage: string | null
+  grpcAcceptEncoding: string | null
   body: Buffer
 }
 
@@ -99,11 +100,13 @@ function call(
     let status = 0
     let grpcStatus: string | undefined
     let grpcMessage: string | undefined
+    let grpcAcceptEncoding: string | undefined
     const chunks: Buffer[] = []
     req.on('response', (h) => {
       status = Number(h[':status'])
       grpcStatus ??= h['grpc-status'] as string | undefined
       grpcMessage ??= h['grpc-message'] as string | undefined
+      grpcAcceptEncoding = h['grpc-accept-encoding'] as string | undefined
     })
     req.on('trailers', (t) => {
       grpcStatus = t['grpc-status'] as string | undefined
@@ -116,6 +119,7 @@ function call(
         grpcStatus: grpcStatus === undefined ? null : Number(grpcStatus),
         grpcMessage:
           grpcMessage === undefined ? null : decodeURIComponent(grpcMessage),
+        grpcAcceptEncoding: grpcAcceptEncoding ?? null,
         body: Buffer.concat(chunks),
       }),
     )
@@ -161,6 +165,7 @@ describe(createOtlpGrpcServer, () => {
 
     expect(result.status).toBe(200)
     expect(result.grpcStatus).toBe(GrpcStatus.OK)
+    expect(result.grpcAcceptEncoding).toBe('identity,gzip')
     expect(result.body).toEqual(Buffer.alloc(5))
     expect(ingest.ingestSpans).toHaveBeenCalledOnce()
     const [resourceSpans] = ingest.ingestSpans.mock.calls[0]

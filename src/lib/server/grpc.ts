@@ -173,7 +173,11 @@ async function handleStream(
   // An empty Export*ServiceResponse signals full success
   if (stream.destroyed) return
   stream.respond(
-    { ':status': 200, 'content-type': 'application/grpc' },
+    {
+      ':status': 200,
+      'content-type': 'application/grpc',
+      'grpc-accept-encoding': 'identity,gzip',
+    },
     { waitForTrailers: true },
   )
   stream.on('wantTrailers', () => {
