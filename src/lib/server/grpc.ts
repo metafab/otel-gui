@@ -93,8 +93,15 @@ export function createOtlpGrpcServer(
   const server = http2.createServer()
 
   server.on('stream', (stream: http2.ServerHttp2Stream, headers) => {
-    // Never let a misbehaving client crash the process
-    stream.on('error', () => {})
+    // Handle transport errors so client disconnects cannot crash the process.
+    stream.on('error', (error) => {
+      if (stream.rstCode === http2.constants.NGHTTP2_CANCEL) return
+      console.warn(
+        '[otel-gui] OTLP gRPC stream transport error:',
+        headers[':path'],
+        error,
+      )
+    })
     handleStream(stream, headers, options.getIngest, maxMessageBytes).catch(
       (error) => {
         console.error('[otel-gui] Error processing OTLP gRPC request:', error)
@@ -102,7 +109,9 @@ export function createOtlpGrpcServer(
       },
     )
   })
-  server.on('sessionError', () => {})
+  server.on('sessionError', (error) => {
+    console.error('[otel-gui] OTLP gRPC session transport error:', error)
+  })
 
   return server
 }

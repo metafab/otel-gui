@@ -333,6 +333,44 @@ describe(createOtlpGrpcServer, () => {
 
     expect(result.status).toBe(415)
   })
+
+  it('logs unexpected stream transport errors', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const streamReady = new Promise<void>((resolve) => {
+      server.once('stream', () => resolve())
+    })
+    const req = client.request({
+      ':method': 'POST',
+      ':path': TRACE_PATH,
+      'content-type': 'application/grpc',
+      te: 'trailers',
+    })
+    req.on('error', () => {})
+
+    await streamReady
+    req.close(http2.constants.NGHTTP2_PROTOCOL_ERROR)
+    await vi.waitFor(() => {
+      expect(warn).toHaveBeenCalledWith(
+        '[otel-gui] OTLP gRPC stream transport error:',
+        TRACE_PATH,
+        expect.any(Error),
+      )
+    })
+    warn.mockRestore()
+  })
+
+  it('logs session transport errors', () => {
+    const error = new Error('test session transport failure')
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    server.emit('sessionError', error)
+
+    expect(log).toHaveBeenCalledWith(
+      '[otel-gui] OTLP gRPC session transport error:',
+      error,
+    )
+    log.mockRestore()
+  })
 })
 
 describe(grpcIsEnabled, () => {
