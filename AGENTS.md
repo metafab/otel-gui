@@ -1,6 +1,6 @@
 # otel-gui Agent Instructions
 
-A lightweight OpenTelemetry viewer built with SvelteKit 5. Port 4318 (OTLP/HTTP standard) and port 4317 (OTLP/gRPC standard).
+A lightweight OpenTelemetry viewer built with SvelteKit. Port 4318 (OTLP/HTTP standard) and port 4317 (OTLP/gRPC standard).
 
 ## Build & Dev
 
