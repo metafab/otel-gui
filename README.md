@@ -26,7 +26,7 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 ## ✨ Features
 
 - **Zero config** — listens on port 4318 (OTLP/HTTP) and 4317 (OTLP/gRPC), the standard OTLP ports. Most exporters work without changing a single setting
-- **OTLP/HTTP & OTLP/gRPC** — accepts `application/json` and `application/x-protobuf` payloads over HTTP, and the standard OTLP gRPC services (with optional gzip compression)
+- **OTLP ingestion** — OTLP/HTTP accepts OTLP/JSON (`application/json`) and OTLP/Protobuf (`application/x-protobuf`); OTLP/gRPC accepts Protobuf exports over HTTP/2, with optional gzip compression
 - **Real-time streaming** — traces, logs, and metrics all update live over SSE (Server-Sent Events) using an incremental snapshot + delta protocol, so views refresh in place without flicker or polling
 - **Traces and spans** — trace list; waterfall timeline with full span details, and correlation with logs
 - **Logs** — log list; log details view; correlation with traces
