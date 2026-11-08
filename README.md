@@ -564,13 +564,13 @@ Notes:
 
 ## 📐 Architecture & Interfaces
 
-| Interface | Endpoint | Purpose |
-|---|---|---|
-| OTLP/HTTP | `POST /v1/traces`, `POST /v1/logs`, `POST /v1/metrics` | Receivers that ingest OTLP/JSON or OTLP/Protobuf |
-| OTLP/gRPC | `:4317` by default | Trace, Logs, and Metrics `Export` services; Protobuf with identity or gzip encoding |
-| HTTP API | `/api/traces`, `/api/logs`, `/api/metrics`, `/api/service-map`, `/api/config` | Read and manage telemetry and runtime configuration; see the [HTTP API guide](docs/http-api.md) and [OpenAPI specification](static/openapi.yaml) |
-| Streaming | `GET /api/stream` | SSE updates for traces, logs, and metrics |
-| MCP | `POST /mcp` | Streamable HTTP MCP endpoint; see [Connect an AI agent with MCP](#connect-an-ai-agent-with-mcp) |
+| Interface | Endpoint                                                                      | Purpose                                                                                                                                          |
+| --------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| OTLP/HTTP | `POST /v1/traces`, `POST /v1/logs`, `POST /v1/metrics`                        | Receivers that ingest OTLP/JSON or OTLP/Protobuf                                                                                                 |
+| OTLP/gRPC | `:4317` by default                                                            | Trace, Logs, and Metrics `Export` services; Protobuf with identity or gzip encoding                                                              |
+| HTTP API  | `/api/traces`, `/api/logs`, `/api/metrics`, `/api/service-map`, `/api/config` | Read and manage telemetry and runtime configuration; see the [HTTP API guide](docs/http-api.md) and [OpenAPI specification](static/openapi.yaml) |
+| Streaming | `GET /api/stream`                                                             | SSE updates for traces, logs, and metrics                                                                                                        |
+| MCP       | `POST /mcp`                                                                   | Streamable HTTP MCP endpoint; see [Connect an AI agent with MCP](#connect-an-ai-agent-with-mcp)                                                  |
 
 Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limits default to 1000 traces (`OTEL_GUI_MAX_TRACES`), 1000 log records (`OTEL_GUI_MAX_LOGS`), 1000 metric entries (`OTEL_GUI_MAX_METRICS`), and 600 points per metric series (`OTEL_GUI_MAX_METRIC_POINTS`).
 <br />
