@@ -30,7 +30,8 @@ pnpm run format:check
 
 ## Architecture
 
-- **Routes**: `/v1/traces` + `/v1/logs` (OTLP receivers), `/api/traces` (list + clear/delete-selected), `/api/traces/:id` (detail), `/api/traces/:id/export` (single export), `/api/traces/export` (bulk export), `/api/traces/import/preview` + `/api/traces/import` (import flow), `/api/traces/:id/logs` (trace-scoped logs), `/api/traces/:id/logs/:logId` (log detail), `/api/logs` (global log list + clear/delete-selected), `/api/logs/export` (bulk log export), `/api/logs/import/preview` + `/api/logs/import` (log import flow), `/api/service-map` (service graph), `/api/config` (runtime config + persistence status)
+- **Routes**: `/v1/traces`, `/v1/logs`, and `/v1/metrics` (OTLP/HTTP receivers); `/api/traces` (list + clear/delete-selected), `/api/traces/:id` (detail), `/api/traces/:id/export` (single export), `/api/traces/export` (bulk export), `/api/traces/import/preview` + `/api/traces/import` (import flow), `/api/traces/:id/logs` (trace-scoped logs), `/api/traces/:id/logs/:logId` (log detail), `/api/logs` (global log list + clear/delete-selected), `/api/logs/export` (bulk log export), `/api/logs/import/preview` + `/api/logs/import` (log import flow), `/api/service-map` (service graph), `/api/config` (runtime config + persistence status)
+- **OTLP/gRPC receiver**: [grpc.ts](src/lib/server/grpc.ts) serves the `TraceService`, `LogsService`, and `MetricsService` `Export` methods over cleartext HTTP/2 using `node:http2`, reusing the OTLP protobuf decoders. The `init` hook in [hooks.server.ts](src/hooks.server.ts) starts it; the Vite dev plugin triggers server initialization on `pnpm dev`.
 - **Server-only code**: `#lib/server/` — never bundled for client
 - **Utilities**: `#lib/utils/` — shared helpers for OTLP data transformation
 - **Types**: `#lib/types.js` — all interfaces (use `import type`)
@@ -182,7 +183,7 @@ Shortcuts implemented:
 
 1. **Port 4318 non-negotiable** — OTLP/HTTP standard (zero config for exporters)
 2. **adapter-node required** — In-memory `Map` must persist across requests
-3. **OTLP/gRPC receiver** — [grpc.ts](src/lib/server/grpc.ts) serves the OTLP `TraceService`/`LogsService`/`MetricsService` `Export` methods over cleartext HTTP/2 on `OTEL_GUI_GRPC_PORT` (default 4317), built on `node:http2` (no gRPC library) and reusing the protobuf decoders. Started from the `init` hook in `hooks.server.ts` (a Vite dev plugin warms it up on `pnpm dev`). Disable with `OTEL_GUI_GRPC_ENABLED=false`; a port conflict only logs a warning.
+3. **OTLP/gRPC remains supported** — the receiver uses cleartext HTTP/2 on port 4317 by default; `OTEL_GUI_GRPC_PORT` can change the port and `OTEL_GUI_GRPC_ENABLED=false` disables it.
 4. **Protobuf and JSON supported** — Both `application/json` and `application/x-protobuf` content types accepted
 5. **Gzip request bodies supported** — OTLP receivers accept gzip-compressed payloads
 6. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1-10 000, default 1000). FIFO eviction. Read via `$app/env/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000. Logs have an independent `OTEL_GUI_MAX_LOGS` env var (same range/defaults), exposed as `traceStore.maxLogs`.
@@ -192,6 +193,7 @@ Shortcuts implemented:
 
 ## Reference Files
 
+- [grpc.ts](src/lib/server/grpc.ts) — OTLP/gRPC message framing, compression, status handling, and dispatch to the trace/log/metric decoders and store
 - [traceStore.ts](src/lib/server/traceStore.ts) — Trace store bootstrap: env parsing, optional backend module loading, fallback policy, `getPersistenceStatus()`
 - [backends.ts](src/lib/server/traceStore/backends.ts) — Backend registry (`memory` built-in) and persistence status contracts
 - [core.ts](src/lib/server/traceStore/core.ts) — Shared trace/log ingestion, span merging, eviction, and service-map aggregation logic
