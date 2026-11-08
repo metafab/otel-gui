@@ -70,6 +70,7 @@ class GrpcError extends Error {
   constructor(
     readonly code: number,
     message: string,
+    readonly resetStream = false,
   ) {
     super(message)
   }
@@ -164,6 +165,7 @@ async function handleStream(
     method.ingest(getIngest(), items ?? [])
   } catch (error) {
     if (error instanceof GrpcError) {
+      if (error.resetStream) return
       sendStatus(stream, error.code, error.message)
       return
     }
@@ -197,11 +199,12 @@ function readBody(
       size += chunk.length
       if (size > maxBytes) {
         stream.removeAllListeners('data')
-        stream.resume()
+        stream.close(http2.constants.NGHTTP2_CANCEL)
         reject(
           new GrpcError(
             GrpcStatus.RESOURCE_EXHAUSTED,
             `Received message larger than max (${maxBytes - MESSAGE_HEADER_BYTES} bytes)`,
+            true,
           ),
         )
         return

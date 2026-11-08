@@ -285,10 +285,33 @@ describe(createOtlpGrpcServer, () => {
     expect(result.grpcStatus).toBe(GrpcStatus.UNIMPLEMENTED)
   })
 
-  it('returns RESOURCE_EXHAUSTED for oversized messages', async () => {
-    const result = await call(TRACE_PATH, frame(Buffer.alloc(2048)))
+  it('resets oversized uploads without draining the remaining request', async () => {
+    const req = client.request({
+      ':method': 'POST',
+      ':path': TRACE_PATH,
+      'content-type': 'application/grpc',
+      te: 'trailers',
+    })
+    const reset = new Promise<number>((resolve, reject) => {
+      const timeout = setTimeout(
+        () => reject(new Error('Oversized upload stream was not reset')),
+        1000,
+      )
+      req.once('close', () => {
+        clearTimeout(timeout)
+        resolve(req.rstCode)
+      })
+    })
+    req.write(Buffer.alloc(2048))
 
-    expect(result.grpcStatus).toBe(GrpcStatus.RESOURCE_EXHAUSTED)
+    await expect(reset).resolves.toBe(http2.constants.NGHTTP2_CANCEL)
+
+    const message = encode(
+      'opentelemetry.proto.collector.trace.v1.ExportTraceServiceRequest',
+      { resourceSpans: [] },
+    )
+    const result = await call(TRACE_PATH, frame(message))
+    expect(result.grpcStatus).toBe(GrpcStatus.OK)
   })
 
   it('returns RESOURCE_EXHAUSTED for oversized decompressed messages', async () => {
