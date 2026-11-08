@@ -243,17 +243,6 @@ No other configuration needed. The viewer accepts the standard `POST /v1/traces`
 
 Requests with `Content-Encoding: gzip` are also supported.
 
-#### OTLP/gRPC
-
-Exporters configured for gRPC can send traces, logs, and metrics to the standard OTLP/gRPC port:
-
-```sh
-export OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
-```
-
-The receiver implements the OTLP `TraceService`, `LogsService`, and `MetricsService` `Export` methods over plaintext HTTP/2 (no TLS), with optional gzip compression. Change the port with `OTEL_GUI_GRPC_PORT`, or disable it with `OTEL_GUI_GRPC_ENABLED=false`. If the port is already in use, a warning is logged and the HTTP server keeps running.
-
 ### Sending Logs
 
 The viewer also accepts OTLP logs at:
@@ -273,6 +262,17 @@ POST /v1/metrics
 ```
 
 Gauges, sums, histograms, exponential histograms, and summaries are all supported and appear in the **Metrics** tab. Monotonic sums are presented as **Counters** and non-monotonic sums as **UpDownCounters**; their OTLP data type remains Sum. Sum points get a server-computed per-second rate (with counter-reset detection); histograms render as both a distribution and a time/bucket heatmap.
+
+### Sending Telemetry over gRPC
+
+OTLP/gRPC exporters can send traces, logs, and metrics to the standard gRPC port:
+
+```sh
+export OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+```
+
+The receiver implements the OTLP `TraceService`, `LogsService`, and `MetricsService` `Export` methods over plaintext HTTP/2 (no TLS), with optional gzip compression. Change the port with `OTEL_GUI_GRPC_PORT`, or disable the receiver with `OTEL_GUI_GRPC_ENABLED=false`. If the port is already in use, a warning is logged and the HTTP server keeps running.
 
 ### Try the demo
 
