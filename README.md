@@ -562,43 +562,15 @@ Notes:
 | `e` / `E`        | Trace detail | Next / prev error span    |
 | `?`              | Everywhere   | Toggle shortcuts overlay  |
 
-## 📐 Architecture
+## 📐 Architecture & Interfaces
 
-```
-POST /v1/traces          ← OTLP receiver (JSON + Protobuf)
-POST /v1/logs            ← OTLP logs receiver (JSON + Protobuf)
-POST /v1/metrics         ← OTLP metrics receiver (JSON + Protobuf)
-:4317 gRPC               ← OTLP/gRPC Trace/Logs/MetricsService Export (Protobuf, gzip)
-
-GET  /api/traces         ← trace list for the UI
-DELETE /api/traces       ← clear all traces or delete selected traceIds
-GET  /api/traces/:id     ← single trace
-GET  /api/traces/:id/logs ← trace-scoped correlated logs
-GET  /api/traces/:id/logs/:logId ← single trace-scoped log detail
-GET  /api/traces/:id/export ← export a single trace envelope
-POST /api/traces/export  ← export filtered/selected traceIds
-POST /api/traces/import/preview ← validate + preview import metadata
-POST /api/traces/import  ← import otel-gui envelope or raw OTLP JSON
-
-GET  /api/logs           ← global log list for the UI
-DELETE /api/logs         ← clear all logs or delete selected logIds
-GET  /api/logs/:id       ← single log detail
-POST /api/logs/export    ← export filtered/selected logIds
-POST /api/logs/import/preview ← validate + preview log import metadata
-POST /api/logs/import    ← import otel-gui log envelope or raw OTLP JSON
-
-GET  /api/metrics        ← metric list for the UI
-DELETE /api/metrics      ← clear all metrics or delete selected ids
-GET  /api/metrics/:id    ← metric detail and chart data
-GET  /api/metrics/:id/stream ← SSE stream for metric detail updates
-
-GET  /api/service-map    ← aggregated service graph
-GET  /api/stream         ← multiplexed SSE stream for traces, logs, and metrics
-GET  /api/config         ← runtime limits and persistence status
-POST /mcp                ← streamable HTTP MCP endpoint
-```
-
-See the [HTTP API guide](docs/http-api.md) and [OpenAPI specification](static/openapi.yaml) for exact request and response details.
+| Interface | Endpoint | Purpose |
+|---|---|---|
+| OTLP/HTTP | `POST /v1/traces`, `POST /v1/logs`, `POST /v1/metrics` | Receivers that ingest OTLP/JSON or OTLP/Protobuf |
+| OTLP/gRPC | `:4317` by default | Trace, Logs, and Metrics `Export` services; Protobuf with identity or gzip encoding |
+| HTTP API | `/api/traces`, `/api/logs`, `/api/metrics`, `/api/service-map`, `/api/config` | Read and manage telemetry and runtime configuration; see the [HTTP API guide](docs/http-api.md) and [OpenAPI specification](static/openapi.yaml) |
+| Streaming | `GET /api/stream` | SSE updates for traces, logs, and metrics |
+| MCP | `POST /mcp` | Streamable HTTP MCP endpoint; see [Connect an AI agent with MCP](#connect-an-ai-agent-with-mcp) |
 
 Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limits default to 1000 traces (`OTEL_GUI_MAX_TRACES`), 1000 log records (`OTEL_GUI_MAX_LOGS`), 1000 metric entries (`OTEL_GUI_MAX_METRICS`), and 600 points per metric series (`OTEL_GUI_MAX_METRIC_POINTS`).
 <br />
