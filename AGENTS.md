@@ -108,7 +108,7 @@ $effect(() => {
 
 ## Testing
 
-**Current status**: 328 unit + integration/component tests, all passing. Run with `pnpm run test`.
+Run unit, integration, and component tests with `pnpm run test`.
 
 **Test files**:
 
