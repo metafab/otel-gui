@@ -34,6 +34,12 @@ Distribution unit per platform:
 
 These three items must be shipped together.
 
+Container images are published to GHCR by CI. The optional
+[Docker Hub mirroring workflow](../.github/workflows/mirror-image-dockerhub.yml)
+runs after a successful image publish (or manually) when the
+`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, and `DOCKERHUB_REPOSITORY` repository
+secrets are configured.
+
 ## Architecture
 
 ```mermaid
@@ -212,6 +218,16 @@ Pursue these only when there is a concrete requirement.
 - Unary `Export` for `TraceService`, `LogsService`, and `MetricsService`; `identity` and `gzip` message encodings.
 - Plaintext only (no TLS), matching the local-first OTLP/HTTP setup.
 - Partial-success responses are not emitted: a request is either fully ingested or rejected with a gRPC status.
+
+## Maybe Later
+
+### Trace Summary Minimap
+
+The trace detail view does not yet include the planned span-depth minimap.
+If implemented, add a collapsible horizontal chart with up to six depth rows,
+bars sized by span duration, error highlighting, and click-to-scroll navigation
+to the corresponding span in the waterfall. See the trace-detail research in
+[`research.md`](./research.md).
 
 ## Key Design Decisions
 
