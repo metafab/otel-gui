@@ -29,7 +29,7 @@ function resolveMaxTraces(): number {
   const parsed = Number.parseInt(raw, 10)
   if (Number.isNaN(parsed) || parsed < 1 || parsed > 10_000) {
     console.warn(
-      `[otel-gui] Invalid OTEL_GUI_MAX_TRACES="${raw}". Must be an integer between 1 and 10000. Falling back to 1000.`,
+      `Invalid OTEL_GUI_MAX_TRACES="${raw}". Must be an integer between 1 and 10000. Falling back to 1000.`,
     )
     return 1000
   }
@@ -42,7 +42,7 @@ function resolveMaxLogs(): number {
   const parsed = Number.parseInt(raw, 10)
   if (Number.isNaN(parsed) || parsed < 1 || parsed > 10_000) {
     console.warn(
-      `[otel-gui] Invalid OTEL_GUI_MAX_LOGS="${raw}". Must be an integer between 1 and 10000. Falling back to 1000.`,
+      `Invalid OTEL_GUI_MAX_LOGS="${raw}". Must be an integer between 1 and 10000. Falling back to 1000.`,
     )
     return 1000
   }
@@ -57,7 +57,7 @@ function resolveMaxMetrics(): number {
   const parsed = Number.parseInt(raw, 10)
   if (Number.isNaN(parsed) || parsed < 1 || parsed > 10_000) {
     console.warn(
-      `[otel-gui] Invalid OTEL_GUI_MAX_METRICS="${raw}". Must be an integer between 1 and 10000. Falling back to 1000.`,
+      `Invalid OTEL_GUI_MAX_METRICS="${raw}". Must be an integer between 1 and 10000. Falling back to 1000.`,
     )
     return 1000
   }
@@ -71,7 +71,7 @@ function resolveMaxMetricPoints(): number {
   const parsed = Number.parseInt(raw, 10)
   if (Number.isNaN(parsed) || parsed < 10 || parsed > 10_000) {
     console.warn(
-      `[otel-gui] Invalid OTEL_GUI_MAX_METRIC_POINTS="${raw}". Must be an integer between 10 and 10000. Falling back to 600.`,
+      `Invalid OTEL_GUI_MAX_METRIC_POINTS="${raw}". Must be an integer between 10 and 10000. Falling back to 600.`,
     )
     return 600
   }
@@ -85,7 +85,7 @@ function resolvePersistenceMode(): 'memory' | 'pglite' {
   if (raw === 'memory' || raw === 'pglite') return raw
 
   console.warn(
-    `[otel-gui] Invalid OTEL_GUI_PERSISTENCE_MODE="${raw}". Must be "memory" or "pglite". Falling back to "memory".`,
+    `Invalid OTEL_GUI_PERSISTENCE_MODE="${raw}". Must be "memory" or "pglite". Falling back to "memory".`,
   )
 
   return 'memory'
@@ -103,7 +103,7 @@ function resolveFlushMs(): number {
   const parsed = Number.parseInt(raw, 10)
   if (Number.isNaN(parsed) || parsed < 50 || parsed > 60_000) {
     console.warn(
-      `[otel-gui] Invalid OTEL_GUI_PERSISTENCE_FLUSH_MS="${raw}". Must be an integer between 50 and 60000. Falling back to 750.`,
+      `Invalid OTEL_GUI_PERSISTENCE_FLUSH_MS="${raw}". Must be an integer between 50 and 60000. Falling back to 750.`,
     )
     return 750
   }
@@ -238,20 +238,20 @@ async function loadExternalBackends(): Promise<void> {
 
     externalBackendLoadError = 'backend-module-invalid-export'
     console.warn(
-      `[otel-gui] Persistence backend module "${persistenceBackendModule}" loaded but did not export registerTraceStoreBackends().`,
+      `Persistence backend module "${persistenceBackendModule}" loaded but did not export registerTraceStoreBackends().`,
     )
   } catch (error) {
     externalBackendLoadError = 'backend-module-load-failed'
 
     if (isMissingBackendModuleError(error)) {
       console.info(
-        `[otel-gui] Optional persistence backend module "${persistenceBackendModule}" was not found. Using built-in backends (memory mode in OSS).`,
+        `Optional persistence backend module "${persistenceBackendModule}" was not found. Using built-in backends (memory mode in OSS).`,
       )
       return
     }
 
     console.error(
-      `[otel-gui] Failed to load persistence backend module "${persistenceBackendModule}". Falling back to built-in backends.`,
+      `Failed to load persistence backend module "${persistenceBackendModule}". Falling back to built-in backends.`,
       error,
     )
   }
@@ -308,24 +308,24 @@ async function createTraceStore(): Promise<TraceStoreWithPersistenceStatus> {
       backendInitError = resolveBackendInitErrorCode(error)
       if (isExpectedBackendInitFallback(error)) {
         console.info(
-          `[otel-gui] ${persistenceMode} persistence is unavailable (${backendInitError}); using in-memory mode.`,
+          `${persistenceMode} persistence is unavailable (${backendInitError}); using in-memory mode.`,
         )
       } else {
         console.error(
-          `[otel-gui] Failed to initialize ${persistenceMode} persistence, using in-memory mode instead.`,
+          `Failed to initialize ${persistenceMode} persistence, using in-memory mode instead.`,
           error,
         )
       }
     }
   } else if (persistenceMode !== 'memory') {
     console.warn(
-      `[otel-gui] Persistence backend "${persistenceMode}" is not available in this build. Falling back to in-memory mode.`,
+      `Persistence backend "${persistenceMode}" is not available in this build. Falling back to in-memory mode.`,
     )
   }
 
   const memoryBackend = getTraceStoreBackend('memory')
   if (!memoryBackend) {
-    throw new Error('[otel-gui] Memory trace store backend is not registered.')
+    throw new Error('Memory trace store backend is not registered.')
   }
 
   const memoryStore = await memoryBackend({
