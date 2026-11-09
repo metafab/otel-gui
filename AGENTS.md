@@ -1,6 +1,6 @@
 # otel-gui Agent Instructions
 
-A lightweight OpenTelemetry viewer built with SvelteKit 5. Port 4318 (OTLP/HTTP standard).
+A lightweight OpenTelemetry viewer built with SvelteKit. Port 4318 (OTLP/HTTP standard) and port 4317 (OTLP/gRPC standard).
 
 ## Build & Dev
 
@@ -30,7 +30,8 @@ pnpm run format:check
 
 ## Architecture
 
-- **Routes**: `/v1/traces` + `/v1/logs` (OTLP receivers), `/api/traces` (list + clear/delete-selected), `/api/traces/:id` (detail), `/api/traces/:id/export` (single export), `/api/traces/export` (bulk export), `/api/traces/import/preview` + `/api/traces/import` (import flow), `/api/traces/:id/logs` (trace-scoped logs), `/api/traces/:id/logs/:logId` (log detail), `/api/logs` (global log list + clear/delete-selected), `/api/logs/export` (bulk log export), `/api/logs/import/preview` + `/api/logs/import` (log import flow), `/api/service-map` (service graph), `/api/config` (runtime config + persistence status)
+- **Routes**: `/v1/traces`, `/v1/logs`, and `/v1/metrics` (OTLP/HTTP receivers); `/api/traces` (list + clear/delete-selected), `/api/traces/:id` (detail), `/api/traces/:id/export` (single export), `/api/traces/export` (bulk export), `/api/traces/import/preview` + `/api/traces/import` (import flow), `/api/traces/:id/logs` (trace-scoped logs), `/api/traces/:id/logs/:logId` (log detail), `/api/logs` (global log list + clear/delete-selected), `/api/logs/export` (bulk log export), `/api/logs/import/preview` + `/api/logs/import` (log import flow), `/api/service-map` (service graph), `/api/config` (runtime config + persistence status)
+- **OTLP/gRPC receiver**: [grpc.ts](src/lib/server/grpc.ts) serves the `TraceService`, `LogsService`, and `MetricsService` `Export` methods over cleartext HTTP/2 using `node:http2`, reusing the OTLP protobuf decoders. The `init` hook in [hooks.server.ts](src/hooks.server.ts) starts it; the Vite dev plugin triggers server initialization on `pnpm dev`.
 - **Server-only code**: `#lib/server/` — never bundled for client
 - **Utilities**: `#lib/utils/` — shared helpers for OTLP data transformation
 - **Types**: `#lib/types.js` — all interfaces (use `import type`)
@@ -107,7 +108,7 @@ $effect(() => {
 
 ## Testing
 
-**Current status**: 328 unit + integration/component tests, all passing. Run with `pnpm run test`.
+Run unit, integration, and component tests with `pnpm run test`.
 
 **Test files**:
 
@@ -129,6 +130,7 @@ $effect(() => {
 | [spanSearch.test.ts](src/lib/utils/spanSearch.test.ts)                            | Span search tokenization/matching, rank/ordering behaviors                                                                           |
 | [updateCheck.test.ts](src/lib/utils/updateCheck.test.ts)                          | Release check caching/dismiss semantics                                                                                              |
 | [moduleImport.test.ts](src/lib/server/traceStore/moduleImport.test.ts)            | Dynamic backend module resolution and import behavior                                                                                |
+| [grpc.test.ts](src/lib/server/grpc.test.ts)                                       | OTLP/gRPC receiver over real HTTP/2: traces/logs/metrics export, gzip, error statuses, env parsing                                   |
 | [server.test.ts](src/routes/api/config/server.test.ts)                            | Config endpoint metadata (maxTraces + persistence fields)                                                                            |
 | [page.test.ts](src/routes/traces/[traceId]/page.test.ts)                          | Trace detail page matching behavior with collapsed descendants                                                                       |
 
@@ -181,15 +183,17 @@ Shortcuts implemented:
 
 1. **Port 4318 non-negotiable** — OTLP/HTTP standard (zero config for exporters)
 2. **adapter-node required** — In-memory `Map` must persist across requests
-3. **Protobuf and JSON supported** — Both `application/json` and `application/x-protobuf` content types accepted
-4. **Gzip request bodies supported** — OTLP receivers accept gzip-compressed payloads
-5. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1-10 000, default 1000). FIFO eviction. Read via `$app/env/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000. Logs have an independent `OTEL_GUI_MAX_LOGS` env var (same range/defaults), exposed as `traceStore.maxLogs`.
-6. **Persistence is optional** — OSS always has `memory`; `pglite` requires a registered backend (usually via `OTEL_GUI_PERSISTENCE_BACKEND_MODULE`). If unavailable, runtime falls back to memory with `persistence.unavailableReason` in `GET /api/config`.
-7. **Update availability check** — On mount, the page fetches `https://api.github.com/repos/metafab/otel-gui/releases/latest` (GitHub API) and compares `tag_name` to `import.meta.env.PACKAGE_VERSION` (embedded at build time from `package.json` via Vite `define`). If a newer semver is found, a non-intrusive notice is shown in the bottom-left of the trace list, next to the retention notice. The notice links to `https://github.com/metafab/otel-gui/releases` and can be dismissed per-version via `localStorage`. The result is cached in `localStorage` (`update-check-cache`) for 1 hour to avoid hitting the GitHub rate limit (60 unauthenticated req/h). Network failures are silent and do not affect the UI.
-8. **Import/export UX contract** — list page provides Import, a single Export button (exports selected traces if any, otherwise all filtered), and split delete actions (`Clear All` + dropdown `Delete Selected (n)`); import always previews metadata before confirmation. The Logs tab mirrors this: Import Logs + a single Export button (selected if any, otherwise filtered), reusing `ImportModal` with `kind="logs"`; log exports use `otel-gui-log-export` envelopes ([logTransfer.ts](src/lib/server/logTransfer.ts)) and import stamps `log.record.uid` so re-imports don't duplicate.
+3. **OTLP/gRPC remains supported** — the receiver uses cleartext HTTP/2 on port 4317 by default; `OTEL_GUI_GRPC_PORT` can change the port and `OTEL_GUI_GRPC_ENABLED=false` disables it.
+4. **Protobuf and JSON supported** — Both `application/json` and `application/x-protobuf` content types accepted
+5. **Gzip request bodies supported** — OTLP receivers accept gzip-compressed payloads
+6. **Configurable retention** — `OTEL_GUI_MAX_TRACES` env var (integer 1-10 000, default 1000). FIFO eviction. Read via `$app/env/private` in `traceStore.ts`. Exposed as `traceStore.maxTraces`. Invalid values warn and fall back to 1000. Logs have an independent `OTEL_GUI_MAX_LOGS` env var (same range/defaults), exposed as `traceStore.maxLogs`.
+7. **Persistence is optional** — OSS always has `memory`; `pglite` requires a registered backend (usually via `OTEL_GUI_PERSISTENCE_BACKEND_MODULE`). If unavailable, runtime falls back to memory with `persistence.unavailableReason` in `GET /api/config`.
+8. **Update availability check** — On mount, the page fetches `https://api.github.com/repos/metafab/otel-gui/releases/latest` (GitHub API) and compares `tag_name` to `import.meta.env.PACKAGE_VERSION` (embedded at build time from `package.json` via Vite `define`). If a newer semver is found, a non-intrusive notice is shown in the bottom-left of the trace list, next to the retention notice. The notice links to `https://github.com/metafab/otel-gui/releases` and can be dismissed per-version via `localStorage`. The result is cached in `localStorage` (`update-check-cache`) for 1 hour to avoid hitting the GitHub rate limit (60 unauthenticated req/h). Network failures are silent and do not affect the UI.
+9. **Import/export UX contract** — list page provides Import, a single Export button (exports selected traces if any, otherwise all filtered), and split delete actions (`Clear All` + dropdown `Delete Selected (n)`); import always previews metadata before confirmation. The Logs tab mirrors this: Import Logs + a single Export button (selected if any, otherwise filtered), reusing `ImportModal` with `kind="logs"`; log exports use `otel-gui-log-export` envelopes ([logTransfer.ts](src/lib/server/logTransfer.ts)) and import stamps `log.record.uid` so re-imports don't duplicate.
 
 ## Reference Files
 
+- [grpc.ts](src/lib/server/grpc.ts) — OTLP/gRPC message framing, compression, status handling, and dispatch to the trace/log/metric decoders and store
 - [traceStore.ts](src/lib/server/traceStore.ts) — Trace store bootstrap: env parsing, optional backend module loading, fallback policy, `getPersistenceStatus()`
 - [backends.ts](src/lib/server/traceStore/backends.ts) — Backend registry (`memory` built-in) and persistence status contracts
 - [core.ts](src/lib/server/traceStore/core.ts) — Shared trace/log ingestion, span merging, eviction, and service-map aggregation logic

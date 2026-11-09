@@ -41,6 +41,6 @@ COPY --from=build /app/proto ./proto
 ENV HOST=0.0.0.0
 ENV PORT=4318
 
-EXPOSE 4318
+EXPOSE 4318 4317
 
 CMD ["node", "build"]

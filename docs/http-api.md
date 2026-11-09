@@ -17,8 +17,8 @@ the otel-gui UI and may change with the application.
   agents that support MCP. MCP provides purpose-built search tools; the HTTP
   API does not have general-purpose trace, log, or metric search endpoints.
 - [OTLP ingestion](../README.md#sending-traces) uses the standard `/v1/traces`,
-  `/v1/logs`, and `/v1/metrics` endpoints. Those are separate from this read
-  API.
+  `/v1/logs`, and `/v1/metrics` endpoints, or OTLP/gRPC on port `4317`. Those
+  are separate from this read API.
 
 ## Base URL and access
 

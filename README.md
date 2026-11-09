@@ -25,8 +25,8 @@ Drop-in replacement for a collector endpoint — point your OTLP exporter at it 
 
 ## ✨ Features
 
-- **Zero config** — listens on port 4318, the standard OTLP/HTTP port. Most exporters work without changing a single setting
-- **OTLP JSON & Protobuf** — accepts both `application/json` and `application/x-protobuf` payloads
+- **Zero config** — listens on port 4318 (OTLP/HTTP) and 4317 (OTLP/gRPC), the standard OTLP ports. Most exporters work without changing a single setting
+- **OTLP ingestion** — OTLP/HTTP accepts OTLP/JSON (`application/json`) and OTLP/Protobuf (`application/x-protobuf`); OTLP/gRPC accepts Protobuf exports over HTTP/2, with optional gzip compression
 - **Real-time streaming** — traces, logs, and metrics all update live over SSE (Server-Sent Events) using an incremental snapshot + delta protocol, so views refresh in place without flicker or polling
 - **Traces and spans** — trace list; waterfall timeline with full span details, and correlation with logs
 - **Logs** — log list; log details view; correlation with traces
@@ -144,7 +144,7 @@ Pull and run the published GHCR image:
 
 ```sh
 docker pull ghcr.io/metafab/otel-gui:latest
-docker run --rm --name otel-gui -p 4318:4318 ghcr.io/metafab/otel-gui:latest
+docker run --rm --name otel-gui -p 4318:4318 -p 4317:4317 ghcr.io/metafab/otel-gui:latest
 ```
 
 Container tags are published from Git refs:
@@ -157,13 +157,16 @@ Build and run locally with Docker:
 
 ```sh
 docker build -t otel-gui .
-docker run --rm -p 4318:4318 otel-gui
+docker run --rm -p 4318:4318 -p 4317:4317 otel-gui
 ```
 
 Then use the standard OTLP endpoint:
 
 ```sh
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+# or, for gRPC exporters
+export OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 ```
 
 #### Docker port configuration
@@ -174,7 +177,7 @@ The container reads `PORT` (default `4318`). You can override it at runtime:
 docker run --rm -e PORT=55681 -p 55681:55681 otel-gui
 ```
 
-Using port `4318` is recommended for zero-config OTLP exporters.
+Using port `4318` is recommended for zero-config OTLP exporters. The OTLP/gRPC receiver listens on `OTEL_GUI_GRPC_PORT` (default `4317`).
 
 #### Docker Compose
 
@@ -259,6 +262,17 @@ POST /v1/metrics
 ```
 
 Gauges, sums, histograms, exponential histograms, and summaries are all supported and appear in the **Metrics** tab. Monotonic sums are presented as **Counters** and non-monotonic sums as **UpDownCounters**; their OTLP data type remains Sum. Sum points get a server-computed per-second rate (with counter-reset detection); histograms render as both a distribution and a time/bucket heatmap.
+
+### Sending Telemetry over gRPC
+
+OTLP/gRPC exporters can send traces, logs, and metrics to the standard gRPC port:
+
+```sh
+export OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+```
+
+The receiver implements the OTLP `TraceService`, `LogsService`, and `MetricsService` `Export` methods over plaintext HTTP/2 (no TLS), with optional gzip compression. Change the port with `OTEL_GUI_GRPC_PORT`, or disable the receiver with `OTEL_GUI_GRPC_ENABLED=false`. If the port is already in use, a warning is logged and the HTTP server keeps running.
 
 ### Try the demo
 
@@ -427,6 +441,9 @@ purpose-built search tools.
 | `OTEL_GUI_MAX_LOGS`                   | `1000`             | Maximum number of log records kept in memory (1–10 000). Oldest records are evicted first when the limit is reached. Requires a restart.                                                                                                                                                                                                                                                                      |
 | `OTEL_GUI_MAX_METRICS`                | `1000`             | Maximum number of metric entries keyed by `service.name` + metric name (1–10 000). Each entry may contain multiple attribute series; this does not cap series cardinality or points per series. Oldest-created entries are evicted first. Requires a restart.                                                                                                                                                 |
 | `OTEL_GUI_MAX_METRIC_POINTS`          | `600`              | Maximum number of data points retained per metric series (10–10 000). Oldest points are evicted first. Requires a restart.                                                                                                                                                                                                                                                                                    |
+| `OTEL_GUI_GRPC_ENABLED`               | `true`             | Enables the OTLP/gRPC receiver. Set to `0` or `false` to disable it.                                                                                                                                                                                                                                                                                                                                          |
+| `OTEL_GUI_GRPC_PORT`                  | `4317`             | Port the OTLP/gRPC receiver listens on.                                                                                                                                                                                                                                                                                                                                                                       |
+| `OTEL_GUI_GRPC_HOST`                  | _(all interfaces)_ | Interface the OTLP/gRPC receiver binds to.                                                                                                                                                                                                                                                                                                                                                                    |
 | `OTEL_GUI_MCP_ENABLED`                | `true`             | Enables the read-only MCP endpoint at `/mcp`. Set to `0` or `false` to disable it.                                                                                                                                                                                                                                                                                                                            |
 | `OTEL_GUI_MCP_ALLOW_REMOTE`           | `false`            | Allows non-loopback clients to use `/mcp`. Only enable when remote access is protected at the network layer; otel-gui does not authenticate MCP clients.                                                                                                                                                                                                                                                      |
 | `OTEL_GUI_PERSISTENCE_MODE`           | `memory`           | Persistence backend mode. Use `memory` (default, no disk writes) or `pglite` (requires an external backend module, typically enterprise).                                                                                                                                                                                                                                                                     |
@@ -545,42 +562,15 @@ Notes:
 | `e` / `E`        | Trace detail | Next / prev error span    |
 | `?`              | Everywhere   | Toggle shortcuts overlay  |
 
-## 📐 Architecture
+## 📐 Architecture & Interfaces
 
-```
-POST /v1/traces          ← OTLP receiver (JSON + Protobuf)
-POST /v1/logs            ← OTLP logs receiver (JSON + Protobuf)
-POST /v1/metrics         ← OTLP metrics receiver (JSON + Protobuf)
-
-GET  /api/traces         ← trace list for the UI
-DELETE /api/traces       ← clear all traces or delete selected traceIds
-GET  /api/traces/:id     ← single trace
-GET  /api/traces/:id/logs ← trace-scoped correlated logs
-GET  /api/traces/:id/logs/:logId ← single trace-scoped log detail
-GET  /api/traces/:id/export ← export a single trace envelope
-POST /api/traces/export  ← export filtered/selected traceIds
-POST /api/traces/import/preview ← validate + preview import metadata
-POST /api/traces/import  ← import otel-gui envelope or raw OTLP JSON
-
-GET  /api/logs           ← global log list for the UI
-DELETE /api/logs         ← clear all logs or delete selected logIds
-GET  /api/logs/:id       ← single log detail
-POST /api/logs/export    ← export filtered/selected logIds
-POST /api/logs/import/preview ← validate + preview log import metadata
-POST /api/logs/import    ← import otel-gui log envelope or raw OTLP JSON
-
-GET  /api/metrics        ← metric list for the UI
-DELETE /api/metrics      ← clear all metrics or delete selected ids
-GET  /api/metrics/:id    ← metric detail and chart data
-GET  /api/metrics/:id/stream ← SSE stream for metric detail updates
-
-GET  /api/service-map    ← aggregated service graph
-GET  /api/stream         ← multiplexed SSE stream for traces, logs, and metrics
-GET  /api/config         ← runtime limits and persistence status
-POST /mcp                ← streamable HTTP MCP endpoint
-```
-
-See the [HTTP API guide](docs/http-api.md) and [OpenAPI specification](static/openapi.yaml) for exact request and response details.
+| Interface | Endpoint                                                                      | Purpose                                                                                                                                          |
+| --------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| OTLP/HTTP | `POST /v1/traces`, `POST /v1/logs`, `POST /v1/metrics`                        | Receivers that ingest OTLP/JSON or OTLP/Protobuf                                                                                                 |
+| OTLP/gRPC | `:4317` by default                                                            | Trace, Logs, and Metrics `Export` services; Protobuf with identity or gzip encoding                                                              |
+| HTTP API  | `/api/traces`, `/api/logs`, `/api/metrics`, `/api/service-map`, `/api/config` | Read and manage telemetry and runtime configuration; see the [HTTP API guide](docs/http-api.md) and [OpenAPI specification](static/openapi.yaml) |
+| Streaming | `GET /api/stream`                                                             | SSE updates for traces, logs, and metrics                                                                                                        |
+| MCP       | `POST /mcp`                                                                   | Streamable HTTP MCP endpoint; see [Connect an AI agent with MCP](#connect-an-ai-agent-with-mcp)                                                  |
 
 Server-only state lives in `src/lib/server/traceStore.ts` with swappable backends behind the `TraceStore` interface. In default `memory` mode, runtime state is kept in memory with FIFO eviction. The retention limits default to 1000 traces (`OTEL_GUI_MAX_TRACES`), 1000 log records (`OTEL_GUI_MAX_LOGS`), 1000 metric entries (`OTEL_GUI_MAX_METRICS`), and 600 points per metric series (`OTEL_GUI_MAX_METRIC_POINTS`).
 <br />
