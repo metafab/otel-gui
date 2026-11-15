@@ -5,5 +5,5 @@
     "sourceMap": true,
     "strict": true
   },
-  "include": ["src"]
+  "include": ["src", "tests/production.test.ts"]
 }

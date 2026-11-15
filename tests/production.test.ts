@@ -2,10 +2,10 @@ import { spawn } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { once } from 'node:events'
 import { request } from 'node:http'
-import { test } from 'node:test'
+import { test, type TestContext } from 'node:test'
 import assert from 'node:assert/strict'
 
-async function startServer(t, extraEnv = {}) {
+async function startServer(t: TestContext, extraEnv: NodeJS.ProcessEnv = {}) {
   const child = spawn(process.execPath, ['build/index.js'], {
     env: {
       PATH: process.env.PATH,
@@ -25,7 +25,7 @@ async function startServer(t, extraEnv = {}) {
     }
   })
 
-  const url = await new Promise((resolve, reject) => {
+  const url = await new Promise<string>((resolve, reject) => {
     let output = ''
     const timer = setTimeout(
       () => reject(new Error(`Server did not start: ${output}`)),
@@ -54,7 +54,7 @@ async function startServer(t, extraEnv = {}) {
   return url
 }
 
-async function fixture(path) {
+async function fixture(path: string) {
   return readFile(new URL(path, import.meta.url), 'utf8')
 }
 
@@ -76,10 +76,16 @@ test('production HTTP clears telemetry while preserving origin checks', async (t
       body,
     })
     assert.equal(ingest.status, 200, `${kind} ingestion`)
-    const before = await (await fetch(`${url}/api/${kind}`)).json()
+    const before = (await (
+      await fetch(`${url}/api/${kind}`)
+    ).json()) as unknown[]
     assert.ok(before.length > 0, `${kind} must be present before clearing`)
 
-    for (const headers of [{ origin: 'http://example.invalid' }, {}]) {
+    const rejectedHeaders: HeadersInit[] = [
+      { origin: 'http://example.invalid' },
+      {},
+    ]
+    for (const headers of rejectedHeaders) {
       const response = await fetch(`${url}/api/${kind}`, {
         method: 'DELETE',
         headers,
@@ -105,8 +111,12 @@ test('production HTTP clears telemetry while preserving origin checks', async (t
       body,
     })
     assert.equal(reingest.status, 200)
-    const items = await (await fetch(`${url}/api/${kind}`)).json()
+    const items = (await (await fetch(`${url}/api/${kind}`)).json()) as Array<{
+      traceId?: string
+      id?: string
+    }>
     const id = kind === 'traces' ? items[0].traceId : items[0].id
+    assert.ok(typeof id === 'string')
     const key =
       kind === 'traces' ? 'traceIds' : kind === 'logs' ? 'logIds' : 'ids'
     const selected = await fetch(`${url}/api/${kind}`, {
@@ -115,13 +125,16 @@ test('production HTTP clears telemetry while preserving origin checks', async (t
       body: JSON.stringify({ [key]: [id] }),
     })
     assert.equal(selected.status, 200, `${kind} selected delete`)
-    assert.equal((await selected.json()).deletedCount, 1)
-    const remaining = await (await fetch(`${url}/api/${kind}`)).json()
+    const result = (await selected.json()) as { deletedCount: number }
+    assert.equal(result.deletedCount, 1)
+    const remaining = (await (
+      await fetch(`${url}/api/${kind}`)
+    ).json()) as unknown[]
     assert.equal(remaining.length, items.length - 1)
   }
 
   const host = new URL(url).host.replace('127.0.0.1', 'localhost')
-  const status = await new Promise((resolve, reject) => {
+  const status = await new Promise<number | undefined>((resolve, reject) => {
     const req = request(
       `${url}/api/traces`,
       {
