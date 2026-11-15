@@ -473,7 +473,13 @@ PORT=4318 node build
 
 The production build uses `@sveltejs/adapter-node`. In-memory state is kept alive by the Node.js process — no external store required for local use.
 
-In Docker, with the default configuration,traces are in-memory only and are lost when the container stops.
+Direct HTTP requests use their connection scheme for origin checks. Behind a
+TLS-terminating reverse proxy, set `PROTOCOL_HEADER=x-forwarded-proto` and
+configure the trusted proxy to remove client-supplied `X-Forwarded-Proto`
+headers and set the correct value itself. Only enable this setting when clients
+cannot bypass the proxy. The proxy must also forward the correct `Host` header.
+
+In Docker, with the default configuration, traces are in-memory only and are lost when the container stops.
 
 ### Self-contained executable (SEA)
 

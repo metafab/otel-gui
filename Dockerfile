@@ -8,6 +8,7 @@ ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches ./patches
 COPY packages ./packages
 # pnpm is pinned via packageManager in package.json so Corepack is deterministic in CI.
 RUN pnpm install --frozen-lockfile --ignore-scripts
@@ -32,6 +33,7 @@ ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches ./patches
 COPY packages ./packages
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 

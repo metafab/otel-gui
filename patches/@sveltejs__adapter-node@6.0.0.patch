@@ -1,0 +1,36 @@
+diff --git a/src/handler.js b/src/handler.js
+index 649ab5efb58ffed21a5d83b94ea7230fde652c28..8662a821f3206211dd409030162f1c4a60a46427 100644
+--- a/src/handler.js
++++ b/src/handler.js
+@@ -1,4 +1,3 @@
+-/** @import { IncomingHttpHeaders } from 'node:http' */
+ import process from 'node:process';
+ import { getRequest, setResponse, createReadableStream } from '@sveltejs/kit/node';
+ import {
+@@ -47,7 +46,7 @@ const ssr = async (req, res) => {
+ 
+ 	if (!request_origin) {
+ 		try {
+-			request_origin = get_origin(req.headers);
++			request_origin = get_origin(req);
+ 		} catch (error) {
+ 			console.error(
+ 				`Could not determine request origin: ${error instanceof Error ? error.message : String(error)}`
+@@ -145,12 +144,14 @@ function normalise_header(name, value) {
+ }
+ 
+ /**
+- * @param {IncomingHttpHeaders} headers
++ * @param {import('node:http').IncomingMessage} req
+  * @returns {string}
+  */
+-function get_origin(headers) {
++function get_origin(req) {
++	const headers = req.headers;
++	const default_protocol = 'encrypted' in req.socket && req.socket.encrypted === true ? 'https' : 'http';
+ 	const protocol = decodeURIComponent(
+-		normalise_header(protocol_header, headers[protocol_header]) || 'https'
++		normalise_header(protocol_header, headers[protocol_header]) || default_protocol
+ 	);
+ 
+ 	// this helps us avoid host injections through the protocol header

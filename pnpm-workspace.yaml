@@ -2,3 +2,5 @@ packages:
   - 'packages/*'
 allowBuilds:
   esbuild: true
+patchedDependencies:
+  '@sveltejs/adapter-node@6.0.0': patches/@sveltejs__adapter-node@6.0.0.patch

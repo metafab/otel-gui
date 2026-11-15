@@ -45,3 +45,6 @@ jobs:
 
       - name: Unit & integration tests
         run: pnpm run test
+
+      - name: Production server regression tests
+        run: pnpm run build && pnpm run test:production
